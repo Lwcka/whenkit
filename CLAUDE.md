@@ -46,7 +46,8 @@ Cer Node ≥ 24 (`node:sqlite`, `--env-file-if-exists`). Prima dată: `npm ci`.
 | `…/initiative-whenkit-mvp/tickets.toml`, `epic-*/` | epicurile și tichetele (`tickets.toml` în fiecare epic = planul de povești, în ordinea de construire) | da |
 | `.env` | setări locale de dezvoltare (ex. `WHENKIT_WORKSPACE` pentru teste); model în `.env.example` | nu |
 | `src/core/` | nucleul hexagonal: logica, schemele, porturile; nu importă Electron, React, `node:*` sau alte straturi (impus de oxlint) | da |
-| `src/adapters/` | implementările porturilor (SQLite, HTTP, GitHub, fișiere, mediu) | da |
+| `src/adapters/` | implementările porturilor (SQLite, HTTP, GitHub, fișiere, mediu); `http/` verifică linkuri pe `node:http`/`node:https`, cu DNS injectabil | da |
+| `tests/fixtures/` | date de test sintetice (ex. certificatul self-signed din `tls/`, doar pentru teste) | da |
 | `src/adapters/sqlite/migrations/` | migrările SQL numerotate (`NNNN-nume.sql`), **append-only**: o migrare ajunsă pe `main` nu se mai editează (hash-ul ei e verificat la deschidere), se adaugă una nouă | da |
 | `src/cli/` | CLI-ul `whenkit`: `main.ts` (alege comanda; testabil), `commands/` (o comandă pe fișier), `render.ts` (ieșirea text), `exit-codes.ts` (singurul tabel `ErrorCode → cod de ieșire`), `bin.ts` (intrarea procesului; singurul loc care leagă adaptoarele reale) | da |
 | `src/desktop/main/`, `preload/`, `renderer/` | procesul main Electron, puntea IPC, interfața React | da |

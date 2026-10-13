@@ -1,6 +1,6 @@
 // Ports: every effect core needs from the outside world (AD-2). Adapters in
 // src/adapters implement them and the drivers (cli, desktop/main) inject them.
-// HttpClient and GitHubClient arrive with the tickets that need them.
+// GitHubClient arrives with the ticket that needs it.
 
 import type { Zone } from './category-seed';
 import type { EntryKind, ResourceType } from './entry';
@@ -32,6 +32,38 @@ export interface FileSystem {
   readText(path: string): string;
   writeText(path: string, text: string): void;
   joinPath(...parts: string[]): string;
+}
+
+/**
+ * What happened when a link was opened (AD-7). A closed union: every network
+ * outcome is a value, so verification never handles exceptions for them.
+ * `finalUrl` is the URL that gave the status, after following redirects.
+ * `lastUrl` is the last URL the check was requesting when it failed (a
+ * redirect target included), so the blocked-domain rule still sees it.
+ */
+export type HttpResult =
+  /** Final status below 400 (2xx, or a 3xx that is not followed). */
+  | { kind: 'ok'; status: number; finalUrl: string }
+  /** Final status 400 or above. */
+  | { kind: 'httpError'; status: number; finalUrl: string }
+  /** The host name does not exist, while DNS itself works. */
+  | { kind: 'dnsNotFound'; lastUrl: string }
+  /** The TLS handshake failed: invalid, expired or self-signed certificate. */
+  | { kind: 'tlsError'; lastUrl: string }
+  /** No answer within the time limit. */
+  | { kind: 'timeout'; lastUrl: string }
+  /**
+   * Refused or reset connection, too many redirects, a redirect to a
+   * non-http(s) URL (then `lastUrl` is that target), or a URL that is not
+   * http(s) at all (then `lastUrl` is the input as given).
+   */
+  | { kind: 'connectionError'; lastUrl: string }
+  /** No network: the machine cannot reach DNS or the internet. */
+  | { kind: 'offline' };
+
+/** Opens a link and reports what happened; never throws for network outcomes. */
+export interface HttpClient {
+  check(url: string): Promise<HttpResult>;
 }
 
 /** A category row, in camelCase. */
