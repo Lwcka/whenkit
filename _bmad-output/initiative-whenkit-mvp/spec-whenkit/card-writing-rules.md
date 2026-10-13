@@ -34,7 +34,7 @@ Sursa conținutului fișierului de reguli comun citit de `/importa` și `/gasest
 
 ## Verificare de conținut
 - Claude marchează ca dubios orice site de pirateria, ocolire a paywall-urilor sau distribuție ilegală de conținut cu copyright și scrie motivul.
-- Poate propune domenii noi pentru lista de domenii interzise.
+- Poate propune domenii noi pentru lista de domenii interzise, doar în lot (apar în raport); nu editează fișierul.
 
 ## Protecții
 - Nu scrie niciodată în „Notițele mele”.

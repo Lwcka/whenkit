@@ -1,6 +1,6 @@
 # Lista de start a categoriilor
 
-Conținutul inițial al fișierului de categorii instalat de `whenkit init`. Editabil oricând.
+Lista de start a categoriilor, pusă o singură dată în catalog la prima creare a bazei de date. După aceea categoriile se editează din aplicație (redenumire, unificare, ștergere).
 
 ## Toolbox
 

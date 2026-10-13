@@ -1,0 +1,168 @@
+# tickets.toml — povestile epicului „Catalogul se umple prin Claude”, în ordinea de construire.
+# O singură linie de lucru (un singur autor). Firul de pornire = intrările 1–3.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Scheletul proiectului"
+description = "Creează proiectul cu create-electron-app@8.0.1 --template vite --typescript (template-ul vite-typescript nu mai există în Forge 8; asta închide întrebarea deschisă a epicului), adaugă React 19 (@vitejs/plugin-react, jsx react-jsx), structura de foldere din spine, Vitest, ESLint cu granițele hexagonului, build-ul separat al CLI-ului în dist/cli (ESM) cu bin-ul whenkit expus prin npm link și convenția .env cu WHENKIT_WORKSPACE spre un workspace de dezvoltare încărcat cu --env-file; documentează în CLAUDE.md comenzile de build/test și faptul că terminalul din VS Code are ELECTRON_RUN_AS_NODE=1 (se pornește doar prin npm start)."
+verify = "npm start deschide o fereastră goală, whenkit --version rulează dintr-un terminal nou, npm test și npm run lint trec."
+covers = []
+after = []
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-1", "architecture-whenkit/architecture-whenkit.md#ad-19", "architecture-whenkit/reviews/review-versions.md"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Stocarea și workspace-ul"
+description = "Porturile din core/ports.ts, Clock și IdGenerator, funcția comună de normalizare name_key, resolveWorkspace (AD-8), whenkit init minimal (foldere + config.json; refuză o cale din repo; nu scrie config.json când WHENKIT_WORKSPACE e setat), SqliteCatalogStore cu WAL/foreign_keys/busy_timeout, cadrul de migrări (schema_migrations cu sha256, backup înainte de migrare, BEGIN IMMEDIATE) și migrarea 0001 cu toată schema v1 din spine (inclusiv rejections, entries_fts cu triggere, meta.owner_id, categoriile de start semănate o dată), plus errors.ts și versions.ts."
+verify = "Teste pe fișier temporar, cu APPDATA injectat: init creează workspace-ul și baza cu schema v1; redeschiderea nu re-migrează; o migrare cu hash schimbat oprește deschiderea; înainte de o a doua migrare de test apare backup-ul; o cale din repo e refuzată; cu WHENKIT_WORKSPACE setat, config.json nu se scrie."
+covers = ["CAP-1"]
+after = [1]
+hitl = false
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-4", "architecture-whenkit/architecture-whenkit.md#ad-5", "architecture-whenkit/architecture-whenkit.md#ad-8"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Firul de pornire: import add și list"
+description = "Schema lotului (batch-schema.ts: toate câmpurile din entry-model, .strict(), kind discriminat, ref, op add, newCategories, verdictul lui Claude, proposedBlockedDomains), schema raportului și a ieșirilor --json (AD-14), dto.ts (AD-18), reason-codes.ts de bază, normalizarea URL-ului și dedupKey(), strings.ro.ts în src/shared, potrivirea categoriilor după name_key cu respingerea celor necunoscute, cazul de utilizare de import cu fazele 1 și 3 (faza 2 o adaugă intrarea 5), BATCH_SCHEMA_OUTDATED, whenkit import --json, list --json, show <id> --json și tabelul codurilor de ieșire 0, 1, 2."
+verify = "Pe un workspace de dev: init, apoi import al unui lot cu o resursă, apoi list --json o arată; un lot invalid iese cu cod 1 și nu scrie nimic; un lot cu schemaVersion vechi iese cu BATCH_SCHEMA_OUTDATED; o categorie necunoscută nedeclarată respinge elementul."
+covers = ["CAP-2"]
+after = [2]
+hitl = false
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-6", "architecture-whenkit/architecture-whenkit.md#ad-11", "architecture-whenkit/architecture-whenkit.md#ad-14", "architecture-whenkit/architecture-whenkit.md#ad-18"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Adaptorul HTTP"
+description = "adapters/http: implementează portul HttpClient cu rezultatul ca uniune închisă (ok, httpError, dnsNotFound, tlsError, timeout, connectionError, offline), HEAD apoi GET, timeout 10 s, User-Agent de browser, urmărirea redirect-urilor cu URL-ul final, rezolvarea DNS printr-o funcție injectabilă care separă dnsNotFound de offline; nu e încă legat în import."
+verify = "Teste doar locale: un server HTTP local pentru fiecare status, timeout și redirect, un server HTTPS local cu certificat self-signed pentru tlsError și un resolver DNS fals pentru dnsNotFound și offline."
+covers = ["CAP-3"]
+after = [2]
+hitl = false
+risk = "high"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-7"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Regulile de verificare în import"
+description = "core/verification: extinde reason-codes și dedupKey din intrarea 3; validarea sintactică a URL-ului, duplicate în catalog și în același lot, parsarea blocked-domains.txt (fișierul inițial e creat aici în workspace-template/data/; dacă lipsește din workspace se recreează din șablon), verdictele din tabelul AD-7 cu 2 reîncercări la 5xx/timeout, flagged_by_claude → rejected, conceptele fără link sar peste URL, linkurile din sources (mort → scos + avertizare; domeniu interzis → concept respins), offline → cod 3 fără scriere; legat în faza 2 a importului, cu adaptorul HTTP real injectat în CLI."
+verify = "Teste offline cu HttpClient fals, câte unul pentru fiecare rând din verification-rules.md despre linkuri, duplicate, surse, domenii interzise și verdictul lui Claude; un import CLI pe serverul local din intrarea 4 dă verdictele așteptate."
+covers = ["CAP-3"]
+after = [3, 4]
+hitl = false
+risk = "high"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-7", "architecture-whenkit/architecture-whenkit.md#ad-15", "spec-whenkit/verification-rules.md"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Update și integritatea lotului"
+description = "op update (înlocuire completă a câmpurilor lui Claude; nu atinge myNotes, ownerId, addedAt, forced; duplicatul exclude fișa însăși; unknown_id → rejected; update respins lasă fișa neschimbată; revision crește), newCategories cu created (refolosite după name_key), raportul complet (added, updated, warned, rejected, duplicate, proposedBlockedDomains) și codurile de ieșire 3 (bază blocată, migrare refuzată) și 4 (eroare internă)."
+verify = "Teste: update păstrează myNotes, ownerId și addedAt; update pe id inexistent e rejected; o categorie nouă declarată de două ori se creează o dată; o eroare internă simulată în faza 3 iese cu 4 și nu scrie nimic."
+covers = ["CAP-2"]
+after = [5]
+hitl = false
+risk = "high"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-6", "architecture-whenkit/architecture-whenkit.md#ad-14", "architecture-whenkit/architecture-whenkit.md#ad-16"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Legături, umbrele și JSON Schema"
+description = "Legăturile din lot prin id existent sau ref (related canonic, parent doar concept → concept fără cicluri, children la update), ignoredLinks în raport, generarea JSON Schema a lotului (z.toJSONSchema) și comanda whenkit schema."
+verify = "Teste: umbrela și copiii din același lot se leagă; o legătură spre un element respins apare în ignoredLinks; un ciclu parent e refuzat; whenkit schema tipărește o schemă care validează un lot corect și respinge unul cu un câmp necunoscut."
+covers = ["CAP-2", "CAP-7"]
+after = [6]
+hitl = false
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-5", "architecture-whenkit/architecture-whenkit.md#ad-6"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Jurnalul de respinse și --force"
+description = "Scrierea în rejections a elementului complet cu motivele și dedup_key, whenkit rejections --json, --force <ref> repetabil care ocolește doar respingerile de verificare și marchează forced_by_user, eliminarea din jurnal la acceptarea dedup_key-ului."
+verify = "Teste: httpss://gutenberg.org e respins și apare în jurnal; reimportat corectat, dispare din jurnal; --force pe un domeniu interzis îl adaugă marcat; --force pe un duplicat sau pe o categorie necunoscută nu are efect."
+covers = ["CAP-4"]
+after = [7]
+hitl = false
+risk = "low"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-5", "architecture-whenkit/architecture-whenkit.md#ad-7"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Datele GitHub"
+description = "adapters/github prin portul GitHubClient (pushed_at, stele, arhivat), recunoașterea owner/repo printr-o singură funcție din core, nota github_archived, sărirea metadatelor la limita de rată, legat în faza 2 a importului."
+verify = "Teste doar locale, cu un server care imită API-ul GitHub: repo arhivat → accepted cu notă; limită de rată → fără metadate și fără respingere; un repo activ primește stele și pushed_at."
+covers = ["CAP-5"]
+after = [8]
+hitl = false
+risk = "low"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-7"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "whenkit init complet și workspace-ul gestionat"
+description = "Copierea workspace-template/ după AD-17 (fișierele șablonului suprascrise, ale utilizatorului create doar dacă lipsesc), .whenkit-template.json și avertismentul pentru șablon vechi, batch.schema.json, folderul batches/, whenkit categories --json și CLAUDE.md-ul de runtime (comenzile CLI, ambele skill-uri, protecțiile: nu scrie în data/, nu atinge Notițele mele, loturile în batches/); fișierul de reguli îl scrie intrarea 11."
+verify = "Pe un workspace de dev: init creează structura completă; un al doilea init păstrează un blocked-domains.txt editat; o sesiune Claude Code deschisă acolo nu încarcă CLAUDE.md-ul de dezvoltare."
+covers = ["CAP-1"]
+after = [9]
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-17", "spec-whenkit/workspace-and-import-flow.md"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Skill-ul /importa"
+description = "workspace-template/.claude/skills/importa și fișierul de reguli comun (din card-writing-rules.md): un lot per fișier de input scris în batches/, clasificare, fișe în română, verdict de conținut, rulare whenkit import --json, citirea raportului după ref, ștergerea fișierului din input/ doar la cod 0, argumente (link sau text direct, reluare din jurnalul de respinse)."
+verify = "Pe un workspace de dev, cu copii ale materialelor din C:/Users/Luca/Personal/ în input/: inspire.txt produce 6 fișe în română cu 3–6 situații concrete fiecare; screenshot-urile din API/ produc câte un concept per tip plus umbrela „Tipuri de API” legată de copii, cu Surse; fișierele din input/ dispar; /importa <link> adaugă o fișă; un httpss://gutenberg.org respins dintr-un lot sintetic e reluat din jurnal cu linkul corectat."
+covers = ["CAP-6", "CAP-7"]
+after = [10]
+hitl = true
+risk = "high"
+references = ["spec-whenkit/card-writing-rules.md", "spec-whenkit/test-scenarios.md"]
+
+[[entry]]
+id = 12
+type = "story"
+title = "Skill-ul /gaseste"
+description = "workspace-template/.claude/skills/gaseste: întrebare în limbaj natural, citire prin whenkit list --json și show <id> --json, răspuns cu resursele potrivite și situațiile lor, fără nicio scriere."
+verify = "Pe catalogul de dev de la intrarea 11: /gaseste răspunde cu resursa potrivită citând situațiile din Când o folosesc, iar ieșirea whenkit list --json și revision-ul maxim sunt identice înainte și după."
+covers = ["CAP-12"]
+after = [11]
+hitl = false
+risk = "low"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-11"]
+
+[[entry]]
+id = 13
+type = "story"
+title = "Curățenie finală (refactor sweep)"
+description = "Doar cleanup, cu scopul stabilit la start din planurile intrărilor 1–12 și din findings amânate în revizii; scopul împins din alte tichete devine tichet nou."
+verify = "Toate testele (inclusiv acoperirea offline a fiecărui rând din verification-rules.md) și lint-ul trec după curățenie."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 14
+type = "story"
+title = "Importul real"
+description = "Pe codul de pe main: npm link, whenkit init în C:/Users/Luca/Programe/whenkit (fără WHENKIT_WORKSPACE), apoi /importa pe toate materialele de test; problemele găsite devin tichete de bug."
+verify = "Rezultatele din test-scenarios.md; input/ gol; /gaseste ce am pentru a scoate fundalul dintr-o poză? răspunde cu remove.bg."
+covers = ["CAP-6", "CAP-7", "CAP-12"]
+after = [13]
+hitl = true
+risk = "medium"

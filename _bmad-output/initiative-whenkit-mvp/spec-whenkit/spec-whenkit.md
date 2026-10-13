@@ -55,10 +55,10 @@ sources:
   - **success:** Căutarea „fundal” găsește remove.bg, deși descrierea sursă era în engleză, datorită cuvintelor-cheie bilingve; căutarea după numele exact („photopea”) găsește resursa.
 - **CAP-10**
   - **intent:** Utilizatorul poate vedea, corecta, completa cu notițele sale și șterge orice intrare.
-  - **success:** Fișa completă afișează toate câmpurile din `entry-model.md`, inclusiv Markdown cu tabele pentru concepte; editările persistă după repornire; ștergerea elimină și legăturile către intrare; „Notițele mele” rămân neatinse după orice import sau re-documentare.
+  - **success:** Fișa completă afișează toate câmpurile din `entry-model.md`, inclusiv Markdown cu tabele pentru concepte; editările persistă după repornire; o editare care schimbă linkul sau sursele trece prin verificare și nu se salvează dacă e respinsă; o salvare peste o fișă modificată între timp din terminal e refuzată cu mesaj, nu suprascrie; ștergerea elimină și legăturile către intrare; „Notițele mele” rămân neatinse după orice import sau re-documentare.
 - **CAP-11**
   - **intent:** Utilizatorul poate ține lista de categorii curată.
-  - **success:** Redenumirea, unificarea și ștergerea unei categorii actualizează toate intrările afectate; nicio intrare nu rămâne cu o categorie inexistentă.
+  - **success:** Redenumirea, unificarea și ștergerea unei categorii actualizează toate intrările afectate; nicio intrare nu rămâne cu o categorie inexistentă sau fără categorie (ștergerea ultimei categorii a unei fișe cere o categorie-țintă); unificarea se face doar în aceeași zonă.
 - **CAP-12**
   - **intent:** Utilizatorul poate întreba în limbaj natural, în Claude Code, ce resursă are pentru o problemă.
   - **success:** `/gaseste ce am pentru a scoate fundalul dintr-o poză?` răspunde cu remove.bg (și alte potriviri din catalog), citând situațiile din „Când o folosesc”, fără să modifice datele.

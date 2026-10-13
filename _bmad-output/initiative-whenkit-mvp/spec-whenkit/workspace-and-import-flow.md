@@ -21,12 +21,14 @@ whenkit/
 │   ├── gaseste/         ← /gaseste
 │   └── (fișier de reguli comun = card-writing-rules.md)
 ├── input/               ← materialele de importat (consumabile)
+├── batches/             ← loturile JSON scrise de /importa, șterse după import reușit
 └── data/
-    ├── catalogul        (format → bmad-architecture)
-    ├── categorii        (listă Toolbox + Learn, editabilă)
-    ├── domenii interzise
-    └── jurnal de respinse
+    ├── catalog.sqlite       (fișe, categorii, legături, jurnalul de respinse)
+    ├── backups/             (copii automate înainte de orice migrare)
+    └── blocked-domains.txt  (domenii interzise, editat doar de utilizator)
 ```
+
+`whenkit init` rulat din nou actualizează fișierele șablonului (CLAUDE.md, skill-uri, reguli, schema lotului), dar nu atinge niciodată `data/` și `input/`.
 
 CLAUDE.md de runtime conține: unde e fișierul de reguli, comenzile CLI ale aplicației, regula „nu suprascrii niciodată Notițele mele”, regula „nu scrii direct în `data/`”. Acoperă și cererile libere (ex. „rescrie fișa X după regulile noi”).
 
