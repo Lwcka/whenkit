@@ -7,7 +7,7 @@ paradigm: 'hexagonal (ports & adapters), ușor'
 scope: 'whenkit MVP: aplicația desktop Electron, CLI-ul whenkit și șablonul workspace-ului'
 status: final
 created: '2026-10-13'
-updated: '2026-10-13'
+updated: '2026-10-14'
 binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12, CAP-13]
 sources:
   - ../spec-whenkit/spec-whenkit.md
@@ -100,7 +100,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** CAP-3, CAP-4, CAP-5, CAP-10
 - **Prevents:** reguli divergente între import, editare și re-verificarea viitoare; respingeri în masă când lipsește internetul; `--force` care ocolește integritatea.
-- **Rule:** Verificarea trăiește în `src/core/verification/`. Primește un candidat sau o fișă existentă și întoarce `{ outcome: accepted | warned | rejected | duplicate, reasons: VerdictReason[] }`, fără excepții pentru rezultate. Portul `HttpClient` întoarce o uniune închisă: `ok(status, finalUrl) | httpError(status) | dnsNotFound | tlsError | timeout | connectionError | offline`.
+- **Rule:** Verificarea trăiește în `src/core/verification/`. Primește un candidat sau o fișă existentă și întoarce `{ outcome: accepted | warned | rejected | duplicate, reasons: VerdictReason[] }`, fără excepții pentru rezultate. Portul `HttpClient` întoarce o uniune închisă: `ok(status, finalUrl) | httpError(status, finalUrl) | dnsNotFound(lastUrl) | tlsError(lastUrl) | timeout(lastUrl) | connectionError(lastUrl) | offline`; regula domeniului interzis se aplică pe URL-ul trimis și pe `finalUrl`/`lastUrl`.
 
 | Rezultat | Verdict (cod) |
 |---|---|
