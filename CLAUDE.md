@@ -6,7 +6,7 @@ Acest fișier este pentru **dezvoltarea** aplicației. Claude-ul care *foloseșt
 
 ## Stadiul proiectului
 
-Codul e la stadiul de schelet (tichetul 1: proiectul Electron + React, CLI-ul `whenkit` cu `--version`/`--help`, testele și regulile de graniță); logica de domeniu vine din tichetele următoare. Produsul e definit în spec-ul **`_bmad-output/initiative-whenkit-mvp/spec-whenkit/spec-whenkit.md`** și în companionii lui: aceasta e sursa de adevăr. Citește spec-ul înainte de a propune ceva de produs sau de arhitectură. Spec-ul se modifică doar prin skill-ul `bmad-spec` (e derivat din `.memlog.md`), nu de mână.
+Codul se construiește tichet cu tichet, în ordinea din `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/tickets.toml`. Ce e gata și ce urmează: `uv run _bmad/method/scripts/tickets.py --project-root . status` (sau `next`); planul fiecărui tichet construit stă lângă `tickets.toml`, ca `story-<titlu>-plan.md`, cu deciziile și triajul reviziei. Lucrurile amânate sunt în `_bmad-output/initiative-whenkit-mvp/deferred-work.md`. Produsul e definit în spec-ul **`_bmad-output/initiative-whenkit-mvp/spec-whenkit/spec-whenkit.md`** și în companionii lui: aceasta e sursa de adevăr. Citește spec-ul înainte de a propune ceva de produs sau de arhitectură. Spec-ul se modifică doar prin skill-ul `bmad-spec` (e derivat din `.memlog.md`), nu de mână.
 
 Arhitectura e decisă în **`_bmad-output/initiative-whenkit-mvp/architecture-whenkit/architecture-whenkit.md`** (regulile AD-1…AD-19): Electron + TypeScript + React (Electron Forge, template Vite), nucleu hexagonal în `src/core`, SQLite prin `node:sqlite`, Zod pentru schema lotului, Vitest pentru teste. Orice cod respectă regulile AD; o abatere se discută și se trece întâi în arhitectură, prin `bmad-architecture`.
 
@@ -47,12 +47,14 @@ Cer Node ≥ 24 (`node:sqlite`, `--env-file-if-exists`). Prima dată: `npm ci`.
 | `.env` | setări locale de dezvoltare (ex. `WHENKIT_WORKSPACE` pentru teste); model în `.env.example` | nu |
 | `src/core/` | nucleul hexagonal: logica, schemele, porturile; nu importă Electron, React, `node:*` sau alte straturi (impus de oxlint) | da |
 | `src/adapters/` | implementările porturilor (SQLite, HTTP, GitHub, fișiere, mediu) | da |
+| `src/adapters/sqlite/migrations/` | migrările SQL numerotate (`NNNN-nume.sql`), **append-only**: o migrare ajunsă pe `main` nu se mai editează (hash-ul ei e verificat la deschidere), se adaugă una nouă | da |
 | `src/cli/` | CLI-ul `whenkit`: `main.ts` (tratarea argumentelor, testabilă), `bin.ts` (intrarea procesului) | da |
 | `src/desktop/main/`, `preload/`, `renderer/` | procesul main Electron, puntea IPC, interfața React | da |
 | `src/shared/` | `strings.ro.ts` (toate textele românești), mai târziu `ipc.ts` | da |
 | `workspace-template/` | **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/importa` și `/gaseste`, regulile de scriere a fișelor), instalat cu `whenkit init` | da |
 | `tests/` | fixture-uri sintetice și teste de integrare | da |
 | `dist/cli/`, `.vite/`, `out/` | ieșiri de build (CLI, Forge, installer) | nu |
+| `.gitattributes` | forțează terminațiile LF (`oxfmt` le cere; `core.autocrlf` le-ar face CRLF pe Windows) | da |
 
 Workspace-ul aplicației (implicit `C:\Users\Luca\Programe\whenkit\`; calea o salvează `whenkit init` în `%APPDATA%\whenkit\config.json`) **nu** face parte din repo: conține `input/`, `data/` și skill-urile instalate. Stă în afara repo-ului pentru că Claude Code încarcă CLAUDE.md și din folderele părinte, iar contextul de dezvoltare nu trebuie să ajungă în sesiunile de import.
 

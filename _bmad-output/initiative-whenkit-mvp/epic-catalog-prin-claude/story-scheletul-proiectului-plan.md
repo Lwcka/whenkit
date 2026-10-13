@@ -3,7 +3,7 @@ title: 'Scheletul proiectului'
 type: 'chore'
 ticket: '1'
 created: '2026-10-13'
-status: 'built'
+status: done
 baseline_revision: 'ba7a7ae18b39b2f14689cdbf20e295b06bf4a205'
 route: 'full'
 route_source: 'auto'
