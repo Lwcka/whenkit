@@ -4,6 +4,7 @@ import type {
   Clock,
   Environment,
   FileSystem,
+  HttpClient,
   IdGenerator,
 } from '../core/ports';
 import { cliStrings } from '../shared/strings.ro';
@@ -24,6 +25,10 @@ export interface CliDeps {
   ids: IdGenerator;
   /** Opens the catalog database (SqliteCatalogStore in bin.ts). */
   openStore: CatalogStoreOpener;
+  /** Checks links during the import's verification (node-http-client in bin.ts). */
+  http: HttpClient;
+  /** Pause before a link check is retried; 1 s when unset. Tests pass 0. */
+  retryDelayMs?: number;
   /** Directory relative paths are resolved against. */
   cwd: string;
 }

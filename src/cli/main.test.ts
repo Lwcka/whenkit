@@ -18,6 +18,7 @@ const noDeps: CliDeps = {
   clock: { now: untouched },
   ids: { newId: untouched },
   openStore: untouched,
+  http: { check: untouched },
   cwd: '',
 };
 

@@ -52,7 +52,8 @@ Cer Node ≥ 24 (`node:sqlite`, `--env-file-if-exists`). Prima dată: `npm ci`.
 | `src/cli/` | CLI-ul `whenkit`: `main.ts` (alege comanda; testabil), `commands/` (o comandă pe fișier), `render.ts` (ieșirea text), `exit-codes.ts` (singurul tabel `ErrorCode → cod de ieșire`), `bin.ts` (intrarea procesului; singurul loc care leagă adaptoarele reale) | da |
 | `src/desktop/main/`, `preload/`, `renderer/` | procesul main Electron, puntea IPC, interfața React | da |
 | `src/shared/` | `strings.ro.ts` (toate textele românești), mai târziu `ipc.ts` | da |
-| `workspace-template/` | **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/importa` și `/gaseste`, regulile de scriere a fișelor), instalat cu `whenkit init` | da |
+| `workspace-template/` | **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/importa` și `/gaseste`, regulile de scriere a fișelor, `data/blocked-domains.txt` inițial), instalat cu `whenkit init`; fișierele utilizatorului (`data/**`) se creează doar dacă lipsesc | da |
+| `src/core/verification/` | verificarea deterministă (AD-7): sintaxa URL, tabelul HTTP cu reîncercări, domeniile interzise, sursele conceptelor; motivele sunt coduri (AD-15) | da |
 | `tests/` | fixture-uri sintetice și teste de integrare | da |
 | `dist/cli/`, `.vite/`, `out/` | ieșiri de build (CLI, Forge, installer) | nu |
 | `.gitattributes` | forțează terminațiile LF (`oxfmt` le cere; `core.autocrlf` le-ar face CRLF pe Windows) | da |

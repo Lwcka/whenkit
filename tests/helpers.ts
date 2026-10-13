@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from 'node:fs';
+import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
@@ -8,6 +8,7 @@ import type {
   CatalogStoreOpener,
   Clock,
   Environment,
+  HttpClient,
   IdGenerator,
 } from '../src/core/ports';
 
@@ -66,6 +67,32 @@ export function fakeEnvironment(
 ): Environment {
   return { get: (name) => vars[name], appRoot: () => appRoot };
 }
+
+const REPO_ROOT = path.resolve(__dirname, '..');
+
+/**
+ * Creates a fake app root at `dir` holding a copy of the repo's
+ * `workspace-template/`, which init and import read (AD-17).
+ */
+export function fakeAppRoot(dir: string): string {
+  mkdirSync(dir, { recursive: true });
+  cpSync(
+    path.join(REPO_ROOT, 'workspace-template'),
+    path.join(dir, 'workspace-template'),
+    { recursive: true },
+  );
+  return dir;
+}
+
+/** An HttpClient that answers 200 for every link, without any network. */
+export const okHttp: HttpClient = {
+  check: (url) => Promise.resolve({ kind: 'ok', status: 200, finalUrl: url }),
+};
+
+/** An HttpClient that fails the test if anything checks a link. */
+export const unusedHttp: HttpClient = {
+  check: () => Promise.reject(new Error('no link check expected')),
+};
 
 /** The code of the WhenkitError that `action` throws. */
 export function errorCodeOf(action: () => unknown): string {

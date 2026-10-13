@@ -19,11 +19,13 @@ import type {
 } from './ports';
 import { dedupKey } from './url';
 import type { VerdictReason } from './verification/reason-codes';
+import type { BatchVerdicts, ItemVerdict } from './verification/verify';
 import { BATCH_SCHEMA_VERSION, IMPORT_REPORT_VERSION } from './versions';
 
 // The import use case (AD-6). Phase 1 validates the batch without I/O;
-// phase 3 writes it in one short write transaction. Phase 2 (verification,
-// GitHub data) slots in between them in ticket 5, so they stay separate.
+// phase 2 (verification/verify.ts) checks the links without a transaction;
+// phase 3 writes the batch, with phase 2's verdicts, in one short write
+// transaction.
 
 function invalid(issues: ErrorIssue[]): WhenkitError {
   return new WhenkitError('BATCH_INVALID', {
@@ -177,18 +179,17 @@ class CategoryResolver {
   }
 }
 
-/** Reasons that reject an item outright, before duplicates are considered. */
+/**
+ * Reasons that reject an item outright, before duplicates are considered:
+ * the verification's (Claude's flag included), then unknown categories.
+ */
 function rejectionReasons(
   item: BatchItem,
+  verdict: ItemVerdict,
   categories: CategoryResolver,
 ): VerdictReason[] {
-  const reasons: VerdictReason[] = [];
-  if (item.flaggedByClaude !== undefined) {
-    reasons.push({
-      code: 'flagged_by_claude',
-      params: { text: item.flaggedByClaude },
-    });
-  }
+  const reasons: VerdictReason[] =
+    verdict.outcome === 'rejected' ? [...verdict.reasons] : [];
   const zone = zoneOf(item.kind);
   for (const name of item.categories) {
     if (!categories.isKnown(zone, name)) {
@@ -200,15 +201,19 @@ function rejectionReasons(
 
 /**
  * Phase 3: writes a validated batch in one write transaction and returns the
- * report. Per item, in batch order: rejected when Claude flagged it or a
- * category is neither in its zone nor declared; duplicate when its dedup key
+ * report. `verdicts` holds phase 2's verdict for every item, by ref. Per
+ * item, in batch order: rejected when its verdict is rejected or a category
+ * is neither in its zone nor declared; duplicate when its dedup key
  * is in the catalog (re-checked here, under the lock) or belongs to an item
- * added earlier in the batch; otherwise added, creating the declared
+ * added earlier in the batch; otherwise added (warned when its verdict is),
+ * with the sources the verification kept, its warnings and notes as
+ * verification notes and `verified_at` = now, creating the declared
  * categories it uses. Every item appears exactly once in the report.
  */
 export function applyBatch(
   store: CatalogStore,
   batch: Batch,
+  verdicts: BatchVerdicts,
   { clock, ids, workspace }: ApplyBatchContext,
 ): ImportReport {
   return store.writeTransaction((writer) => {
@@ -219,7 +224,13 @@ export function applyBatch(
 
     for (const item of batch.items) {
       const base = { ref: item.ref, op: item.op };
-      const reasons = rejectionReasons(item, categories);
+      const verdict = verdicts.get(item.ref);
+      if (verdict === undefined) {
+        throw new WhenkitError('INTERNAL', {
+          detail: `no verification verdict for ${item.ref}`,
+        });
+      }
+      const reasons = rejectionReasons(item, verdict, categories);
       if (reasons.length > 0) {
         items.push({ ...base, outcome: 'rejected', reasons });
         continue;
@@ -262,19 +273,23 @@ export function applyBatch(
         whatItDoes: item.whatItDoes,
         situations: item.situations,
         keywords: item.keywords,
-        sources: item.kind === 'concept' ? item.sources : [],
+        sources: item.kind === 'concept' ? verdict.sources : [],
         content: item.kind === 'concept' ? item.content : null,
-        verificationNotes: [],
+        verificationNotes: verdict.reasons,
         dedupKey: key,
         addedAt: now,
-        // Set by verification, which arrives in ticket 5.
-        verifiedAt: null,
+        verifiedAt: now,
       });
       for (const categoryId of categoryIds) {
         writer.addEntryCategory(id, categoryId);
       }
       addedKeys.set(key, item.ref);
-      items.push({ ...base, outcome: 'added', id, reasons: [] });
+      items.push({
+        ...base,
+        outcome: verdict.outcome === 'warned' ? 'warned' : 'added',
+        id,
+        reasons: verdict.reasons,
+      });
     }
 
     // Validated before the commit: a report that breaks its own schema is a

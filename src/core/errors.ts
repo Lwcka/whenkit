@@ -14,6 +14,7 @@ export const ERROR_CODES = [
   'DATABASE_TOO_NEW',
   'DATABASE_NEEDS_MIGRATION',
   'DATABASE_BUSY',
+  'OFFLINE',
   'INTERNAL',
 ] as const;
 

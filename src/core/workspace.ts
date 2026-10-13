@@ -1,5 +1,6 @@
 import { WhenkitError } from './errors';
 import type { Environment, FileSystem, OpenStoreOptions } from './ports';
+import { parseBlockedDomains } from './verification/blocked-domains';
 import { CONFIG_VERSION } from './versions';
 
 // The single source of the workspace path (AD-8): WHENKIT_WORKSPACE, then
@@ -24,6 +25,79 @@ export interface WorkspaceConfig {
 
 export function catalogPath(fs: FileSystem, workspace: string): string {
   return fs.joinPath(workspace, 'data', 'catalog.sqlite');
+}
+
+const BLOCKED_DOMAINS_FILE = 'blocked-domains.txt';
+
+export function blockedDomainsPath(fs: FileSystem, workspace: string): string {
+  return fs.joinPath(workspace, 'data', BLOCKED_DOMAINS_FILE);
+}
+
+/**
+ * The template text for `data/blocked-domains.txt` when the workspace lacks
+ * the file, or undefined when it has it (the file is the user's and is never
+ * overwritten, AD-17). Reads only, so callers can fail before creating
+ * anything. A missing template is a broken install: INTERNAL.
+ */
+function missingBlockedDomainsText(
+  workspace: string,
+  { env, fs }: { env: Environment; fs: FileSystem },
+): string | undefined {
+  if (fs.exists(blockedDomainsPath(fs, workspace))) return undefined;
+  const template = fs.joinPath(
+    env.appRoot(),
+    'workspace-template',
+    'data',
+    BLOCKED_DOMAINS_FILE,
+  );
+  try {
+    return fs.readText(template);
+  } catch (cause) {
+    throw new WhenkitError('INTERNAL', {
+      cause,
+      detail: `cannot read the template ${template}`,
+    });
+  }
+}
+
+/** Writes the text missingBlockedDomainsText() returned, if any. */
+function writeBlockedDomains(
+  workspace: string,
+  fs: FileSystem,
+  text: string | undefined,
+): void {
+  if (text === undefined) return;
+  fs.mkdir(fs.joinPath(workspace, 'data'));
+  fs.writeText(blockedDomainsPath(fs, workspace), text);
+}
+
+/**
+ * Creates `data/blocked-domains.txt` from the app's
+ * `workspace-template/data/` when it is missing. Returns the file's path.
+ */
+function ensureBlockedDomains(
+  workspace: string,
+  ports: { env: Environment; fs: FileSystem },
+): string {
+  writeBlockedDomains(
+    workspace,
+    ports.fs,
+    missingBlockedDomainsText(workspace, ports),
+  );
+  return blockedDomainsPath(ports.fs, workspace);
+}
+
+/**
+ * The workspace's blocked-domain rules, parsed by parseBlockedDomains().
+ * A missing file is first recreated from the template.
+ */
+export function readBlockedDomains(
+  workspace: string,
+  ports: { env: Environment; fs: FileSystem },
+): string[] {
+  return parseBlockedDomains(
+    ports.fs.readText(ensureBlockedDomains(workspace, ports)),
+  );
 }
 
 function envValue(env: Environment, name: string): string | undefined {
@@ -152,8 +226,9 @@ export interface InitWorkspacePorts {
 }
 
 /**
- * Minimal `whenkit init` (ticket 10 adds the template): creates the folders
- * and the migrated catalog, then records the path in config.json unless
+ * Minimal `whenkit init` (ticket 10 adds the template): creates the folders,
+ * the migrated catalog and, when missing, `data/blocked-domains.txt` from
+ * the template, then records the path in config.json unless
  * WHENKIT_WORKSPACE is set (a development run never moves the real
  * configuration). Re-running on an existing workspace changes nothing.
  * Returns the workspace path.
@@ -180,11 +255,17 @@ export function initWorkspace(
     });
   }
 
+  // Read before anything is created: a missing template fails with nothing
+  // written (AD-11).
+  const blockedDomainsText = missingBlockedDomainsText(workspace, { env, fs });
+
   for (const folder of WORKSPACE_FOLDERS) {
     fs.mkdir(fs.joinPath(workspace, ...folder));
   }
   // The only place that may create the catalog file.
   openStore(catalogPath(fs, workspace), { create: true }).close();
+  // The user's file: created when missing, never overwritten (AD-17).
+  writeBlockedDomains(workspace, fs, blockedDomainsText);
 
   if (dir !== undefined) {
     const content: WorkspaceConfig = {

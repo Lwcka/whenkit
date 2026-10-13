@@ -1,5 +1,6 @@
 import { createProcessEnvironment } from '../adapters/env/process-environment';
 import { nodeFileSystem } from '../adapters/fs/node-file-system';
+import { createHttpClient } from '../adapters/http/node-http-client';
 import { openCatalogStore } from '../adapters/sqlite/sqlite-catalog-store';
 import { randomIdGenerator, systemClock } from '../adapters/system';
 import { main } from './main';
@@ -28,6 +29,7 @@ process.exitCode = await main(
         ids: randomIdGenerator,
         busyTimeoutMs: CLI_BUSY_TIMEOUT_MS,
       }),
+    http: createHttpClient(),
     cwd: process.cwd(),
   },
 );

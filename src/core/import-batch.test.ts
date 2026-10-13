@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import type { Batch } from './batch-schema';
 import type { Zone } from './category-seed';
 import { WhenkitError } from './errors';
 import { applyBatch, parseBatch, readBatch } from './import-batch';
@@ -11,6 +12,7 @@ import type {
   StoredCategory,
   StoredEntry,
 } from './ports';
+import type { ItemVerdict } from './verification/verify';
 
 // Core tests run on an in-memory fake store (AD-2); the real SQLite store is
 // covered in tests/.
@@ -137,8 +139,47 @@ function errorOf(action: () => unknown): WhenkitError {
   throw new Error('expected a WhenkitError');
 }
 
-function run(store: FakeStore, items: unknown[], extra = {}) {
-  return applyBatch(store, parseBatch(batchText(items, extra)), context());
+/**
+ * Phase 2 verdicts as verification gives them for working links: Claude's
+ * flag rejects, every other item is accepted with all its sources. Entries
+ * in `overrides` replace the verdict of their ref.
+ */
+function verdictsFor(
+  batch: Batch,
+  overrides: Record<string, ItemVerdict> = {},
+): Map<string, ItemVerdict> {
+  return new Map(
+    batch.items.map((item): [string, ItemVerdict] => [
+      item.ref,
+      overrides[item.ref] ??
+        (item.flaggedByClaude !== undefined
+          ? {
+              outcome: 'rejected',
+              reasons: [
+                {
+                  code: 'flagged_by_claude',
+                  params: { text: item.flaggedByClaude },
+                },
+              ],
+              sources: [],
+            }
+          : {
+              outcome: 'accepted',
+              reasons: [],
+              sources: item.kind === 'concept' ? item.sources : [],
+            }),
+    ]),
+  );
+}
+
+function run(
+  store: FakeStore,
+  items: unknown[],
+  extra = {},
+  overrides: Record<string, ItemVerdict> = {},
+) {
+  const batch = parseBatch(batchText(items, extra));
+  return applyBatch(store, batch, verdictsFor(batch, overrides), context());
 }
 
 describe('parseBatch (phase 1)', () => {
@@ -220,7 +261,7 @@ describe('applyBatch (phase 3)', () => {
         verificationNotes: [],
         dedupKey: 'url:a.dev',
         addedAt: '2026-10-13T12:00:00.000Z',
-        verifiedAt: null,
+        verifiedAt: '2026-10-13T12:00:00.000Z',
         categoryIds: ['seed-1'],
       },
     ]);
@@ -415,8 +456,116 @@ describe('applyBatch (phase 3)', () => {
         return `id-${calls}`;
       },
     };
-    expect(() => applyBatch(store, batch, { ...context(), ids })).toThrow(
-      'boom',
+    expect(() =>
+      applyBatch(store, batch, verdictsFor(batch), { ...context(), ids }),
+    ).toThrow('boom');
+    expect(store.entries).toEqual([]);
+  });
+});
+
+describe('applyBatch with verification verdicts', () => {
+  const concept = {
+    ref: 'c',
+    op: 'add',
+    kind: 'concept',
+    name: 'REST',
+    categories: ['Backend & API-uri'],
+    whatItDoes: 'Stil de API.',
+    situations: ['Când aleg un API'],
+    content: '# REST',
+    sources: ['https://dead.dev', 'https://live.dev'],
+  };
+
+  it('stores a warned item with its notes, kept sources and verified_at', () => {
+    const store = new FakeStore(SEED);
+    const reasons = [
+      {
+        code: 'source_link_removed' as const,
+        params: { url: 'https://dead.dev' },
+      },
+    ];
+    const report = run(
+      store,
+      [concept],
+      {},
+      {
+        c: { outcome: 'warned', reasons, sources: ['https://live.dev'] },
+      },
+    );
+    expect(report.items).toEqual([
+      { ref: 'c', op: 'add', outcome: 'warned', id: 'id-1', reasons },
+    ]);
+    expect(store.entries[0]).toMatchObject({
+      sources: ['https://live.dev'],
+      verificationNotes: reasons,
+      verifiedAt: '2026-10-13T12:00:00.000Z',
+    });
+  });
+
+  it('adds an accepted item with a note, keeping the note in the report', () => {
+    const store = new FakeStore(SEED);
+    const reasons = [{ code: 'blocks_automation' as const }];
+    const report = run(
+      store,
+      [tool('a')],
+      {},
+      {
+        a: { outcome: 'accepted', reasons, sources: [] },
+      },
+    );
+    expect(report.items[0]).toMatchObject({ outcome: 'added', reasons });
+    expect(store.entries[0].verificationNotes).toEqual(reasons);
+  });
+
+  it('joins rejected verdict reasons with unknown categories, writing nothing', () => {
+    const store = new FakeStore(SEED);
+    const report = run(
+      store,
+      [tool('a', { categories: ['Nicăieri'] })],
+      {},
+      {
+        a: {
+          outcome: 'rejected',
+          reasons: [{ code: 'http_error', params: { status: '404' } }],
+          sources: [],
+        },
+      },
+    );
+    expect(report.items[0]).toEqual({
+      ref: 'a',
+      op: 'add',
+      outcome: 'rejected',
+      reasons: [
+        { code: 'http_error', params: { status: '404' } },
+        { code: 'unknown_category', params: { name: 'Nicăieri' } },
+      ],
+    });
+    expect(store.entries).toEqual([]);
+  });
+
+  it('reports a warned duplicate as a duplicate', () => {
+    const store = new FakeStore(SEED);
+    run(store, [tool('a')]);
+    const report = run(
+      store,
+      [tool('a2', { url: 'https://a.dev/' })],
+      {},
+      {
+        a2: {
+          outcome: 'warned',
+          reasons: [{ code: 'no_response_at_import' }],
+          sources: [],
+        },
+      },
+    );
+    expect(report.items[0].outcome).toBe('duplicate');
+  });
+
+  it('refuses a batch whose item has no verdict, writing nothing', () => {
+    const store = new FakeStore(SEED);
+    const batch = parseBatch(batchText([tool('a')]));
+    expect(() => applyBatch(store, batch, new Map(), context())).toThrow(
+      WhenkitError,
     );
     expect(store.entries).toEqual([]);
   });

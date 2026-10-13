@@ -1,7 +1,13 @@
 import path from 'node:path';
+import { WhenkitError } from '../../core/errors';
 import { applyBatch, readBatch } from '../../core/import-batch';
 import { importReportSchema } from '../../core/import-report-schema';
-import { catalogPath, resolveWorkspace } from '../../core/workspace';
+import { verifyBatch } from '../../core/verification/verify';
+import {
+  catalogPath,
+  readBlockedDomains,
+  resolveWorkspace,
+} from '../../core/workspace';
 import { EXIT_OK } from '../exit-codes';
 import {
   parseArgs,
@@ -12,10 +18,10 @@ import {
 import { renderImportReport } from '../render';
 
 /** `whenkit import <lot> [--json]` */
-export function runImport(
+export async function runImport(
   args: readonly string[],
   ctx: CommandContext,
-): number {
+): Promise<number> {
   const [file] = parseArgs('import', args, { required: ['lot'], json: true });
   const { deps } = ctx;
   const workspace = resolveWorkspace(deps.env, deps.fs);
@@ -25,10 +31,24 @@ export function runImport(
   // nothing.
   const batch = readBatch(deps.fs, path.resolve(deps.cwd, file));
 
-  const store = deps.openStore(catalogPath(deps.fs, workspace));
+  // A workspace without a catalog fails before any link is checked or the
+  // blocked-domain list is recreated; opening the store checks it again.
+  const dbPath = catalogPath(deps.fs, workspace);
+  if (!deps.fs.exists(dbPath)) {
+    throw new WhenkitError('CATALOG_NOT_FOUND', { detail: dbPath });
+  }
+
+  // Phase 2 holds no transaction (AD-6). OFFLINE stops here: nothing written.
+  const verdicts = await verifyBatch(batch, {
+    http: deps.http,
+    blockedDomains: readBlockedDomains(workspace, deps),
+    retryDelayMs: deps.retryDelayMs,
+  });
+
+  const store = deps.openStore(dbPath);
   let report;
   try {
-    report = applyBatch(store, batch, {
+    report = applyBatch(store, batch, verdicts, {
       clock: deps.clock,
       ids: deps.ids,
       workspace,

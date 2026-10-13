@@ -5,6 +5,7 @@ import {
   initWorkspace,
   isSameOrInside,
   normalizeWorkspacePath,
+  readBlockedDomains,
   resolveWorkspace,
 } from './workspace';
 
@@ -39,6 +40,15 @@ class FakeFileSystem implements FileSystem {
 const APP_ROOT = 'C:\\Proiecte\\whenkit';
 const APPDATA = 'C:\\AppData';
 const CONFIG = 'C:\\AppData\\whenkit\\config.json';
+const TEMPLATE_LIST =
+  'C:\\Proiecte\\whenkit\\workspace-template\\data\\blocked-domains.txt';
+const TEMPLATE_TEXT = '# initial\nlibgen.*\npdfdrive.com\n';
+
+/** A fake file system holding the app's blocked-domains template. */
+function withTemplate(fs = new FakeFileSystem()): FakeFileSystem {
+  fs.writeText(TEMPLATE_LIST, TEMPLATE_TEXT);
+  return fs;
+}
 
 function fakeEnv(vars: Record<string, string>): Environment {
   return { get: (name) => vars[name], appRoot: () => APP_ROOT };
@@ -205,7 +215,7 @@ describe('isSameOrInside', () => {
 
 describe('initWorkspace', () => {
   it('creates the folders and the catalog, then writes config.json', () => {
-    const fs = new FakeFileSystem();
+    const fs = withTemplate();
     const { opened, openStore } = fakeOpener();
     const env = fakeEnv({ APPDATA });
     expect(initWorkspace({ path: 'D:\\ws' }, { env, fs, openStore })).toBe(
@@ -222,7 +232,7 @@ describe('initWorkspace', () => {
   });
 
   it('uses the resolved workspace when no path is given', () => {
-    const fs = new FakeFileSystem();
+    const fs = withTemplate();
     fs.writeText(CONFIG, config('D:\\ws'));
     const { opened, openStore } = fakeOpener();
     const env = fakeEnv({ APPDATA });
@@ -231,16 +241,52 @@ describe('initWorkspace', () => {
   });
 
   it('does not write config.json when WHENKIT_WORKSPACE is set', () => {
-    const fs = new FakeFileSystem();
+    const fs = withTemplate();
     const { opened, openStore } = fakeOpener();
     const env = fakeEnv({ APPDATA, WHENKIT_WORKSPACE: 'D:\\dev' });
     expect(initWorkspace({}, { env, fs, openStore })).toBe('D:\\dev');
     expect(opened).toEqual(['D:\\dev\\data\\catalog.sqlite']);
-    expect(fs.files.size).toBe(0);
+    expect([...fs.files.keys()].sort()).toEqual([
+      TEMPLATE_LIST,
+      'D:\\dev\\data\\blocked-domains.txt',
+    ]);
+  });
+
+  it('creates data/blocked-domains.txt from the template when missing', () => {
+    const fs = withTemplate();
+    const { openStore } = fakeOpener();
+    initWorkspace(
+      { path: 'D:\\ws' },
+      { env: fakeEnv({ APPDATA }), fs, openStore },
+    );
+    expect(fs.readText('D:\\ws\\data\\blocked-domains.txt')).toBe(
+      TEMPLATE_TEXT,
+    );
+  });
+
+  it('creates nothing when the blocked-domains template is missing', () => {
+    const fs = new FakeFileSystem();
+    const { opened, openStore } = fakeOpener();
+    const env = fakeEnv({ APPDATA });
+    expect(
+      codeOf(() => initWorkspace({ path: 'D:\\ws' }, { env, fs, openStore })),
+    ).toBe('INTERNAL');
+    expect(fs.dirs.size + fs.files.size + opened.length).toBe(0);
+  });
+
+  it('never overwrites an existing blocked-domains.txt', () => {
+    const fs = withTemplate();
+    fs.writeText('D:\\ws\\data\\blocked-domains.txt', 'mine.com\n');
+    const { openStore } = fakeOpener();
+    initWorkspace(
+      { path: 'D:\\ws' },
+      { env: fakeEnv({ APPDATA }), fs, openStore },
+    );
+    expect(fs.readText('D:\\ws\\data\\blocked-domains.txt')).toBe('mine.com\n');
   });
 
   it('uses the normalized path for folders, catalog and config.json', () => {
-    const fs = new FakeFileSystem();
+    const fs = withTemplate();
     const { opened, openStore } = fakeOpener();
     const env = fakeEnv({ APPDATA });
     expect(initWorkspace({ path: 'D:/x/../ws/' }, { env, fs, openStore })).toBe(
@@ -312,7 +358,7 @@ describe('initWorkspace', () => {
   });
 
   it('does not write config.json when the store refuses to open', () => {
-    const fs = new FakeFileSystem();
+    const fs = withTemplate();
     const env = fakeEnv({ APPDATA });
     const openStore = (): { close(): void } => {
       throw new WhenkitError('MIGRATION_MISMATCH');
@@ -320,6 +366,37 @@ describe('initWorkspace', () => {
     expect(
       codeOf(() => initWorkspace({ path: 'D:\\ws' }, { env, fs, openStore })),
     ).toBe('MIGRATION_MISMATCH');
+    expect([...fs.files.keys()]).toEqual([TEMPLATE_LIST]);
+  });
+});
+
+describe('readBlockedDomains', () => {
+  const LIST = 'D:\\ws\\data\\blocked-domains.txt';
+  const env = fakeEnv({});
+
+  it('parses the workspace list', () => {
+    const fs = withTemplate();
+    fs.writeText(LIST, '# mine\nWWW.Exemplu.com\n\nsci-hub.*  # comment\n');
+    expect(readBlockedDomains('D:\\ws', { env, fs })).toEqual([
+      'exemplu.com',
+      'sci-hub.*',
+    ]);
+  });
+
+  it('recreates a missing list from the template, then uses it', () => {
+    const fs = withTemplate();
+    expect(readBlockedDomains('D:\\ws', { env, fs })).toEqual([
+      'libgen.*',
+      'pdfdrive.com',
+    ]);
+    expect(fs.readText(LIST)).toBe(TEMPLATE_TEXT);
+  });
+
+  it('fails with INTERNAL when the template is missing too', () => {
+    const fs = new FakeFileSystem();
+    expect(codeOf(() => readBlockedDomains('D:\\ws', { env, fs }))).toBe(
+      'INTERNAL',
+    );
     expect(fs.files.size).toBe(0);
   });
 });

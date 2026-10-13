@@ -13,11 +13,13 @@ import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
 import { main } from '../src/cli/main';
 import { errorMessages } from '../src/shared/strings.ro';
 import {
+  fakeAppRoot,
   fakeEnvironment,
   fixedClock,
   sequentialIds,
   tempDir,
   testStoreOpener,
+  unusedHttp,
 } from './helpers';
 
 // `whenkit init` end to end on temp dirs: real file system and SQLite, with
@@ -34,9 +36,8 @@ interface Setup {
 function setup(vars: { workspaceEnv?: string } = {}): Setup {
   const root = tempDir();
   const appData = path.join(root, 'AppData');
-  const appRoot = path.join(root, 'repo');
+  const appRoot = fakeAppRoot(path.join(root, 'repo'));
   mkdirSync(appData);
-  mkdirSync(appRoot);
   return {
     root,
     appData,
@@ -65,6 +66,7 @@ async function runCli(s: Setup, args: string[], cwd = s.root) {
       clock: fixedClock(),
       ids: sequentialIds(),
       openStore: testStoreOpener(),
+      http: unusedHttp,
       cwd,
     },
   );
@@ -166,6 +168,23 @@ describe('whenkit init', () => {
     expect(readdirSync(path.join(workspace, 'data', 'backups'))).toEqual([]);
   });
 
+  it('creates data/blocked-domains.txt from the template and never overwrites it', async () => {
+    const s = setup();
+    const workspace = path.join(s.root, 'ws');
+    expect((await runCli(s, ['init', workspace])).exitCode).toBe(0);
+    const list = path.join(workspace, 'data', 'blocked-domains.txt');
+    const template = readFileSync(
+      path.join(s.appRoot, 'workspace-template', 'data', 'blocked-domains.txt'),
+      'utf8',
+    );
+    expect(readFileSync(list, 'utf8')).toBe(template);
+    expect(template).toMatch(/^libgen\.\*$/m);
+
+    writeFileSync(list, 'exemplu.com\n');
+    expect((await runCli(s, ['init'])).exitCode).toBe(0);
+    expect(readFileSync(list, 'utf8')).toBe('exemplu.com\n');
+  });
+
   it.each([
     ['the app root itself', (appRoot: string) => appRoot],
     ['a folder inside it', (appRoot: string) => path.join(appRoot, 'ws')],
@@ -181,7 +200,7 @@ describe('whenkit init', () => {
     expect(result.exitCode).toBe(2);
     expect(result.stdout).toBe('');
     expect(result.stderr).toContain(errorMessages.WORKSPACE_INSIDE_REPO);
-    expect(readdirSync(s.appRoot)).toEqual([]);
+    expect(readdirSync(s.appRoot)).toEqual(['workspace-template']);
     expect(existsSync(path.join(s.appData, 'whenkit'))).toBe(false);
   });
 
@@ -190,7 +209,7 @@ describe('whenkit init', () => {
     s.vars.WHENKIT_WORKSPACE = path.join(s.appRoot, 'ws');
     const result = await runCli(s, ['init']);
     expect(result.exitCode).toBe(2);
-    expect(readdirSync(s.appRoot)).toEqual([]);
+    expect(readdirSync(s.appRoot)).toEqual(['workspace-template']);
   });
 
   // Win32 clamps `..` at the drive root and strips trailing dots and spaces,
@@ -203,7 +222,7 @@ describe('whenkit init', () => {
 
   function expectNothingCreated(s: Setup) {
     expect(readdirSync(s.root).sort()).toEqual(['AppData', 'repo']);
-    expect(readdirSync(s.appRoot)).toEqual([]);
+    expect(readdirSync(s.appRoot)).toEqual(['workspace-template']);
     expect(readdirSync(s.appData)).toEqual([]);
   }
 

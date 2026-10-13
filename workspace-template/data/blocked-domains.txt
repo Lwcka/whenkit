@@ -1,0 +1,17 @@
+# Domenii interzise: o resursă de pe aceste domenii nu intră în catalog.
+# Linkul trimis, cel final (după redirect) și sursele conceptelor se
+# verifică după această listă.
+#
+# Fișierul e al tău: whenkit nu îl modifică niciodată (doar îl recreează,
+# dacă lipsește). Claude propune domenii noi în raportul de import.
+#
+# O regulă pe linie; tot ce urmează după # e comentariu.
+#   exemplu.com   blochează exemplu.com și subdomeniile lui
+#   exemplu.*     blochează exemplu.<orice TLD> (exemplu.is, exemplu.co.uk)
+#                 și subdomeniile lor
+
+libgen.*
+sci-hub.*
+z-lib.*
+pdfdrive.com
+12ft.io

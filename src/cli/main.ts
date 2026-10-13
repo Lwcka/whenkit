@@ -25,7 +25,10 @@ import { formatIssuePath } from './render';
 export type { CliDeps, CliIo } from './command';
 
 interface Command {
-  run: (args: readonly string[], ctx: CommandContext) => number;
+  run: (
+    args: readonly string[],
+    ctx: CommandContext,
+  ) => number | Promise<number>;
   /** Whether the command speaks the `--json` contract (AD-11). */
   json: boolean;
 }
@@ -120,7 +123,8 @@ export async function main(
     workspace: null,
   };
   try {
-    return command.run(rest, ctx);
+    // Awaited here, so an async command's failure is reported like a sync one.
+    return await command.run(rest, ctx);
   } catch (error) {
     try {
       return reportError(ctx, error);

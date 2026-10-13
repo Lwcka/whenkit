@@ -61,6 +61,8 @@ export const errorMessages: Record<ErrorCode, string> = {
     'Baza de date trebuie actualizată la versiunea acestui whenkit. Rulează „whenkit init”; comenzile de citire nu modifică baza.',
   DATABASE_BUSY:
     'Baza de date e blocată de alt proces. Încearcă din nou peste câteva secunde.',
+  OFFLINE:
+    'Nu există conexiune la internet, deci linkurile nu pot fi verificate. Importul s-a oprit: nu s-a scris și nu s-a respins nimic. Reia importul când revine conexiunea.',
   INTERNAL: 'Eroare internă neprevăzută.',
 };
 
@@ -99,6 +101,26 @@ export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
     p.ref === undefined
       ? 'există deja în catalog'
       : `repetă elementul „${p.ref}” din același lot`,
+  invalid_url: () =>
+    'linkul nu e un URL http(s) valid (de exemplu, o greșeală de scriere)',
+  http_error: (p) =>
+    `linkul nu funcționează: site-ul răspunde cu eroarea HTTP ${p.status ?? ''}`,
+  dns_not_found: () => 'domeniul linkului nu există',
+  tls_error: () => 'certificatul SSL al site-ului e invalid',
+  connection_error: () =>
+    'conexiunea la site a fost refuzată sau întreruptă, ori redirecționarea e greșită',
+  blocks_automation: () =>
+    'site-ul blochează accesul automat; linkul nu a putut fi verificat complet',
+  no_response_at_import: (p) =>
+    p.url === undefined
+      ? 'site-ul nu a răspuns la import (eroare de server sau timeout, după 3 încercări)'
+      : `sursa ${p.url} nu a răspuns la import (eroare de server sau timeout, după 3 încercări)`,
+  blocked_domain: (p) =>
+    `domeniu interzis (regula „${p.domain ?? ''}” din data\\blocked-domains.txt)`,
+  source_link_removed: (p) =>
+    `sursa ${p.url ?? ''} nu funcționează și a fost scoasă din Surse`,
+  source_blocked_domain: (p) =>
+    `sursa ${p.url ?? ''} e pe un domeniu interzis (regula „${p.domain ?? ''}”)`,
 };
 
 export const importStrings = {
@@ -113,7 +135,7 @@ export const importStrings = {
   proposedBlockedDomains: (domains: string) =>
     `Domenii propuse pentru blocare (editează tu data\\blocked-domains.txt): ${domains}`,
   summary: (counts: Record<ImportOutcome, number>) =>
-    `Rezumat: ${counts.added} adăugate, ${counts.rejected} respinse, ${counts.duplicate} duplicate.`,
+    `Rezumat: ${counts.added} adăugate, ${counts.warned} adăugate cu avertisment, ${counts.rejected} respinse, ${counts.duplicate} duplicate.`,
 } as const;
 
 export const entryStrings = {
@@ -134,5 +156,6 @@ export const entryStrings = {
   addedAt: 'Adăugată la',
   verifiedAt: 'Verificată la',
   notVerified: 'încă neverificată',
+  verificationNotes: 'Note de verificare',
   id: 'Id',
 } as const;

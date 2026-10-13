@@ -12,11 +12,13 @@ import {
   showOutputSchema,
 } from '../src/core/cli-schemas';
 import { importReportSchema } from '../src/core/import-report-schema';
-import type { CatalogStoreOpener } from '../src/core/ports';
+import type { CatalogStoreOpener, HttpClient } from '../src/core/ports';
 import { errorMessages } from '../src/shared/strings.ro';
 import {
+  fakeAppRoot,
   fakeEnvironment,
   fixedClock,
+  okHttp,
   sequentialIds,
   tempDir,
   testStoreOpener,
@@ -34,12 +36,15 @@ interface Setup {
 }
 
 function setup(
-  options: { workspaceEnv?: boolean; openStore?: CatalogStoreOpener } = {},
+  options: {
+    workspaceEnv?: boolean;
+    openStore?: CatalogStoreOpener;
+    http?: HttpClient;
+  } = {},
 ): Setup {
   const root = tempDir();
-  const appRoot = path.join(root, 'repo');
+  const appRoot = fakeAppRoot(path.join(root, 'repo'));
   const appData = path.join(root, 'AppData');
-  mkdirSync(appRoot);
   mkdirSync(appData);
   const workspace = path.join(root, 'ws');
   return {
@@ -59,6 +64,7 @@ function setup(
       clock: fixedClock(new Date('2026-10-13T12:00:00.000Z')),
       ids: sequentialIds(),
       openStore: options.openStore ?? testStoreOpener(),
+      http: options.http ?? okHttp,
       cwd: root,
     },
   };
@@ -171,7 +177,7 @@ describe('whenkit import, list and show', () => {
       url: 'https://a.dev',
       categories: [{ id: expect.any(String), name: 'Imagini & video' }],
       addedAt: '2026-10-13T12:00:00.000Z',
-      verifiedAt: null,
+      verifiedAt: '2026-10-13T12:00:00.000Z',
     });
     expect(list.entries[0]).not.toHaveProperty('content');
 

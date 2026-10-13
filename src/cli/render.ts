@@ -120,6 +120,7 @@ export function renderEntry(entry: EntryDto): string[] {
   }
   field(entryStrings.addedAt, entry.addedAt);
   field(entryStrings.verifiedAt, entry.verifiedAt ?? entryStrings.notVerified);
+  list(entryStrings.verificationNotes, entry.verificationNotes.map(reasonText));
   field(entryStrings.id, entry.id);
   return lines;
 }
