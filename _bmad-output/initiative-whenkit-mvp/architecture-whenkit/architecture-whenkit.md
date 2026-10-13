@@ -83,7 +83,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
   - **Duplicate:** `core` calculează `dedup_key` (`url:<URL normalizat>` sau `title:<titlu normalizat>` pentru concepte fără link); index unic pe `(owner_id, dedup_key)`.
   - **Concurență:** `entries.revision` crește la fiecare scriere (AD-16).
   - **Motive:** `verification_notes` e JSON, listă de `VerdictReason` (AD-15).
-  - **Căutare:** `entries_fts` e FTS5 external-content (`content='entries'`, `tokenize='unicode61 remove_diacritics 2'`) peste coloane text derivate (listele unite cu spațiu); se sincronizează **doar** prin triggerele din migrare. Interogarea se construiește într-o singură funcție din adaptor: fiecare token al utilizatorului devine `"tok"*`, uniți cu AND; utilizatorul nu scrie niciodată sintaxă FTS.
+  - **Căutare:** `entries_fts` e FTS5 external-content cu sursa în view-ul `entries_fts_source` (`content='entries_fts_source'`, `content_rowid='seq'`, `tokenize='unicode61 remove_diacritics 2'`), care expune coloanele text derivate din `entries` (listele JSON unite cu spațiu), așa că indexul și sursa lui sunt mereu identice; se sincronizează **doar** prin triggerele din migrare, pe `entries`. Interogarea se construiește într-o singură funcție din adaptor: fiecare token al utilizatorului devine `"tok"*`, uniți cu AND; utilizatorul nu scrie niciodată sintaxă FTS.
   - **Jurnal:** `rejections` păstrează elementul din lot exact cum a trecut de schemă (`element` JSON), motivele, `dedup_key`, `op` și `batch_schema_version`; o respingere se elimină când `dedup_key`-ul ei e acceptat sau forțat.
 
 ### AD-6 — Contractul lotului de import
