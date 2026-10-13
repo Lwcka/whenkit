@@ -1,0 +1,2 @@
+# LF everywhere, whatever core.autocrlf says: oxfmt checks LF and migration files must not change.
+* text=auto eol=lf
