@@ -1,82 +1,133 @@
-import path from 'node:path';
 import { version } from '../../package.json';
-import { isWhenkitError } from '../core/errors';
-import type {
-  CatalogStoreOpener,
-  Clock,
-  Environment,
-  FileSystem,
-  IdGenerator,
-} from '../core/ports';
-import { initWorkspace } from '../core/workspace';
+import { errorOutputSchema } from '../core/cli-schemas';
+import { isWhenkitError, type ErrorCode } from '../core/errors';
+import { CLI_OUTPUT_VERSION } from '../core/versions';
 import { cliStrings, errorMessages } from '../shared/strings.ro';
-import { EXIT_INVALID_INPUT, EXIT_OK, exitCodeFor } from './exit-codes';
+import {
+  UsageError,
+  printJson,
+  type CliDeps,
+  type CliIo,
+  type CommandContext,
+} from './command';
+import { runImport } from './commands/import';
+import { runInit } from './commands/init';
+import { runList } from './commands/list';
+import { runShow } from './commands/show';
+import {
+  EXIT_INTERNAL,
+  EXIT_INVALID_INPUT,
+  EXIT_OK,
+  exitCodeFor,
+} from './exit-codes';
+import { formatIssuePath } from './render';
 
-export interface CliIo {
-  stdout: (text: string) => void;
-  stderr: (text: string) => void;
+export type { CliDeps, CliIo } from './command';
+
+interface Command {
+  run: (args: readonly string[], ctx: CommandContext) => number;
+  /** Whether the command speaks the `--json` contract (AD-11). */
+  json: boolean;
 }
 
-/** Ports and process facts the CLI runs on; bin.ts injects the real ones. */
-export interface CliDeps {
-  env: Environment;
-  fs: FileSystem;
-  clock: Clock;
-  ids: IdGenerator;
-  /** Opens the catalog database (SqliteCatalogStore in bin.ts). */
-  openStore: CatalogStoreOpener;
-  /** Directory relative paths are resolved against. */
-  cwd: string;
+const COMMANDS: Record<string, Command> = {
+  init: { run: runInit, json: false },
+  import: { run: runImport, json: true },
+  list: { run: runList, json: true },
+  show: { run: runShow, json: true },
+};
+
+/** Prints an error: one JSON document on stdout with `--json`, else stderr text. */
+function reportError(ctx: CommandContext, error: unknown): number {
+  if (error instanceof UsageError) {
+    if (ctx.json) {
+      printErrorDocument(ctx, 'ARGUMENTS_INVALID', error.text);
+    } else {
+      ctx.io.stderr(`${error.text}\n`);
+    }
+    return EXIT_INVALID_INPUT;
+  }
+
+  const code: ErrorCode = isWhenkitError(error) ? error.code : 'INTERNAL';
+  const issues = isWhenkitError(error) ? error.issues : undefined;
+  if (ctx.json) {
+    printErrorDocument(ctx, code, errorMessages[code], issues);
+  } else {
+    const lines = [`${cliStrings.errorPrefix}: ${errorMessages[code]}`];
+    for (const issue of issues ?? []) {
+      lines.push(
+        cliStrings.issueLine(formatIssuePath(issue.path), issue.message),
+      );
+    }
+    ctx.io.stderr(`${lines.join('\n')}\n`);
+  }
+  return exitCodeFor[code];
 }
 
-function runInit(args: readonly string[], io: CliIo, deps: CliDeps): number {
-  const option = args.find((arg) => arg.startsWith('-'));
-  if (option !== undefined) {
-    io.stderr(`${cliStrings.unknownOption('init', option)}\n`);
-    return EXIT_INVALID_INPUT;
-  }
-  if (args.length > 1) {
-    io.stderr(`${cliStrings.tooManyArguments('init')}\n`);
-    return EXIT_INVALID_INPUT;
-  }
-  const [target] = args;
-  const workspace = initWorkspace(
-    { path: target === undefined ? undefined : path.resolve(deps.cwd, target) },
-    { env: deps.env, fs: deps.fs, openStore: deps.openStore },
-  );
-  io.stdout(`${cliStrings.initDone(workspace)}\n`);
-  return EXIT_OK;
+function printErrorDocument(
+  ctx: CommandContext,
+  code: ErrorCode,
+  message: string,
+  issues?: readonly { path: (string | number)[]; message: string }[],
+): void {
+  printJson(ctx.io, errorOutputSchema, {
+    schemaVersion: CLI_OUTPUT_VERSION,
+    workspace: ctx.workspace,
+    error: {
+      code,
+      message,
+      ...(issues === undefined ? {} : { issues: [...issues] }),
+    },
+  });
 }
 
 /**
  * Handles the `whenkit` arguments and returns the process exit code.
- * Errors are printed as Romanian text on stderr, never as a stack trace.
+ * Errors are printed as Romanian text on stderr, or as one JSON document on
+ * stdout with `--json`; never as a stack trace.
  */
 export async function main(
   args: readonly string[],
   io: CliIo,
   deps: CliDeps,
 ): Promise<number> {
-  const [command, ...rest] = args;
+  const [name, ...rest] = args;
 
-  if (command === undefined || command === '--help' || command === '-h') {
+  if (name === undefined || name === '--help' || name === '-h') {
     io.stdout(`${cliStrings.usage}\n`);
     return EXIT_OK;
   }
 
-  if (command === '--version' || command === '-v') {
+  if (name === '--version' || name === '-v') {
     io.stdout(`${version}\n`);
     return EXIT_OK;
   }
 
-  try {
-    if (command === 'init') return runInit(rest, io, deps);
-  } catch (error) {
-    const code = isWhenkitError(error) ? error.code : 'INTERNAL';
-    io.stderr(`${cliStrings.errorPrefix}: ${errorMessages[code]}\n`);
-    return exitCodeFor[code];
+  const command = Object.hasOwn(COMMANDS, name) ? COMMANDS[name] : undefined;
+  if (command === undefined) {
+    // `whenkit lst --json` or `whenkit --json list`: the caller asked for
+    // JSON, so it gets the one error document (AD-11).
+    return reportError(
+      { io, deps, json: args.includes('--json'), workspace: null },
+      new UsageError(cliStrings.unknownCommand(name)),
+    );
   }
 
-  io.stderr(`${cliStrings.unknownCommand(command)}\n`);
-  return EXIT_INVALID_INPUT;
+  const ctx: CommandContext = {
+    io,
+    deps,
+    json: command.json && rest.includes('--json'),
+    workspace: null,
+  };
+  try {
+    return command.run(rest, ctx);
+  } catch (error) {
+    try {
+      return reportError(ctx, error);
+    } catch {
+      // The error document itself failed its schema: a bug, never silent.
+      io.stderr(`${cliStrings.errorPrefix}: ${errorMessages.INTERNAL}\n`);
+      return EXIT_INTERNAL;
+    }
+  }
 }

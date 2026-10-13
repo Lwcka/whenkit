@@ -3,6 +3,7 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { CATEGORY_SEED } from '../src/core/category-seed';
+import type { NewEntryRow, OpenStoreOptions } from '../src/core/ports';
 import { nameKey } from '../src/core/name-key';
 import {
   bundledMigrations,
@@ -26,8 +27,13 @@ function backupsOf(dbPath: string) {
   return path.join(path.dirname(dbPath), 'backups');
 }
 
-function open(dbPath: string, migrations?: Migration[]) {
+function open(
+  dbPath: string,
+  migrations?: Migration[],
+  options: OpenStoreOptions = { create: true },
+) {
   return openCatalogStore(dbPath, {
+    ...options,
     clock: fixedClock(),
     ids: sequentialIds(),
     busyTimeoutMs: 100,
@@ -357,5 +363,149 @@ describe('SqliteCatalogStore', () => {
           .get(),
       ).toEqual({ my_notes: '', revision: 1, forced: 0, sources: '[]' });
     });
+  });
+});
+
+function entryRow(overrides: Partial<NewEntryRow> = {}): NewEntryRow {
+  return {
+    id: 'e1',
+    kind: 'tool',
+    name: 'remove.bg',
+    url: 'https://remove.bg',
+    resourceType: 'site',
+    whatItDoes: 'Elimină fundalul.',
+    situations: ['Când vreau fundal transparent'],
+    keywords: ['fundal'],
+    sources: [],
+    content: null,
+    verificationNotes: [],
+    dedupKey: 'url:remove.bg',
+    addedAt: '2026-10-13T12:00:00.000Z',
+    verifiedAt: null,
+    ...overrides,
+  };
+}
+
+describe('SqliteCatalogStore open modes', () => {
+  it('refuses a missing file with CATALOG_NOT_FOUND unless asked to create it', () => {
+    const dbPath = newDbPath();
+    expect(errorCodeOf(() => open(dbPath, undefined, {}))).toBe(
+      'CATALOG_NOT_FOUND',
+    );
+    expect(errorCodeOf(() => open(dbPath, undefined, { readOnly: true }))).toBe(
+      'CATALOG_NOT_FOUND',
+    );
+    expect(existsSync(dbPath)).toBe(false);
+  });
+
+  it('opens an existing catalog read-only and refuses to write through it', () => {
+    const dbPath = newDbPath();
+    const writer = open(dbPath);
+    const owner = writer.ownerId();
+    writer.close();
+
+    const reader = open(dbPath, undefined, { readOnly: true });
+    expect(reader.ownerId()).toBe(owner);
+    expect(reader.schemaVersion()).toBe(1);
+    expect(reader.categoriesInZone('learn')).toHaveLength(7);
+    expect(errorCodeOf(() => reader.writeTransaction(() => 0))).toBe(
+      'INTERNAL',
+    );
+    reader.close();
+  });
+
+  it('refuses read-only a database with a pending migration, writing nothing', () => {
+    const dbPath = newDbPath();
+    open(dbPath).close();
+    expect(
+      errorCodeOf(() =>
+        open(dbPath, [...bundledMigrations(), v2], { readOnly: true }),
+      ),
+    ).toBe('DATABASE_NEEDS_MIGRATION');
+    withRawDb(dbPath, (db) => {
+      expect(
+        db.prepare('SELECT max(version) AS v FROM schema_migrations').get(),
+      ).toEqual({ v: 1 });
+    });
+    expect(existsSync(backupsOf(dbPath))).toBe(false);
+  });
+});
+
+describe('SqliteCatalogStore reads and writes', () => {
+  it('writes an entry with its categories and reads it back camelCased', () => {
+    const dbPath = newDbPath();
+    const store = open(dbPath);
+    const [design] = store
+      .categoriesInZone('toolbox')
+      .filter((c) => c.name === 'Design & UI');
+    store.writeTransaction((tx) => {
+      tx.insertCategory({
+        id: 'c-new',
+        zone: 'toolbox',
+        name: 'Fonturi',
+        nameKey: 'fonturi',
+      });
+      tx.insertEntry(entryRow());
+      tx.addEntryCategory('e1', design.id);
+      tx.addEntryCategory('e1', 'c-new');
+    });
+
+    expect(store.entryIdByDedupKey('url:remove.bg')).toBe('e1');
+    expect(store.entryIdByDedupKey('url:other')).toBeUndefined();
+    const entry = store.entryById('e1');
+    expect(entry).toMatchObject({
+      id: 'e1',
+      ownerId: store.ownerId(),
+      kind: 'tool',
+      resourceType: 'site',
+      situations: ['Când vreau fundal transparent'],
+      keywords: ['fundal'],
+      sources: [],
+      content: null,
+      myNotes: '',
+      githubArchived: null,
+      verificationNotes: [],
+      forced: false,
+      revision: 1,
+      verifiedAt: null,
+    });
+    expect(entry?.categories.map((c) => c.name)).toEqual([
+      'Design & UI',
+      'Fonturi',
+    ]);
+    const summaries = store.entrySummaries();
+    expect(summaries).toHaveLength(1);
+    expect(summaries[0]).not.toHaveProperty('content');
+    expect(store.entryById('missing')).toBeUndefined();
+    store.close();
+  });
+
+  it('rolls the whole transaction back when it throws', () => {
+    const dbPath = newDbPath();
+    const store = open(dbPath);
+    expect(() =>
+      store.writeTransaction((tx) => {
+        tx.insertEntry(entryRow());
+        tx.insertEntry(entryRow({ id: 'e2' })); // same dedup_key: UNIQUE
+      }),
+    ).toThrow(/UNIQUE/);
+    expect(store.entrySummaries()).toEqual([]);
+    store.close();
+  });
+
+  it('maps a lock held by another process to DATABASE_BUSY', () => {
+    const dbPath = newDbPath();
+    const store = open(dbPath);
+    withRawDb(dbPath, (locker) => {
+      locker.exec('BEGIN IMMEDIATE');
+      try {
+        expect(errorCodeOf(() => store.writeTransaction(() => 0))).toBe(
+          'DATABASE_BUSY',
+        );
+      } finally {
+        locker.exec('ROLLBACK');
+      }
+    });
+    store.close();
   });
 });

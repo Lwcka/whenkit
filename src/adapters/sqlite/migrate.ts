@@ -135,6 +135,28 @@ function backup(
   return target;
 }
 
+/**
+ * Read-only counterpart of migrate(): returns the applied version, refusing
+ * an unknown or altered migration (DATABASE_TOO_NEW, MIGRATION_MISMATCH) or
+ * pending ones (DATABASE_NEEDS_MIGRATION). Writes nothing.
+ */
+export function checkMigrated(
+  db: DatabaseSync,
+  migrations: Migration[],
+): number {
+  const known = sortMigrations(migrations);
+  const latest = known.length === 0 ? 0 : known[known.length - 1].version;
+  const applied = readApplied(db);
+  checkApplied(applied, known);
+  const version = currentVersion(applied);
+  if (version < latest) {
+    throw new WhenkitError('DATABASE_NEEDS_MIGRATION', {
+      detail: `database at v${version}, code at v${latest}`,
+    });
+  }
+  return version;
+}
+
 export interface MigrateOptions {
   dbPath: string;
   clock: Clock;

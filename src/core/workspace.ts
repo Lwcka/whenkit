@@ -1,5 +1,5 @@
 import { WhenkitError } from './errors';
-import type { CatalogStoreOpener, Environment, FileSystem } from './ports';
+import type { Environment, FileSystem, OpenStoreOptions } from './ports';
 import { CONFIG_VERSION } from './versions';
 
 // The single source of the workspace path (AD-8): WHENKIT_WORKSPACE, then
@@ -147,7 +147,8 @@ export function isSameOrInside(path: string, root: string): boolean {
 export interface InitWorkspacePorts {
   env: Environment;
   fs: FileSystem;
-  openStore: CatalogStoreOpener;
+  /** A CatalogStoreOpener; init only creates the catalog and closes it. */
+  openStore: (dbPath: string, options: OpenStoreOptions) => { close(): void };
 }
 
 /**
@@ -182,7 +183,8 @@ export function initWorkspace(
   for (const folder of WORKSPACE_FOLDERS) {
     fs.mkdir(fs.joinPath(workspace, ...folder));
   }
-  openStore(catalogPath(fs, workspace)).close();
+  // The only place that may create the catalog file.
+  openStore(catalogPath(fs, workspace), { create: true }).close();
 
   if (dir !== undefined) {
     const content: WorkspaceConfig = {

@@ -2,8 +2,14 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
+import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
 import { WhenkitError } from '../src/core/errors';
-import type { Clock, Environment, IdGenerator } from '../src/core/ports';
+import type {
+  CatalogStoreOpener,
+  Clock,
+  Environment,
+  IdGenerator,
+} from '../src/core/ports';
 
 // Shared test fixtures: temp dirs under the OS temp folder and injected
 // environments, so no test ever touches the real %APPDATA% or workspace.
@@ -27,12 +33,31 @@ export function fixedClock(date = new Date(2026, 9, 13, 14, 5, 9)): Clock {
   return { now: () => new Date(date) };
 }
 
-/** Sequential ids that still look like UUID v4. */
-export function sequentialIds(): IdGenerator {
+/**
+ * Sequential ids that still look like UUID v4. Generators with different
+ * `series` (8000, 9000, a000, b000) never produce the same id.
+ */
+export function sequentialIds(series = '8000'): IdGenerator {
   let n = 0;
   return {
-    newId: () => `00000000-0000-4000-8000-${String(++n).padStart(12, '0')}`,
+    newId: () =>
+      `00000000-0000-4000-${series}-${String(++n).padStart(12, '0')}`,
   };
+}
+
+/**
+ * The real SqliteCatalogStore with a fixed clock. Its ids (owner and seeded
+ * categories) come from their own series, so they never collide with the
+ * ids core generates through the CLI's IdGenerator.
+ */
+export function testStoreOpener(): CatalogStoreOpener {
+  return (dbPath, options) =>
+    openCatalogStore(dbPath, {
+      ...options,
+      clock: fixedClock(),
+      ids: sequentialIds('9000'),
+      busyTimeoutMs: 100,
+    });
 }
 
 export function fakeEnvironment(

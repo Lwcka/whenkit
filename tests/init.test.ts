@@ -10,10 +10,15 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
 import { main } from '../src/cli/main';
 import { errorMessages } from '../src/shared/strings.ro';
-import { fakeEnvironment, fixedClock, sequentialIds, tempDir } from './helpers';
+import {
+  fakeEnvironment,
+  fixedClock,
+  sequentialIds,
+  tempDir,
+  testStoreOpener,
+} from './helpers';
 
 // `whenkit init` end to end on temp dirs: real file system and SQLite, with
 // APPDATA, WHENKIT_WORKSPACE and the app root injected (AD-8).
@@ -59,12 +64,7 @@ async function runCli(s: Setup, args: string[], cwd = s.root) {
       fs: nodeFileSystem,
       clock: fixedClock(),
       ids: sequentialIds(),
-      openStore: (dbPath) =>
-        openCatalogStore(dbPath, {
-          clock: fixedClock(),
-          ids: sequentialIds(),
-          busyTimeoutMs: 100,
-        }),
+      openStore: testStoreOpener(),
       cwd,
     },
   );

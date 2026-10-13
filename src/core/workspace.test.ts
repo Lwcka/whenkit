@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { WhenkitError } from './errors';
-import type { CatalogStore, Environment, FileSystem } from './ports';
+import type { Environment, FileSystem, OpenStoreOptions } from './ports';
 import {
   initWorkspace,
   isSameOrInside,
@@ -50,9 +50,11 @@ function config(workspace: unknown, configVersion: unknown = 1) {
 
 function fakeOpener() {
   const opened: string[] = [];
-  const openStore = (dbPath: string): CatalogStore => {
+  const openStore = (dbPath: string, options: OpenStoreOptions) => {
+    // init is the only command that creates the catalog file.
+    expect(options).toEqual({ create: true });
     opened.push(dbPath);
-    return { ownerId: () => 'owner', schemaVersion: () => 1, close: () => {} };
+    return { close: () => {} };
   };
   return { opened, openStore };
 }
@@ -312,7 +314,7 @@ describe('initWorkspace', () => {
   it('does not write config.json when the store refuses to open', () => {
     const fs = new FakeFileSystem();
     const env = fakeEnv({ APPDATA });
-    const openStore = (): CatalogStore => {
+    const openStore = (): { close(): void } => {
       throw new WhenkitError('MIGRATION_MISMATCH');
     };
     expect(

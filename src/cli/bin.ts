@@ -21,8 +21,9 @@ process.exitCode = await main(
     fs: nodeFileSystem,
     clock: systemClock,
     ids: randomIdGenerator,
-    openStore: (dbPath) =>
+    openStore: (dbPath, options) =>
       openCatalogStore(dbPath, {
+        ...options,
         clock: systemClock,
         ids: randomIdGenerator,
         busyTimeoutMs: CLI_BUSY_TIMEOUT_MS,

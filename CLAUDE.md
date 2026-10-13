@@ -48,7 +48,7 @@ Cer Node ≥ 24 (`node:sqlite`, `--env-file-if-exists`). Prima dată: `npm ci`.
 | `src/core/` | nucleul hexagonal: logica, schemele, porturile; nu importă Electron, React, `node:*` sau alte straturi (impus de oxlint) | da |
 | `src/adapters/` | implementările porturilor (SQLite, HTTP, GitHub, fișiere, mediu) | da |
 | `src/adapters/sqlite/migrations/` | migrările SQL numerotate (`NNNN-nume.sql`), **append-only**: o migrare ajunsă pe `main` nu se mai editează (hash-ul ei e verificat la deschidere), se adaugă una nouă | da |
-| `src/cli/` | CLI-ul `whenkit`: `main.ts` (tratarea argumentelor, testabilă), `bin.ts` (intrarea procesului) | da |
+| `src/cli/` | CLI-ul `whenkit`: `main.ts` (alege comanda; testabil), `commands/` (o comandă pe fișier), `render.ts` (ieșirea text), `exit-codes.ts` (singurul tabel `ErrorCode → cod de ieșire`), `bin.ts` (intrarea procesului; singurul loc care leagă adaptoarele reale) | da |
 | `src/desktop/main/`, `preload/`, `renderer/` | procesul main Electron, puntea IPC, interfața React | da |
 | `src/shared/` | `strings.ro.ts` (toate textele românești), mai târziu `ipc.ts` | da |
 | `workspace-template/` | **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/importa` și `/gaseste`, regulile de scriere a fișelor), instalat cu `whenkit init` | da |
