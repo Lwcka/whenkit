@@ -5,7 +5,7 @@
 id = 1
 type = "story"
 title = "Scheletul proiectului"
-description = "Creează proiectul cu create-electron-app@8.0.1 --template vite --typescript (template-ul vite-typescript nu mai există în Forge 8; asta închide întrebarea deschisă a epicului), adaugă React 19 (@vitejs/plugin-react, jsx react-jsx), structura de foldere din spine, Vitest, ESLint cu granițele hexagonului, build-ul separat al CLI-ului în dist/cli (ESM) cu bin-ul whenkit expus prin npm link și convenția .env cu WHENKIT_WORKSPACE spre un workspace de dezvoltare încărcat cu --env-file; documentează în CLAUDE.md comenzile de build/test și faptul că terminalul din VS Code are ELECTRON_RUN_AS_NODE=1 (se pornește doar prin npm start)."
+description = "Creează proiectul cu create-electron-app@8.0.1 --template vite --typescript (template-ul vite-typescript nu mai există în Forge 8; asta închide întrebarea deschisă a epicului), adaugă React 19 (@vitejs/plugin-react, jsx react-jsx), structura de foldere din spine, Vitest, oxlint cu granițele hexagonului (AD-2), build-ul separat al CLI-ului în dist/cli (ESM) cu bin-ul whenkit expus prin npm link și convenția .env cu WHENKIT_WORKSPACE spre un workspace de dezvoltare încărcat cu --env-file; documentează în CLAUDE.md comenzile de build/test și faptul că terminalul din VS Code are ELECTRON_RUN_AS_NODE=1 (se pornește doar prin npm start)."
 verify = "npm start deschide o fereastră goală, whenkit --version rulează dintr-un terminal nou, npm test și npm run lint trec."
 covers = []
 after = []
