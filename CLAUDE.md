@@ -8,7 +8,7 @@ Acest fișier este pentru **dezvoltarea** aplicației. Claude-ul care *foloseșt
 
 Încă nu există cod. Produsul e definit în spec-ul **`_bmad-output/initiative-whenkit-mvp/spec-whenkit/spec-whenkit.md`** și în companionii lui: aceasta e sursa de adevăr. Citește spec-ul înainte de a propune ceva de produs sau de arhitectură. Spec-ul se modifică doar prin skill-ul `bmad-spec` (e derivat din `.memlog.md`), nu de mână.
 
-Încă **nu sunt decise**: framework-ul desktop, formatul de stocare, schema JSON a lotului de import. Ele se decid în `bmad-architecture`. Nu presupune un stack și nu inventa comenzi de build/test. Actualizează această secțiune după decizia de arhitectură.
+Arhitectura e decisă în **`_bmad-output/initiative-whenkit-mvp/architecture-whenkit/architecture-whenkit.md`** (regulile AD-1…AD-13): Electron + TypeScript + React (Electron Forge, template Vite), nucleu hexagonal în `src/core`, SQLite prin `node:sqlite`, Zod pentru schema lotului, Vitest pentru teste. Orice cod respectă regulile AD; o abatere se discută și se trece întâi în arhitectură, prin `bmad-architecture`. Încă nu există cod, deci nici comenzi de build/test: adaugă-le aici după primul tichet (scaffold).
 
 ## Structura proiectului
 
@@ -23,11 +23,12 @@ Acest fișier este pentru **dezvoltarea** aplicației. Claude-ul care *foloseșt
 | `_bmad/scripts/`, `_bmad/<modul>/scripts/` | generate de `bmad setup`; nu se editează de mână | da |
 | `.claude/skills/` | skill-urile BMad folosite la dezvoltare (sursa în `skills-lock.json`) | da |
 | `.tmp/` | fișiere de lucru ale sesiunilor (ex. `.tmp/grill-me/whenkit-mvp.md`: interviul de produs din care s-a făcut spec-ul) | nu |
-| `.env` | chei și setări locale (ex. calea workspace-ului) | nu |
+| `…/initiative-whenkit-mvp/architecture-whenkit/` | arhitectura: `architecture-whenkit.md` (regulile AD) + `.memlog.md` + `reviews/` | da |
+| `.env` | setări locale de dezvoltare (ex. `WHENKIT_WORKSPACE` pentru teste) | nu |
 
 Când apare codul, se adaugă aici și folderul cu **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/importa` și `/gaseste`, regulile de scriere a fișelor), versionat în repo și instalat cu `whenkit init`.
 
-Workspace-ul aplicației (implicit `C:\Users\Luca\Programe\whenkit\`, configurabil în `.env`) **nu** face parte din repo: conține `input/`, `data/` și skill-urile instalate. Stă în afara repo-ului pentru că Claude Code încarcă CLAUDE.md și din folderele părinte, iar contextul de dezvoltare nu trebuie să ajungă în sesiunile de import.
+Workspace-ul aplicației (implicit `C:\Users\Luca\Programe\whenkit\`; calea o salvează `whenkit init` în `%APPDATA%\whenkit\config.json`) **nu** face parte din repo: conține `input/`, `data/` și skill-urile instalate. Stă în afara repo-ului pentru că Claude Code încarcă CLAUDE.md și din folderele părinte, iar contextul de dezvoltare nu trebuie să ajungă în sesiunile de import.
 
 ## Produsul, pe scurt
 

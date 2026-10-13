@@ -7,6 +7,8 @@
 | Repo `whenkit` | `C:\Users\Luca\Proiecte\whenkit\` | cod, CLAUDE.md de dezvoltare, BMad, **șablonul** workspace-ului | dezvoltarea aplicației |
 | Workspace | implicit `C:\Users\Luca\Programe\whenkit\`, configurabil; niciodată în repo sau într-un subfolder al lui | date, input, CLAUDE.md de runtime, skill-uri instalate | folosirea aplicației (import, căutare) |
 
+Calea workspace-ului o salvează `whenkit init` în `%APPDATA%\whenkit\config.json`; la dezvoltare o poate suprascrie variabila `WHENKIT_WORKSPACE`. Aplicația și CLI-ul o citesc din același loc.
+
 Motivul separării: Claude Code încarcă CLAUDE.md din folderul curent **și din toate folderele părinte**. Un workspace în repo ar moșteni contextul de dezvoltare și skill-urile BMad.
 
 ## Structura workspace-ului
@@ -53,3 +55,4 @@ Reguli:
 - Ștergerea fișierului din `input/` se face **doar după import reușit**.
 - Nu se păstrează referință la fișierul sursă (catalogul e singura sursă de adevăr).
 - Reluarea din jurnal: cu link corectat (trece prin verificare) sau cu `--force` (marcat în fișă).
+- Lotul poate și **actualiza** fișe existente (ex. „rescrie fișa X după regulile noi”): elementul referă fișa prin id, trece prin verificare și nu atinge „Notițele mele”, proprietarul sau data adăugării.

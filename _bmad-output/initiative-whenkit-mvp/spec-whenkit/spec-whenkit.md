@@ -10,6 +10,7 @@ companions:
   - test-scenarios.md
   - post-v1-roadmap.md
   - project-context.md
+  - ../architecture-whenkit/architecture-whenkit.md
 sources:
   - ../../../.tmp/grill-me/whenkit-mvp.md
   - ../../../PROJECT_BRIEF.md   # șters din repo; copie în C:\Users\Luca\Personal\
@@ -30,10 +31,10 @@ sources:
   - **success:** După `whenkit init` la calea configurată, workspace-ul conține structura din `workspace-and-import-flow.md` (CLAUDE.md de runtime, `/importa`, `/gaseste`, fișierul de reguli, `input/`, `data/` cu categoriile din `categories-seed.md` și lista de domenii interzise); o sesiune Claude Code deschisă acolo nu încarcă CLAUDE.md-ul de dezvoltare al repo-ului.
 - **CAP-2**
   - **intent:** Claude Code poate preda aplicației un lot de intrări candidate, iar aplicația decide ce intră în catalog.
-  - **success:** `whenkit import <lot>` respinge un lot invalid față de schemă fără să scrie nimic, rulează verificarea pentru fiecare candidat, salvează doar ce trece și afișează raportul: adăugate, respinse cu motiv, duplicate, categorii noi create.
+  - **success:** `whenkit import <lot>` respinge un lot invalid față de schemă fără să scrie nimic, rulează verificarea pentru fiecare candidat, salvează doar ce trece și afișează raportul: adăugate, actualizate, respinse cu motiv, avertizări, duplicate, categorii noi create. Un element de tip actualizare modifică o fișă existentă, trece prin verificare și lasă neatinse „Notițele mele”, proprietarul și data adăugării.
 - **CAP-3**
   - **intent:** Sistemul verifică determinist fiecare candidat înainte de salvare, după `verification-rules.md`.
-  - **success:** Pe scenariile din `test-scenarios.md`, `httpss://gutenberg.org`, un link care nu răspunde, domeniile din lista interzisă și un duplicat primesc exact efectul din tabel, la fiecare rulare; modulul se testează izolat de UI și de Claude.
+  - **success:** Pe scenariile din `test-scenarios.md`, `httpss://gutenberg.org`, o pagină inexistentă (404), un domeniu inexistent, un site căzut temporar (intră cu avertizare), domeniile din lista interzisă și un duplicat primesc exact efectul din tabel, la fiecare rulare; modulul se testează izolat de UI și de Claude.
 - **CAP-4**
   - **intent:** Utilizatorul poate recupera o resursă respinsă fără materialul original.
   - **success:** Fiecare respingere apare în jurnalul de respinse cu toate datele extrase și motivul; o reluare cu link corectat trece prin verificare normal, iar una cu `--force` intră în catalog marcată în nota de verificare ca „verificare ocolită de utilizator”.
@@ -70,7 +71,7 @@ sources:
 - Aplicație **desktop** locală (Windows 11). Nu web, nu mobil.
 - Două puncte de intrare peste același nucleu: UI desktop și CLI (`whenkit init`, `whenkit import`), folosit de Claude Code.
 - **Fără AI și fără chei API în aplicație** în v1. Orice inteligență generativă trăiește în skill-urile Claude Code.
-- Datele stau în workspace, în afara repo-ului (implicit `C:\Users\Luca\Programe\whenkit\`), într-un format portabil, ușor de citit de Claude Code (pentru `/gaseste`). Calea workspace-ului se configurează (`.env`/config), nu e hardcodată.
+- Datele stau în workspace, în afara repo-ului (implicit `C:\Users\Luca\Programe\whenkit\`), într-un format portabil, ușor de citit de Claude Code (pentru `/gaseste`). Calea workspace-ului se salvează de `whenkit init` în configurarea utilizatorului (`%APPDATA%\whenkit\config.json`), poate fi suprascrisă de variabila `WHENKIT_WORKSPACE` la dezvoltare și nu e hardcodată.
 - În catalog se scrie doar prin aplicație (`whenkit import`, UI). Claude Code nu scrie direct în date, ca verificarea să nu poată fi ocolită; singura ocolire e `--force`, marcată.
 - Modulul de verificare e separat, determinist, testabil izolat și refolosibil pentru intrări deja existente (pregătit pentru re-verificare, vezi `post-v1-roadmap.md`).
 - În caz de dubiu, resursa se respinge și utilizatorul primește motivul.

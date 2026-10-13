@@ -5,7 +5,10 @@ Regula de bază: **în caz de dubiu, resursa nu se adaugă, iar utilizatorul pri
 | Verificare | Cine o face | Efect |
 |---|---|---|
 | URL invalid sintactic (ex. `httpss://`) | cod | ❌ respinsă |
-| Link-ul nu răspunde | cod | ❌ respinsă |
+| Link-ul merge (2xx, 3xx după redirect) | cod | ✅ intră |
+| Site-ul blochează programele (401, 403, 429) | cod | ✅ intră, cu notă „blochează accesul automat” |
+| Site căzut temporar (5xx, timeout 10 s) | cod | 2 reîncercări, apoi ⚠️ intră cu avertizare „nu a răspuns la import”, vizibilă în fișă și în raport |
+| Pagină inexistentă (404, 410), domeniu inexistent (DNS), certificat SSL invalid | cod | ❌ respinsă |
 | Domeniu în lista de domenii interzise | cod | ❌ respinsă |
 | Duplicat în catalog | cod | ⚠️ ignorată + mesaj „există deja: <nume>” |
 | Conținut dubios (pirateria, ocolirea paywall-urilor, conținut cu copyright distribuit ilegal) | Claude (`/importa`) | ❌ respinsă, cu motivul scris de Claude |
