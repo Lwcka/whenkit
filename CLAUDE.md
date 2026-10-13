@@ -40,7 +40,7 @@ Decizii care trebuie respectate de orice arhitectură (detalii în spec, secțiu
 - În catalog se scrie **doar prin aplicație**: CLI `whenkit import` (folosit de Claude Code) și UI. Claude Code nu scrie direct în date.
 - **Verificarea** e un modul separat, determinist și testabil (URL, link care răspunde, domenii interzise, duplicate), completat de judecata lui Claude pentru conținut dubios. În caz de dubiu, resursa se respinge cu motiv.
 - Datele sunt separate de cod, în workspace, într-un format portabil.
-- „Personal-first, multi-user ready”: `owner_id` în model de la început; setările în `.env`. **Nu** se construiesc acum: autentificare, conturi, hosting, plăți.
+- „Personal-first, multi-user ready”: `owner_id` în model de la început; calea workspace-ului în configurarea utilizatorului (AD-8), nimic hardcodat. **Nu** se construiesc acum: autentificare, conturi, hosting, plăți.
 - **Limba:** codul e integral în engleză (identificatori, comentarii, mesaje de commit). În română sunt interfața, fișele din catalog și documentele citite de autor (README, documentație, artefacte BMad); documentele se traduc în engleză la trecerea open-source. Cod și README scrise ca pentru un proiect public.
 
 Datele de test reale (screenshot-uri și `inspire.txt`) sunt în `C:\Users\Luca\Personal\`, în afara repo-ului. Sunt input pentru `/importa` și nu se transcriu manual. Rezultatele așteptate sunt în companionul `test-scenarios.md` al spec-ului.
