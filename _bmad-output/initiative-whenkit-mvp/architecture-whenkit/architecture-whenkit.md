@@ -44,7 +44,7 @@ flowchart LR
   shared -.->|doar tipuri din core/dto| core
 ```
 
-Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui (în afară de Zod). Granițele sunt impuse de ESLint (`no-restricted-imports`) pe `src/core/**` și `src/desktop/renderer/**`.
+Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui (în afară de Zod). Granițele sunt impuse de oxlint (`no-restricted-imports`) pe `src/core/**` și `src/desktop/renderer/**`.
 
 ## Invariants & Rules
 
@@ -58,7 +58,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** all
 - **Prevents:** CLI dependent de Electron; verificare netestabilă fără internet; logică amestecată cu I/O.
-- **Rule:** `src/core/` nu importă `electron`, `react`, `node:fs`, `node:sqlite`, `fetch` sau rețea. Orice efect exterior trece printr-un port din `src/core/ports.ts` (`CatalogStore`, `HttpClient`, `GitHubClient`, `Clock`, `IdGenerator`, `FileSystem`, `Environment`). Adaptoarele se injectează la pornire de `cli` sau `desktop/main`. Regula e verificată de ESLint.
+- **Rule:** `src/core/` nu importă `electron`, `react`, `node:fs`, `node:sqlite`, `fetch` sau rețea. Orice efect exterior trece printr-un port din `src/core/ports.ts` (`CatalogStore`, `HttpClient`, `GitHubClient`, `Clock`, `IdGenerator`, `FileSystem`, `Environment`). Adaptoarele se injectează la pornire de `cli` sau `desktop/main`. Regula e verificată de oxlint (`no-restricted-imports`).
 
 ### AD-3 — Un singur drum de scriere în catalog, cu verificare la orice link
 
@@ -198,7 +198,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | Erori și motive | coduri închise (AD-15, AD-18); texte doar în `src/shared/strings.ro.ts` |
 | Configurare | doar prin `resolveWorkspace()` (AD-8); fără chei API în v1 |
 | Teste | Vitest; `core` cu adaptoare false; `SqliteCatalogStore` pe fișier temporar (WAL și `data_version` nu funcționează pe `:memory:`); HTTP real testat cu un server local; fixture-urile sunt sintetice, niciodată copii din `C:\Users\Luca\Personal\` |
-| Granițe | ESLint `no-restricted-imports` pentru `src/core/**` și `src/desktop/renderer/**` |
+| Granițe | oxlint `no-restricted-imports` pentru `src/core/**` și `src/desktop/renderer/**` |
 | Domenii interzise | `<workspace>/data/blocked-domains.txt`, o regulă pe linie, `#` comentariu, `libgen.*` = orice TLD, subdomeniile incluse; parsat de o singură funcție din `core` |
 
 ## Stack

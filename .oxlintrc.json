@@ -1,0 +1,115 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "categories": {
+    "correctness": "warn"
+  },
+  "ignorePatterns": ["dist/**", "out/**", ".vite/**"],
+  "overrides": [
+    {
+      "files": ["src/core/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^(electron|react)(/|-|$)",
+                "message": "core is pure (AD-2): no Electron or React."
+              },
+              {
+                "regex": "^node:",
+                "message": "core is pure (AD-2): Node built-ins go behind a port in src/core/ports.ts."
+              },
+              {
+                "regex": "^(_http_agent|_http_client|_http_common|_http_incoming|_http_outgoing|_http_server|_stream_duplex|_stream_passthrough|_stream_readable|_stream_transform|_stream_wrap|_stream_writable|_tls_common|_tls_wrap|assert|assert/strict|async_hooks|buffer|child_process|cluster|console|constants|crypto|dgram|diagnostics_channel|dns|dns/promises|domain|events|fs|fs/promises|http|http2|https|inspector|inspector/promises|module|net|os|path|path/posix|path/win32|perf_hooks|process|punycode|querystring|readline|readline/promises|repl|stream|stream/consumers|stream/promises|stream/web|string_decoder|sys|timers|timers/promises|tls|trace_events|tty|url|util|util/types|v8|vm|wasi|worker_threads|zlib)$",
+                "message": "core is pure (AD-2): Node built-ins go behind a port in src/core/ports.ts."
+              },
+              {
+                "regex": "(^|/)(adapters|cli|desktop|shared)(/|$)",
+                "message": "core imports nothing outside src/core except zod (AD-2)."
+              }
+            ]
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "fetch",
+            "message": "core does no network I/O (AD-2): use the HttpClient port."
+          },
+          {
+            "name": "XMLHttpRequest",
+            "message": "core does no network I/O (AD-2): use the HttpClient port."
+          },
+          {
+            "name": "WebSocket",
+            "message": "core does no network I/O (AD-2): use the HttpClient port."
+          },
+          {
+            "name": "require",
+            "message": "core is ESM and imports nothing but zod (AD-2)."
+          }
+        ]
+      }
+    },
+    {
+      "files": ["src/desktop/renderer/**"],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "regex": "^electron(/|$)",
+                "message": "The renderer reaches the main process only through window.whenkit (AD-9)."
+              },
+              {
+                "regex": "^node:",
+                "message": "The renderer has no Node access (AD-9)."
+              },
+              {
+                "regex": "^(_http_agent|_http_client|_http_common|_http_incoming|_http_outgoing|_http_server|_stream_duplex|_stream_passthrough|_stream_readable|_stream_transform|_stream_wrap|_stream_writable|_tls_common|_tls_wrap|assert|assert/strict|async_hooks|buffer|child_process|cluster|console|constants|crypto|dgram|diagnostics_channel|dns|dns/promises|domain|events|fs|fs/promises|http|http2|https|inspector|inspector/promises|module|net|os|path|path/posix|path/win32|perf_hooks|process|punycode|querystring|readline|readline/promises|repl|stream|stream/consumers|stream/promises|stream/web|string_decoder|sys|timers|timers/promises|tls|trace_events|tty|url|util|util/types|v8|vm|wasi|worker_threads|zlib)$",
+                "message": "The renderer has no Node access (AD-9)."
+              },
+              {
+                "regex": "(^|/)core(/|$)",
+                "message": "The renderer gets core types only through src/shared (AD-18)."
+              },
+              {
+                "regex": "(^|/)adapters(/|$)",
+                "message": "The renderer reaches data only through IPC (AD-3)."
+              }
+            ]
+          }
+        ],
+        "no-restricted-globals": [
+          "error",
+          {
+            "name": "process",
+            "message": "Node globals do not exist in the sandboxed renderer (AD-9)."
+          },
+          {
+            "name": "Buffer",
+            "message": "Node globals do not exist in the sandboxed renderer (AD-9)."
+          },
+          {
+            "name": "require",
+            "message": "Node globals do not exist in the sandboxed renderer (AD-9)."
+          },
+          {
+            "name": "__dirname",
+            "message": "Node globals do not exist in the sandboxed renderer (AD-9)."
+          },
+          {
+            "name": "__filename",
+            "message": "Node globals do not exist in the sandboxed renderer (AD-9)."
+          },
+          {
+            "name": "global",
+            "message": "Node globals do not exist in the sandboxed renderer (AD-9)."
+          }
+        ]
+      }
+    }
+  ]
+}
