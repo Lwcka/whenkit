@@ -48,6 +48,13 @@ Datele de test reale (screenshot-uri și `inspire.txt`) sunt în `C:\Users\Luca\
 
 Proiectul e și pentru învățare: explică raționamentul, nu doar codul. La deciziile importante dă 2–3 opțiuni cu pro și contra și contrazice-l direct când greșește. Planificarea tehnică (spec, arhitectură, tichete) și implementarea se fac prin skill-urile BMad, nu printr-un plan separat în plan mode, ca să nu planificăm de două ori. Ordinea pașilor o alege autorul; dacă nu e clar ce urmează, întreabă skill-ul `bmad`. Se lucrează pas cu pas.
 
+## Flux de lucru cu git
+
+- **Documente de planificare** (spec, arhitectură, CLAUDE.md): commit direct pe `main`.
+- **Cod**: o ramură per tichet (`feat/<nume-scurt>`, `fix/<nume-scurt>`), revizie cu `bmad-code-review` pe ramură, apoi merge în `main` și ștergerea ramurii.
+- **Fără `push`** pe GitHub (`origin` = `Lwcka/whenkit`) până nu cere autorul explicit; deocamdată totul rămâne local.
+- Autorul învață acest flux: explică pe scurt fiecare pas de git (ce face și de ce) când îl execuți.
+
 ## BMad Method
 
 Workflow-ul de planificare și implementare folosește skill-urile BMad instalate la nivel de proiect în `.claude/skills/` (sursa și hash-urile sunt în `skills-lock.json`). `bmod-core-tools` și `bmod-method` sunt doar metadate de modul și nu se invocă niciodată. Pentru a afla ce skill urmează, folosește skill-ul `bmad`, care răspunde din help-ul modulelor instalate.
