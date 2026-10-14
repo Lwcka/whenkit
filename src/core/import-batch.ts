@@ -109,7 +109,7 @@ const zoneKey = (zone: Zone, key: string): ZoneKey => `${zone}:${key}`;
 class CategoryResolver {
   private readonly byZone = new Map<Zone, Map<string, StoredCategory>>();
   private readonly declared = new Map<ZoneKey, string>();
-  /** Declared categories used by an added item, in order of first use. */
+  /** Declared categories used by a written item, in order of first use. */
   readonly used = new Map<ZoneKey, ReportCategory>();
 
   constructor(
@@ -181,15 +181,23 @@ class CategoryResolver {
 
 /**
  * Reasons that reject an item outright, before duplicates are considered:
- * the verification's (Claude's flag included), then unknown categories.
+ * an update's unknown id, the verification's (Claude's flag included), then
+ * unknown categories.
  */
 function rejectionReasons(
   item: BatchItem,
   verdict: ItemVerdict,
   categories: CategoryResolver,
+  writer: CatalogWriter,
 ): VerdictReason[] {
-  const reasons: VerdictReason[] =
-    verdict.outcome === 'rejected' ? [...verdict.reasons] : [];
+  const reasons: VerdictReason[] = [];
+  if (item.op === 'update') {
+    const id = updateId(item);
+    if (writer.entryById(id) === undefined) {
+      reasons.push({ code: 'unknown_id', params: { id } });
+    }
+  }
+  if (verdict.outcome === 'rejected') reasons.push(...verdict.reasons);
   const zone = zoneOf(item.kind);
   for (const name of item.categories) {
     if (!categories.isKnown(zone, name)) {
@@ -199,16 +207,31 @@ function rejectionReasons(
   return reasons;
 }
 
+/** The entry id of an update; the batch schema guarantees it is present. */
+function updateId(item: BatchItem): string {
+  if (item.id === undefined) {
+    throw new WhenkitError('INTERNAL', {
+      detail: `update ${item.ref} has no id`,
+    });
+  }
+  return item.id;
+}
+
 /**
  * Phase 3: writes a validated batch in one write transaction and returns the
  * report. `verdicts` holds phase 2's verdict for every item, by ref. Per
- * item, in batch order: rejected when its verdict is rejected or a category
- * is neither in its zone nor declared; duplicate when its dedup key
- * is in the catalog (re-checked here, under the lock) or belongs to an item
- * added earlier in the batch; otherwise added (warned when its verdict is),
- * with the sources the verification kept, its warnings and notes as
- * verification notes and `verified_at` = now, creating the declared
- * categories it uses. Every item appears exactly once in the report.
+ * item, in batch order: rejected when an update's id is not in the catalog,
+ * its verdict is rejected or a category is neither in its zone nor declared;
+ * duplicate when its dedup key belongs to an item written earlier in the
+ * batch or to another catalog entry (re-checked here, under the lock; an
+ * update never duplicates its own entry); otherwise written, with the
+ * sources the verification kept, its warnings and notes as verification
+ * notes and `verified_at` = now, creating the declared categories it uses.
+ * An add inserts a new entry (added, or warned); an update fully replaces
+ * Claude's fields and the categories of its entry, increments its revision
+ * and keeps the author's fields (updated, or warned). A rejected or
+ * duplicate update leaves its entry untouched. Every item appears exactly
+ * once in the report.
  */
 export function applyBatch(
   store: CatalogStore,
@@ -219,7 +242,8 @@ export function applyBatch(
   return store.writeTransaction((writer) => {
     const now = clock.now().toISOString();
     const categories = new CategoryResolver(writer, ids, batch.newCategories);
-    const addedKeys = new Map<string, string>();
+    /** Dedup keys written by this batch (added or updated), to their ref. */
+    const writtenKeys = new Map<string, string>();
     const items: ReportItem[] = [];
 
     for (const item of batch.items) {
@@ -230,16 +254,17 @@ export function applyBatch(
           detail: `no verification verdict for ${item.ref}`,
         });
       }
-      const reasons = rejectionReasons(item, verdict, categories);
+      const reasons = rejectionReasons(item, verdict, categories, writer);
       if (reasons.length > 0) {
         items.push({ ...base, outcome: 'rejected', reasons });
         continue;
       }
 
       // The batch check comes first: the transaction already sees the rows
-      // this batch inserted, and those are reported by ref, not by id.
+      // this batch wrote, and those are reported by ref, not by id. Batch
+      // ids are unique, so an earlier write is never this update's own.
       const key = dedupKey(item);
-      const earlierRef = addedKeys.get(key);
+      const earlierRef = writtenKeys.get(key);
       if (earlierRef !== undefined) {
         items.push({
           ...base,
@@ -249,7 +274,7 @@ export function applyBatch(
         continue;
       }
       const existingId = writer.entryIdByDedupKey(key);
-      if (existingId !== undefined) {
+      if (existingId !== undefined && existingId !== item.id) {
         items.push({
           ...base,
           outcome: 'duplicate',
@@ -263,9 +288,7 @@ export function applyBatch(
       const categoryIds = item.categories.map((name) =>
         categories.resolve(zone, name),
       );
-      const id = ids.newId();
-      writer.insertEntry({
-        id,
+      const fields = {
         kind: item.kind,
         name: item.name,
         url: item.url ?? null,
@@ -277,16 +300,25 @@ export function applyBatch(
         content: item.kind === 'concept' ? item.content : null,
         verificationNotes: verdict.reasons,
         dedupKey: key,
-        addedAt: now,
         verifiedAt: now,
-      });
-      for (const categoryId of categoryIds) {
-        writer.addEntryCategory(id, categoryId);
+      };
+      let id: string;
+      if (item.op === 'update') {
+        id = updateId(item);
+        writer.updateEntry({ id, ...fields });
+        writer.replaceEntryCategories(id, categoryIds);
+      } else {
+        id = ids.newId();
+        writer.insertEntry({ id, ...fields, addedAt: now });
+        for (const categoryId of categoryIds) {
+          writer.addEntryCategory(id, categoryId);
+        }
       }
-      addedKeys.set(key, item.ref);
+      writtenKeys.set(key, item.ref);
+      const written = item.op === 'update' ? 'updated' : 'added';
       items.push({
         ...base,
-        outcome: verdict.outcome === 'warned' ? 'warned' : 'added',
+        outcome: verdict.outcome === 'warned' ? 'warned' : written,
         id,
         reasons: verdict.reasons,
       });

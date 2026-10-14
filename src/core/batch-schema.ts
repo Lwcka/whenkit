@@ -7,8 +7,8 @@ import { BATCH_SCHEMA_VERSION } from './versions';
 // ticket 7, the JSON Schema both derive from it. Every object is strict, so
 // an unknown field (a typo, or an application field such as myNotes) makes
 // the batch invalid instead of being dropped. Field names follow
-// spec-whenkit/entry-model.md. Link fields (`related`, `children`) and
-// `op: 'update'` arrive with the tickets that process them.
+// spec-whenkit/entry-model.md. Link fields (`related`, `children`) arrive
+// with the ticket that processes them.
 
 const text = z.string().trim().min(1);
 
@@ -16,7 +16,19 @@ const text = z.string().trim().min(1);
 const commonFields = {
   /** Unique within the batch; the report refers to items by it. */
   ref: text,
-  op: z.literal('add'),
+  /**
+   * `add` creates an entry; `update` fully replaces the fields Claude writes
+   * on the entry `id` (AD-6). The pairing of `op` and `id` is checked below.
+   */
+  op: z.enum(['add', 'update']),
+  /**
+   * The entry an `update` rewrites; an `add` has none. Lowercased, the form
+   * the catalog stores, so lookup and the unique-id rule see one spelling.
+   */
+  id: z
+    .uuid()
+    .transform((id) => id.toLowerCase())
+    .optional(),
   /** The resource's original name. */
   name: text,
   /** 1–2 category names, matched by name_key in the zone of the kind. */
@@ -77,6 +89,7 @@ export const batchSchema = z
   })
   .superRefine((batch, ctx) => {
     const refs = new Set<string>();
+    const ids = new Set<string>();
     batch.items.forEach((item, index) => {
       if (refs.has(item.ref)) {
         ctx.addIssue({
@@ -86,6 +99,32 @@ export const batchSchema = z
         });
       }
       refs.add(item.ref);
+
+      if (item.op === 'update' && item.id === undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['items', index, 'id'],
+          message: 'an update needs the id of the entry it rewrites',
+        });
+      }
+      if (item.op === 'add' && item.id !== undefined) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['items', index, 'id'],
+          message: 'an add has no id: the application generates it',
+        });
+      }
+      // Two updates of one entry would contradict each other (AD-6).
+      if (item.id !== undefined) {
+        if (ids.has(item.id)) {
+          ctx.addIssue({
+            code: 'custom',
+            path: ['items', index, 'id'],
+            message: `entry id "${item.id}" appears twice in the batch`,
+          });
+        }
+        ids.add(item.id);
+      }
 
       const keys = item.categories.map(nameKey);
       if (new Set(keys).size !== keys.length) {

@@ -38,14 +38,27 @@ export function renderImportReport(report: ImportReport): string[] {
   };
   for (const item of report.items) {
     counts[item.outcome] += 1;
-    const detail =
-      item.id !== undefined
-        ? importStrings.entryId(item.id)
-        : item.duplicateOfId !== undefined
-          ? importStrings.duplicateOf(item.duplicateOfId)
-          : '';
-    const outcome = `${outcomeLabels[item.outcome]} ${detail}`.trimEnd();
-    lines.push(importStrings.item(item.ref, outcome));
+    const isUpdate = item.op === 'update';
+    const details: string[] = [];
+    if (item.id !== undefined) details.push(importStrings.entryId(item.id));
+    if (item.duplicateOfId !== undefined) {
+      details.push(importStrings.duplicateOf(item.duplicateOfId));
+    }
+    // An unknown id names no entry, so there is none to stay unchanged.
+    const unknownId = item.reasons.some((r) => r.code === 'unknown_id');
+    if (isUpdate && item.id === undefined && !unknownId) {
+      details.push(importStrings.entryUnchanged);
+    }
+    const label =
+      isUpdate && item.outcome === 'warned'
+        ? importStrings.warnedUpdate
+        : outcomeLabels[item.outcome];
+    const outcome = [label, ...details].join(' ');
+    lines.push(
+      isUpdate
+        ? importStrings.updateItem(item.ref, outcome)
+        : importStrings.item(item.ref, outcome),
+    );
     for (const reason of item.reasons) {
       lines.push(importStrings.reason(reasonText(reason)));
     }

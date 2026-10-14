@@ -480,6 +480,80 @@ describe('SqliteCatalogStore reads and writes', () => {
     store.close();
   });
 
+  it('updates Claude fields and categories, keeping the author fields', () => {
+    const dbPath = newDbPath();
+    const store = open(dbPath);
+    const toolbox = store.categoriesInZone('toolbox');
+    const [design, security] = ['Design & UI', 'Securitate'].map(
+      (name) => toolbox.find((c) => c.name === name)?.id ?? '',
+    );
+    store.writeTransaction((tx) => {
+      tx.insertEntry(entryRow());
+      tx.addEntryCategory('e1', design);
+    });
+    withRawDb(dbPath, (db) => {
+      db.prepare(
+        "UPDATE entries SET my_notes = 'Notițele mele', forced = 1 WHERE id = 'e1'",
+      ).run();
+    });
+
+    store.writeTransaction((tx) => {
+      tx.updateEntry({
+        ...entryRow({
+          name: 'Squoosh',
+          url: 'https://squoosh.app',
+          situations: ['Când o imagine e prea mare'],
+          keywords: ['compresie'],
+          verificationNotes: [{ code: 'blocks_automation' }],
+          dedupKey: 'url:squoosh.app',
+          verifiedAt: '2026-10-14T08:00:00.000Z',
+        }),
+      });
+      tx.replaceEntryCategories('e1', [security]);
+    });
+
+    expect(store.entryById('e1')).toMatchObject({
+      name: 'Squoosh',
+      url: 'https://squoosh.app',
+      situations: ['Când o imagine e prea mare'],
+      keywords: ['compresie'],
+      verificationNotes: [{ code: 'blocks_automation' }],
+      dedupKey: 'url:squoosh.app',
+      verifiedAt: '2026-10-14T08:00:00.000Z',
+      categories: [{ id: security, name: 'Securitate' }],
+      myNotes: 'Notițele mele',
+      forced: true,
+      ownerId: store.ownerId(),
+      addedAt: '2026-10-13T12:00:00.000Z',
+      revision: 2,
+    });
+    expect(store.entryIdByDedupKey('url:remove.bg')).toBeUndefined();
+    store.close();
+
+    withRawDb(dbPath, (db) => {
+      const found = (term: string) =>
+        db
+          .prepare('SELECT rowid FROM entries_fts WHERE entries_fts MATCH ?')
+          .all(`"${term}"*`).length;
+      expect(found('transparent')).toBe(0);
+      expect(found('compres')).toBe(1);
+      db.exec(
+        "INSERT INTO entries_fts (entries_fts, rank) VALUES ('integrity-check', 1)",
+      );
+    });
+  });
+
+  it('refuses to update an entry that does not exist', () => {
+    const dbPath = newDbPath();
+    const store = open(dbPath);
+    expect(
+      errorCodeOf(() =>
+        store.writeTransaction((tx) => tx.updateEntry(entryRow())),
+      ),
+    ).toBe('INTERNAL');
+    store.close();
+  });
+
   it('rolls the whole transaction back when it throws', () => {
     const dbPath = newDbPath();
     const store = open(dbPath);

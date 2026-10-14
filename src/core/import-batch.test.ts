@@ -21,6 +21,8 @@ class FakeStore implements CatalogStore {
   categories: StoredCategory[] = [];
   entries: (NewEntryRow & { categoryIds: string[] })[] = [];
   transactions = 0;
+  /** Revisions of the entries an update rewrote; 1 when absent. */
+  revisions = new Map<string, number>();
 
   constructor(seed: { zone: Zone; name: string }[] = []) {
     seed.forEach(({ zone, name }, index) =>
@@ -46,8 +48,21 @@ class FakeStore implements CatalogStore {
       .filter((c) => c.zone === zone)
       .map((c) => ({ ...c }));
   }
-  entryById(): StoredEntry | undefined {
-    throw new Error('not used by import');
+  entryById(id: string): StoredEntry | undefined {
+    const row = this.entries.find((e) => e.id === id);
+    if (row === undefined) return undefined;
+    const { categoryIds, ...fields } = row;
+    return {
+      ...fields,
+      ownerId: 'owner',
+      categories: this.categories.filter((c) => categoryIds.includes(c.id)),
+      myNotes: '',
+      githubStars: null,
+      githubPushedAt: null,
+      githubArchived: null,
+      forced: false,
+      revision: this.revisions.get(id) ?? 1,
+    };
   }
   entrySummaries(): never {
     throw new Error('not used by import');
@@ -58,15 +73,47 @@ class FakeStore implements CatalogStore {
 
   writeTransaction<T>(fn: (writer: CatalogWriter) => T): T {
     this.transactions += 1;
+    // Writes replace array elements instead of mutating them, so these
+    // shallow copies are a full snapshot.
     const snapshot = {
       categories: [...this.categories],
       entries: [...this.entries],
+      revisions: new Map(this.revisions),
+    };
+    const indexOf = (id: string) => {
+      const index = this.entries.findIndex((e) => e.id === id);
+      if (index < 0) throw new Error(`no entry ${id}`);
+      return index;
     };
     const writer: CatalogWriter = {
       categoriesInZone: (zone) => this.categoriesInZone(zone),
-      entryById: () => this.entryById(),
+      entryById: (id) => this.entryById(id),
       entrySummaries: () => this.entrySummaries(),
       entryIdByDedupKey: (key) => this.entryIdByDedupKey(key),
+      updateEntry: (entry) => {
+        const index = indexOf(entry.id);
+        const old = this.entries[index];
+        if (
+          this.entries.some(
+            (e) => e.id !== entry.id && e.dedupKey === entry.dedupKey,
+          )
+        ) {
+          throw new Error('UNIQUE dedup_key');
+        }
+        this.entries[index] = {
+          ...entry,
+          addedAt: old.addedAt,
+          categoryIds: old.categoryIds,
+        };
+        this.revisions.set(entry.id, (this.revisions.get(entry.id) ?? 1) + 1);
+      },
+      replaceEntryCategories: (entryId, categoryIds) => {
+        const index = indexOf(entryId);
+        this.entries[index] = {
+          ...this.entries[index],
+          categoryIds: [...categoryIds],
+        };
+      },
       insertCategory: (category) => {
         if (this.categories.some((c) => c.id === category.id)) {
           throw new Error('duplicate category id');
@@ -74,12 +121,17 @@ class FakeStore implements CatalogStore {
         this.categories.push({ ...category });
       },
       insertEntry: (entry) => {
+        if (this.entries.some((e) => e.dedupKey === entry.dedupKey)) {
+          throw new Error('UNIQUE dedup_key');
+        }
         this.entries.push({ ...entry, categoryIds: [] });
       },
       addEntryCategory: (entryId, categoryId) => {
-        this.entries
-          .find((e) => e.id === entryId)
-          ?.categoryIds.push(categoryId);
+        const index = indexOf(entryId);
+        this.entries[index] = {
+          ...this.entries[index],
+          categoryIds: [...this.entries[index].categoryIds, categoryId],
+        };
       },
     };
     try {
@@ -87,6 +139,7 @@ class FakeStore implements CatalogStore {
     } catch (error) {
       this.categories = snapshot.categories;
       this.entries = snapshot.entries;
+      this.revisions = snapshot.revisions;
       throw error;
     }
   }
@@ -568,5 +621,307 @@ describe('applyBatch with verification verdicts', () => {
       WhenkitError,
     );
     expect(store.entries).toEqual([]);
+  });
+});
+
+describe('applyBatch with op update', () => {
+  /** UUID-shaped ids, as the batch schema requires them on an update. */
+  const uuid = (n: number) =>
+    `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+
+  const LATER = new Date('2026-10-14T08:00:00.000Z');
+
+  /** A context whose ids continue after the first `skip` UUIDs. */
+  function uuidContext(now = NOW, skip = 0) {
+    let n = skip;
+    return {
+      clock: { now: () => now },
+      ids: { newId: () => uuid(++n) },
+      workspace: 'D:\\ws',
+    };
+  }
+
+  /** A store holding tools `a` (uuid 1) and `b` (uuid 2), added at NOW. */
+  function seeded() {
+    const store = new FakeStore(SEED);
+    const batch = parseBatch(batchText([tool('a'), tool('b')]));
+    applyBatch(store, batch, verdictsFor(batch), uuidContext());
+    return store;
+  }
+
+  function update(ref: string, id: string, overrides = {}) {
+    return tool(ref, { op: 'update', id, ...overrides });
+  }
+
+  function runUpdate(
+    store: FakeStore,
+    items: unknown[],
+    extra = {},
+    overrides: Record<string, ItemVerdict> = {},
+  ) {
+    const batch = parseBatch(batchText(items, extra));
+    return applyBatch(
+      store,
+      batch,
+      verdictsFor(batch, overrides),
+      uuidContext(LATER, 2),
+    );
+  }
+
+  it('replaces Claude fields and categories, keeps addedAt, bumps revision', () => {
+    const store = seeded();
+    const report = runUpdate(store, [
+      update('u', uuid(1), {
+        name: 'Tool nou',
+        url: 'https://nou.dev',
+        resourceType: 'repo',
+        categories: ['Securitate'],
+        whatItDoes: 'Face altceva.',
+        situations: ['Altă situație'],
+        keywords: ['nou'],
+      }),
+    ]);
+
+    expect(report.items).toEqual([
+      { ref: 'u', op: 'update', outcome: 'updated', id: uuid(1), reasons: [] },
+    ]);
+    expect(store.entries[0]).toEqual({
+      id: uuid(1),
+      kind: 'tool',
+      name: 'Tool nou',
+      url: 'https://nou.dev',
+      resourceType: 'repo',
+      whatItDoes: 'Face altceva.',
+      situations: ['Altă situație'],
+      keywords: ['nou'],
+      sources: [],
+      content: null,
+      verificationNotes: [],
+      dedupKey: 'url:nou.dev',
+      addedAt: NOW.toISOString(),
+      verifiedAt: LATER.toISOString(),
+      categoryIds: ['seed-2'],
+    });
+    expect(store.revisions.get(uuid(1))).toBe(2);
+    expect(store.entries).toHaveLength(2);
+  });
+
+  it('is not a duplicate of its own entry when it keeps its URL', () => {
+    const store = seeded();
+    const report = runUpdate(store, [
+      update('u', uuid(1), { url: 'https://www.a.dev/', name: 'Alt nume' }),
+    ]);
+    expect(report.items[0].outcome).toBe('updated');
+    expect(store.entries[0]).toMatchObject({
+      name: 'Alt nume',
+      url: 'https://www.a.dev/',
+      dedupKey: 'url:a.dev',
+    });
+  });
+
+  it('is a duplicate when its new URL is another entry, leaving it unchanged', () => {
+    const store = seeded();
+    const before = store.entryById(uuid(1));
+    const report = runUpdate(store, [
+      update('u', uuid(1), { url: 'https://B.dev' }),
+    ]);
+    expect(report.items[0]).toEqual({
+      ref: 'u',
+      op: 'update',
+      outcome: 'duplicate',
+      duplicateOfId: uuid(2),
+      reasons: [{ code: 'duplicate' }],
+    });
+    expect(store.entryById(uuid(1))).toEqual(before);
+  });
+
+  it('rejects an update of an unknown id with unknown_id', () => {
+    const store = seeded();
+    const report = runUpdate(store, [update('u', uuid(99))]);
+    expect(report.items[0]).toEqual({
+      ref: 'u',
+      op: 'update',
+      outcome: 'rejected',
+      reasons: [{ code: 'unknown_id', params: { id: uuid(99) } }],
+    });
+    expect(store.entries).toHaveLength(2);
+  });
+
+  it('leaves the entry and its revision unchanged when the update is rejected', () => {
+    const store = seeded();
+    const before = store.entryById(uuid(1));
+    const report = runUpdate(
+      store,
+      [update('u', uuid(1), { url: 'https://dead.dev' })],
+      {},
+      {
+        u: {
+          outcome: 'rejected',
+          reasons: [{ code: 'http_error', params: { status: '404' } }],
+          sources: [],
+        },
+      },
+    );
+    expect(report.items[0]).toMatchObject({
+      op: 'update',
+      outcome: 'rejected',
+    });
+    expect(store.entryById(uuid(1))).toEqual(before);
+    expect(before?.revision).toBe(1);
+  });
+
+  it('reports a warned update as warned with op update', () => {
+    const store = seeded();
+    const reasons = [{ code: 'no_response_at_import' as const }];
+    const report = runUpdate(
+      store,
+      [update('u', uuid(1))],
+      {},
+      { u: { outcome: 'warned', reasons, sources: [] } },
+    );
+    expect(report.items[0]).toEqual({
+      ref: 'u',
+      op: 'update',
+      outcome: 'warned',
+      id: uuid(1),
+      reasons,
+    });
+    expect(store.entries[0].verificationNotes).toEqual(reasons);
+    expect(store.revisions.get(uuid(1))).toBe(2);
+  });
+
+  it('may change the kind, matching the categories in the new zone', () => {
+    const store = seeded();
+    const report = runUpdate(store, [
+      {
+        ref: 'u',
+        op: 'update',
+        id: uuid(1),
+        kind: 'concept',
+        name: 'REST',
+        categories: ['Securitate'],
+        whatItDoes: 'Stil de API.',
+        situations: ['Când aleg un API'],
+        content: '# REST',
+      },
+    ]);
+    expect(report.items[0].outcome).toBe('updated');
+    expect(store.entries[0]).toMatchObject({
+      kind: 'concept',
+      url: null,
+      resourceType: null,
+      content: '# REST',
+      dedupKey: 'title:rest',
+      // "Securitate" of Learn (seed-4), not the Toolbox one (seed-2).
+      categoryIds: ['seed-4'],
+    });
+  });
+
+  it('rejects a kind change whose categories exist only in the old zone', () => {
+    const store = seeded();
+    const report = runUpdate(store, [
+      update('u', uuid(1), {
+        kind: 'material',
+        categories: ['Imagini & video'],
+      }),
+    ]);
+    expect(report.items[0]).toMatchObject({
+      outcome: 'rejected',
+      reasons: [
+        { code: 'unknown_category', params: { name: 'Imagini & video' } },
+      ],
+    });
+    expect(store.entries[0].kind).toBe('tool');
+  });
+
+  it('counts keys written earlier in the batch, by adds and by updates', () => {
+    const store = seeded();
+    const report = runUpdate(store, [
+      tool('c'),
+      update('u1', uuid(1), { url: 'https://c.dev' }),
+      update('u2', uuid(2), { url: 'https://moved.dev' }),
+      tool('d', { url: 'https://moved.dev/' }),
+      // u1 was a duplicate, so entry 1 still holds a.dev.
+      tool('e', { url: 'https://a.dev' }),
+    ]);
+    expect(report.items).toEqual([
+      { ref: 'c', op: 'add', outcome: 'added', id: uuid(3), reasons: [] },
+      {
+        ref: 'u1',
+        op: 'update',
+        outcome: 'duplicate',
+        reasons: [{ code: 'duplicate', params: { ref: 'c' } }],
+      },
+      {
+        ref: 'u2',
+        op: 'update',
+        outcome: 'updated',
+        id: uuid(2),
+        reasons: [],
+      },
+      {
+        ref: 'd',
+        op: 'add',
+        outcome: 'duplicate',
+        reasons: [{ code: 'duplicate', params: { ref: 'u2' } }],
+      },
+      {
+        ref: 'e',
+        op: 'add',
+        outcome: 'duplicate',
+        duplicateOfId: uuid(1),
+        reasons: [{ code: 'duplicate' }],
+      },
+    ]);
+  });
+
+  it('frees the old key of an updated entry for a later add', () => {
+    const store = seeded();
+    const report = runUpdate(store, [
+      update('u', uuid(1), { url: 'https://new-a.dev' }),
+      tool('a2', { url: 'https://a.dev' }),
+    ]);
+    expect(report.items.map((i) => i.outcome)).toEqual(['updated', 'added']);
+  });
+
+  it('creates a declared category once when an update and an add use it', () => {
+    const store = seeded();
+    const report = runUpdate(
+      store,
+      [
+        update('u', uuid(1), { categories: ['Fonturi'] }),
+        tool('c', { categories: ['fonturi'] }),
+      ],
+      {
+        newCategories: [
+          { zone: 'toolbox', name: 'Fonturi' },
+          { zone: 'toolbox', name: 'FONTURI' },
+        ],
+      },
+    );
+    expect(report.newCategories).toEqual([
+      { id: uuid(3), zone: 'toolbox', name: 'Fonturi', created: true },
+    ]);
+    expect(store.entries[0].categoryIds).toEqual([uuid(3)]);
+    expect(store.entries[2].categoryIds).toEqual([uuid(3)]);
+  });
+
+  it('rolls an update back when a later write fails', () => {
+    const store = seeded();
+    const before = store.entryById(uuid(1));
+    const batch = parseBatch(
+      batchText([update('u', uuid(1), { name: 'Nou' }), tool('c')]),
+    );
+    const ids = {
+      newId: (): string => {
+        throw new Error('boom');
+      },
+    };
+    expect(() =>
+      applyBatch(store, batch, verdictsFor(batch), { ...uuidContext(), ids }),
+    ).toThrow('boom');
+    expect(store.entryById(uuid(1))).toEqual(before);
+    expect(store.revisions.get(uuid(1))).toBeUndefined();
+    expect(store.entries).toHaveLength(2);
   });
 });

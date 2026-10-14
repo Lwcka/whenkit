@@ -78,7 +78,7 @@ describe('batchSchema', () => {
       [{ ...tool, resourceType: 'x' }],
       'items.0.resourceType',
     ],
-    ['op update', [{ ...tool, op: 'update' }], 'items.0.op'],
+    ['an unknown op', [{ ...tool, op: 'delete' }], 'items.0.op'],
     [
       'three categories',
       [{ ...tool, categories: ['a', 'b', 'c'] }],
@@ -140,5 +140,62 @@ describe('batchSchema', () => {
         ]),
       ),
     ).toEqual(['items.0.categories']);
+  });
+});
+
+describe('batchSchema op update', () => {
+  const ID = '6f1c2a4e-8b3d-4c5e-9f70-1a2b3c4d5e6f';
+  const OTHER_ID = '0b9e8d7c-6a5f-4e3d-8c2b-1a0f9e8d7c6b';
+  const update = { ...tool, ref: 'u1', op: 'update', id: ID };
+
+  it('accepts an update with the id of its entry, and an add next to it', () => {
+    const parsed = batchSchema.parse(batch([update, tool]));
+    expect(parsed.items[0]).toMatchObject({ op: 'update', id: ID });
+    expect(parsed.items[1]).toMatchObject({ op: 'add' });
+    expect(parsed.items[1].id).toBeUndefined();
+  });
+
+  it('accepts an update that changes the kind', () => {
+    const parsed = batchSchema.parse(
+      batch([{ ...concept, ref: 'u1', op: 'update', id: ID }]),
+    );
+    expect(parsed.items[0]).toMatchObject({ kind: 'concept', id: ID });
+  });
+
+  it.each([
+    ['an update without an id', [{ ...update, id: undefined }], 'items.0.id'],
+    ['an add with an id', [{ ...tool, id: ID }], 'items.0.id'],
+    ['an id that is not a UUID', [{ ...update, id: 'abc' }], 'items.0.id'],
+  ])('refuses %s', (_label, items, path) => {
+    expect(paths(batch(items))).toContain(path);
+  });
+
+  it('refuses the same id twice in one batch', () => {
+    expect(
+      paths(batch([update, { ...update, ref: 'u2', url: 'https://x.dev' }])),
+    ).toEqual(['items.1.id']);
+  });
+
+  it('lowercases the id, so differently cased ids are the same entry', () => {
+    const parsed = batchSchema.parse(
+      batch([{ ...update, id: ID.toUpperCase() }]),
+    );
+    expect(parsed.items[0].id).toBe(ID);
+    expect(
+      paths(
+        batch([
+          update,
+          { ...update, ref: 'u2', id: ID.toUpperCase(), url: 'https://x.dev' },
+        ]),
+      ),
+    ).toEqual(['items.1.id']);
+  });
+
+  it('accepts two updates of different entries', () => {
+    expect(
+      batchSchema.safeParse(
+        batch([update, { ...update, ref: 'u2', id: OTHER_ID }]),
+      ).success,
+    ).toBe(true);
   });
 });

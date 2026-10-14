@@ -5,6 +5,8 @@ import { z } from 'zod';
 // carries are listed next to it.
 
 export const REASON_CODES = [
+  /** `{ id }`: an update names an entry that is not in the catalog. */
+  'unknown_id',
   /** `{ name }`: a category neither in the item's zone nor declared. */
   'unknown_category',
   /** `{ text }`: Claude's content verdict, kept as written. */

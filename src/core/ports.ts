@@ -122,6 +122,14 @@ export interface NewEntryRow {
   verifiedAt: string | null;
 }
 
+/**
+ * What core writes when an update rewrites an entry (AD-6): every field
+ * Claude writes, plus the recomputed verification and duplicate key. The
+ * store also increments `revision`; it never touches `my_notes`, `owner_id`,
+ * `added_at` or `forced`.
+ */
+export type EntryUpdateRow = Omit<NewEntryRow, 'addedAt'>;
+
 /** What core writes when it creates a category; the store fills `owner_id`. */
 export type NewCategoryRow = StoredCategory;
 
@@ -139,6 +147,13 @@ export interface CatalogWriter extends CatalogReader {
   insertCategory(category: NewCategoryRow): void;
   insertEntry(entry: NewEntryRow): void;
   addEntryCategory(entryId: string, categoryId: string): void;
+  /**
+   * Rewrites the entry `entry.id` and increments its revision (AD-5, AD-16).
+   * Throws when the entry does not exist.
+   */
+  updateEntry(entry: EntryUpdateRow): void;
+  /** Replaces every category of an entry with `categoryIds`. */
+  replaceEntryCategories(entryId: string, categoryIds: readonly string[]): void;
 }
 
 /** The catalog database. Grows with the use cases that need it. */

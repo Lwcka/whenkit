@@ -465,7 +465,7 @@ describe('whenkit import verification', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('b: respinsă');
     expect(result.stdout).toContain('domeniu interzis (regula „libgen.*”');
-    expect(result.stdout).toContain('0 adăugate cu avertisment');
+    expect(result.stdout).toContain('0 cu avertisment');
   });
 
   it('stops offline with exit 3, writing and rejecting nothing', async () => {

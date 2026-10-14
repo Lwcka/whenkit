@@ -94,6 +94,7 @@ export const outcomeLabels: Record<ImportOutcome, string> = {
 type Params = Readonly<Record<string, string>>;
 
 export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
+  unknown_id: (p) => `în catalog nu există nicio fișă cu id-ul ${p.id ?? ''}`,
   unknown_category: (p) =>
     `categoria „${p.name ?? ''}” nu există în zona fișei și nu e declarată în newCategories`,
   flagged_by_claude: (p) => `semnalată de Claude: ${p.text ?? ''}`,
@@ -126,6 +127,13 @@ export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
 export const importStrings = {
   header: (workspace: string) => `Import în ${workspace}`,
   item: (ref: string, outcome: string) => `  ${ref}: ${outcome}`,
+  /** The line of an `op: update` item. */
+  updateItem: (ref: string, outcome: string) =>
+    `  ${ref} (actualizare): ${outcome}`,
+  /** Outcome `warned` of an update; an add uses outcomeLabels.warned. */
+  warnedUpdate: 'actualizată cu avertisment',
+  /** A rejected or duplicate update wrote nothing. */
+  entryUnchanged: '(fișa rămâne neschimbată)',
   entryId: (id: string) => `(id ${id})`,
   duplicateOf: (id: string) => `(fișa existentă ${id})`,
   reason: (text: string) => `    - ${text}`,
@@ -135,7 +143,7 @@ export const importStrings = {
   proposedBlockedDomains: (domains: string) =>
     `Domenii propuse pentru blocare (editează tu data\\blocked-domains.txt): ${domains}`,
   summary: (counts: Record<ImportOutcome, number>) =>
-    `Rezumat: ${counts.added} adăugate, ${counts.warned} adăugate cu avertisment, ${counts.rejected} respinse, ${counts.duplicate} duplicate.`,
+    `Rezumat: ${counts.added} adăugate, ${counts.updated} actualizate, ${counts.warned} cu avertisment, ${counts.rejected} respinse, ${counts.duplicate} duplicate.`,
 } as const;
 
 export const entryStrings = {

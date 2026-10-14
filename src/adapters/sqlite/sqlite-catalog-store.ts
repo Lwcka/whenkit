@@ -8,6 +8,7 @@ import type {
   CatalogStore,
   CatalogWriter,
   Clock,
+  EntryUpdateRow,
   IdGenerator,
   NewCategoryRow,
   NewEntryRow,
@@ -280,6 +281,52 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         'INSERT INTO entry_categories (entry_id, category_id) VALUES (?, ?)',
       )
       .run(entryId, categoryId);
+  }
+
+  updateEntry(entry: EntryUpdateRow): void {
+    // my_notes, owner_id, added_at and forced are deliberately absent: an
+    // update never touches the author's fields (AD-6).
+    const result = this.db
+      .prepare(
+        `UPDATE entries SET kind = ?, name = ?, url = ?, resource_type = ?,
+           what_it_does = ?, situations = ?, keywords = ?, sources = ?,
+           content = ?, verification_notes = ?, dedup_key = ?,
+           verified_at = ?, revision = revision + 1
+         WHERE owner_id = ? AND id = ?`,
+      )
+      .run(
+        entry.kind,
+        entry.name,
+        entry.url,
+        entry.resourceType,
+        entry.whatItDoes,
+        JSON.stringify(entry.situations),
+        JSON.stringify(entry.keywords),
+        JSON.stringify(entry.sources),
+        entry.content,
+        JSON.stringify(entry.verificationNotes),
+        entry.dedupKey,
+        entry.verifiedAt,
+        this.owner,
+        entry.id,
+      );
+    if (Number(result.changes) !== 1) {
+      throw new WhenkitError('INTERNAL', {
+        detail: `no entry ${entry.id} to update`,
+      });
+    }
+  }
+
+  replaceEntryCategories(
+    entryId: string,
+    categoryIds: readonly string[],
+  ): void {
+    this.db
+      .prepare('DELETE FROM entry_categories WHERE entry_id = ?')
+      .run(entryId);
+    for (const categoryId of categoryIds) {
+      this.addEntryCategory(entryId, categoryId);
+    }
   }
 
   writeTransaction<T>(fn: (writer: CatalogWriter) => T): T {
