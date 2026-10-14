@@ -3,7 +3,7 @@ title: 'Adaptorul HTTP'
 type: 'feature'
 ticket: '4'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: 'e22b8effc48f7c14917bfa7fde7d745d10e5c141'
 route: 'full'
 route_source: 'auto'

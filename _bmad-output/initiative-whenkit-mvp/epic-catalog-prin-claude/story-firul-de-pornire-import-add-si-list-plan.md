@@ -3,7 +3,7 @@ title: 'Firul de pornire: import add și list'
 type: 'feature'
 ticket: '3'
 created: '2026-10-13'
-status: 'built'
+status: done
 baseline_revision: 'db632767f7c0f114cebe57325b8b47974c441ff9'
 route: 'full'
 route_source: 'auto'

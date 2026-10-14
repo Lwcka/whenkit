@@ -3,7 +3,7 @@ title: 'Update și integritatea lotului'
 type: 'feature'
 ticket: '6'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: '9af002354056f324b408cc99793b0af0e1e712ec'
 route: 'full'
 route_source: 'auto'

@@ -3,7 +3,7 @@ title: 'Regulile de verificare în import'
 type: 'feature'
 ticket: '5'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: 'ad327f683e8e2aa3318938afd0b94de27bd0b91a'
 route: 'full'
 route_source: 'auto'

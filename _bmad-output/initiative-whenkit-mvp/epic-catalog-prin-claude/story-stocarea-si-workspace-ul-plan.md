@@ -3,7 +3,7 @@ title: 'Stocarea și workspace-ul'
 type: 'feature'
 ticket: '2'
 created: '2026-10-13'
-status: 'built'
+status: done
 baseline_revision: '1a275cbf7e1b1283e035fb041984c330e7d085a5'
 route: 'full'
 route_source: 'auto'
