@@ -1,6 +1,23 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import type { FileSystem } from '../../core/ports';
+
+function collectFiles(root: string, relative: string, found: string[]): void {
+  const entries = readdirSync(path.join(root, relative), {
+    withFileTypes: true,
+  });
+  for (const entry of entries) {
+    const next = relative === '' ? entry.name : `${relative}/${entry.name}`;
+    if (entry.isDirectory()) collectFiles(root, next, found);
+    else if (entry.isFile()) found.push(next);
+  }
+}
 
 export const nodeFileSystem: FileSystem = {
   exists: (target) => existsSync(target),
@@ -10,6 +27,11 @@ export const nodeFileSystem: FileSystem = {
   readText: (target) => readFileSync(target, 'utf8'),
   writeText: (target, text) => {
     writeFileSync(target, text, 'utf8');
+  },
+  listFiles: (dir) => {
+    const found: string[] = [];
+    collectFiles(dir, '', found);
+    return found.sort();
   },
   joinPath: (...parts) => path.join(...parts),
 };

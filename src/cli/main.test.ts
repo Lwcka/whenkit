@@ -13,6 +13,7 @@ const noDeps: CliDeps = {
     mkdir: untouched,
     readText: untouched,
     writeText: untouched,
+    listFiles: untouched,
     joinPath: untouched,
   },
   clock: { now: untouched },

@@ -24,3 +24,6 @@
 - source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-jurnalul-de-respinse-si-force-plan.md`
   summary: Ticket 11 (/importa) must re-declare in `newCategories` any category of a journaled element that is missing from `whenkit categories --json` before retrying it, because the journal keeps only the item, not the batch's declared categories.
   evidence: ticket 8 review loop 1, finding 6: a retried element whose category was declared only in its original batch comes out `unknown_category`.
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-whenkit-init-complet-si-workspace-ul-gestionat-plan.md`
+  summary: Clarify in `workspace-and-import-flow.md` (through bmad-spec) that the workspace's shared card rules file is `.claude/skills/reguli-fise.md`, built from the companion `card-writing-rules.md`; ticket 11 must create it under that name, since the runtime CLAUDE.md already points there.
+  evidence: ticket 10 review, finding 5: the spec's structure tree says "fișier de reguli comun = card-writing-rules.md", which can be read as the file name.

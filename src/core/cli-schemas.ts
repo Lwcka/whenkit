@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import {
+  categoryDtoSchema,
   entryDtoSchema,
   entrySummaryDtoSchema,
   rejectionDtoSchema,
@@ -36,6 +37,15 @@ export const rejectionsOutputSchema = z.strictObject({
 });
 
 export type RejectionsOutput = z.infer<typeof rejectionsOutputSchema>;
+
+export const categoriesOutputSchema = z.strictObject({
+  schemaVersion: outputVersion,
+  workspace: z.string(),
+  /** Toolbox first, then Learn; by name within a zone. */
+  categories: z.array(categoryDtoSchema),
+});
+
+export type CategoriesOutput = z.infer<typeof categoriesOutputSchema>;
 
 export const errorOutputSchema = z.strictObject({
   schemaVersion: outputVersion,

@@ -8,6 +8,7 @@ import type {
   HttpClient,
   IdGenerator,
 } from '../core/ports';
+import { resolveWorkspace, templateOutdated } from '../core/workspace';
 import { cliStrings } from '../shared/strings.ro';
 
 // What every command handler shares: the injected ports, the output streams
@@ -130,4 +131,19 @@ export function printJson<T>(
 /** Prints lines of human text on stdout. */
 export function printLines(io: CliIo, lines: readonly string[]): void {
   io.stdout(`${lines.join('\n')}\n`);
+}
+
+/**
+ * Resolves the workspace for a command, records it in `ctx.workspace` and,
+ * when its template is outdated, warns on stderr (AD-17). The warning never
+ * changes stdout or the exit code.
+ */
+export function resolveCommandWorkspace(ctx: CommandContext): string {
+  const { deps } = ctx;
+  const workspace = resolveWorkspace(deps.env, deps.fs);
+  ctx.workspace = workspace;
+  if (templateOutdated(workspace, deps.fs)) {
+    ctx.io.stderr(`${cliStrings.templateOutdated}\n`);
+  }
+  return workspace;
 }

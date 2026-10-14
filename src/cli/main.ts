@@ -10,6 +10,7 @@ import {
   type CliIo,
   type CommandContext,
 } from './command';
+import { runCategories } from './commands/categories';
 import { runImport } from './commands/import';
 import { runInit } from './commands/init';
 import { runList } from './commands/list';
@@ -41,8 +42,12 @@ const COMMANDS: Record<string, Command> = {
   list: { run: runList, json: true },
   show: { run: runShow, json: true },
   rejections: { run: runRejections, json: true },
+  categories: { run: runCategories, json: true },
   schema: { run: runSchema, json: false },
 };
+
+/** The names of the commands, for tests that check the docs name them all. */
+export const COMMAND_NAMES = Object.keys(COMMANDS);
 
 /** Prints an error: one JSON document on stdout with `--json`, else stderr text. */
 function reportError(ctx: CommandContext, error: unknown): number {

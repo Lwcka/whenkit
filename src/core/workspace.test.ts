@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest';
+import { batchJsonSchemaText } from './batch-json-schema';
 import { WhenkitError } from './errors';
 import type { Environment, FileSystem, OpenStoreOptions } from './ports';
+import { BATCH_SCHEMA_VERSION, TEMPLATE_VERSION } from './versions';
 import {
   initWorkspace,
   isSameOrInside,
   normalizeWorkspacePath,
   readBlockedDomains,
   resolveWorkspace,
+  templateOutdated,
 } from './workspace';
 
 // In-memory fakes: core tests never touch the disk (AD-2). Paths use `\`.
@@ -32,6 +35,15 @@ class FakeFileSystem implements FileSystem {
   writeText(path: string, text: string) {
     this.files.set(path, text);
   }
+  listFiles(dir: string) {
+    const prefix = `${dir}\\`;
+    const found = [...this.files.keys()]
+      .filter((path) => path.startsWith(prefix))
+      .map((path) => path.slice(prefix.length).replaceAll('\\', '/'))
+      .sort();
+    if (found.length === 0) throw new Error(`cannot list ${dir}`);
+    return found;
+  }
   joinPath(...parts: string[]) {
     return parts.join('\\');
   }
@@ -44,9 +56,26 @@ const TEMPLATE_LIST =
   'C:\\Proiecte\\whenkit\\workspace-template\\data\\blocked-domains.txt';
 const TEMPLATE_TEXT = '# initial\nlibgen.*\npdfdrive.com\n';
 
-/** A fake file system holding the app's blocked-domains template. */
+const TEMPLATE_DIR = 'C:\\Proiecte\\whenkit\\workspace-template';
+const TEMPLATE_CLAUDE = `${TEMPLATE_DIR}\\CLAUDE.md`;
+const TEMPLATE_SKILL = `${TEMPLATE_DIR}\\.claude\\skills\\importa\\SKILL.md`;
+const TEMPLATE_KEEP = `${TEMPLATE_DIR}\\input\\.gitkeep`;
+const TEMPLATE_INPUT = `${TEMPLATE_DIR}\\input\\welcome.txt`;
+const TEMPLATE_FILES = [
+  TEMPLATE_CLAUDE,
+  TEMPLATE_SKILL,
+  TEMPLATE_KEEP,
+  TEMPLATE_INPUT,
+  TEMPLATE_LIST,
+].sort();
+
+/** A fake file system holding the app's workspace template. */
 function withTemplate(fs = new FakeFileSystem()): FakeFileSystem {
   fs.writeText(TEMPLATE_LIST, TEMPLATE_TEXT);
+  fs.writeText(TEMPLATE_CLAUDE, '# runtime\n');
+  fs.writeText(TEMPLATE_SKILL, 'skill\n');
+  fs.writeText(TEMPLATE_KEEP, '');
+  fs.writeText(TEMPLATE_INPUT, 'welcome\n');
   return fs;
 }
 
@@ -246,10 +275,17 @@ describe('initWorkspace', () => {
     const env = fakeEnv({ APPDATA, WHENKIT_WORKSPACE: 'D:\\dev' });
     expect(initWorkspace({}, { env, fs, openStore })).toBe('D:\\dev');
     expect(opened).toEqual(['D:\\dev\\data\\catalog.sqlite']);
-    expect([...fs.files.keys()].sort()).toEqual([
-      TEMPLATE_LIST,
-      'D:\\dev\\data\\blocked-domains.txt',
-    ]);
+    expect([...fs.files.keys()].sort()).toEqual(
+      [
+        ...TEMPLATE_FILES,
+        'D:\\dev\\CLAUDE.md',
+        'D:\\dev\\.claude\\skills\\importa\\SKILL.md',
+        'D:\\dev\\input\\welcome.txt',
+        'D:\\dev\\data\\blocked-domains.txt',
+        'D:\\dev\\batch.schema.json',
+        'D:\\dev\\.whenkit-template.json',
+      ].sort(),
+    );
   });
 
   it('creates data/blocked-domains.txt from the template when missing', () => {
@@ -366,7 +402,110 @@ describe('initWorkspace', () => {
     expect(
       codeOf(() => initWorkspace({ path: 'D:\\ws' }, { env, fs, openStore })),
     ).toBe('MIGRATION_MISMATCH');
-    expect([...fs.files.keys()]).toEqual([TEMPLATE_LIST]);
+    expect([...fs.files.keys()].sort()).toEqual(TEMPLATE_FILES);
+  });
+});
+
+describe('initWorkspace template copy', () => {
+  const env = fakeEnv({ APPDATA });
+  const run = (fs: FakeFileSystem) =>
+    initWorkspace(
+      { path: 'D:\\ws' },
+      { env, fs, openStore: fakeOpener().openStore },
+    );
+  const SKILL = 'D:\\ws\\.claude\\skills\\importa\\SKILL.md';
+
+  it('copies every template file, skips .gitkeep and writes schema and marker', () => {
+    const fs = withTemplate();
+    run(fs);
+    expect(fs.readText('D:\\ws\\CLAUDE.md')).toBe('# runtime\n');
+    expect(fs.readText(SKILL)).toBe('skill\n');
+    expect(fs.readText('D:\\ws\\input\\welcome.txt')).toBe('welcome\n');
+    expect(fs.exists('D:\\ws\\input\\.gitkeep')).toBe(false);
+    expect(fs.readText('D:\\ws\\batch.schema.json')).toBe(
+      batchJsonSchemaText(),
+    );
+    expect(JSON.parse(fs.readText('D:\\ws\\.whenkit-template.json'))).toEqual({
+      templateVersion: TEMPLATE_VERSION,
+      batchSchemaVersion: BATCH_SCHEMA_VERSION,
+    });
+  });
+
+  it('overwrites template-managed files and keeps the user files', () => {
+    const fs = withTemplate();
+    fs.writeText('D:\\ws\\CLAUDE.md', 'edited');
+    fs.writeText(SKILL, 'edited');
+    fs.writeText('D:\\ws\\input\\welcome.txt', 'mine');
+    fs.writeText('D:\\ws\\data\\blocked-domains.txt', 'mine');
+    fs.writeText('D:\\ws\\data\\catalog.sqlite', 'db');
+    fs.writeText('D:\\ws\\old-skill.md', 'left the template');
+    fs.writeText('D:\\ws\\batch.schema.json', 'stale');
+    run(fs);
+    expect(fs.readText('D:\\ws\\CLAUDE.md')).toBe('# runtime\n');
+    expect(fs.readText(SKILL)).toBe('skill\n');
+    expect(fs.readText('D:\\ws\\batch.schema.json')).toBe(
+      batchJsonSchemaText(),
+    );
+    expect(fs.readText('D:\\ws\\input\\welcome.txt')).toBe('mine');
+    expect(fs.readText('D:\\ws\\data\\blocked-domains.txt')).toBe('mine');
+    expect(fs.readText('D:\\ws\\data\\catalog.sqlite')).toBe('db');
+    expect(fs.readText('D:\\ws\\old-skill.md')).toBe('left the template');
+  });
+
+  it('creates nothing when one template file is unreadable', () => {
+    const fs = withTemplate();
+    fs.unreadable.add(TEMPLATE_CLAUDE);
+    const { opened, openStore } = fakeOpener();
+    expect(
+      codeOf(() => initWorkspace({ path: 'D:\\ws' }, { env, fs, openStore })),
+    ).toBe('INTERNAL');
+    expect(fs.dirs.size + opened.length).toBe(0);
+    expect([...fs.files.keys()].sort()).toEqual(TEMPLATE_FILES);
+  });
+});
+
+describe('templateOutdated', () => {
+  const MARKER = 'D:\\ws\\.whenkit-template.json';
+  const current = {
+    templateVersion: TEMPLATE_VERSION,
+    batchSchemaVersion: BATCH_SCHEMA_VERSION,
+  };
+  const marker = (value: unknown) => {
+    const fs = new FakeFileSystem();
+    fs.writeText(MARKER, JSON.stringify(value));
+    return fs;
+  };
+
+  it('is false for the current versions', () => {
+    expect(templateOutdated('D:\\ws', marker(current))).toBe(false);
+  });
+
+  it('is false for a newer template version', () => {
+    const newer = { ...current, templateVersion: TEMPLATE_VERSION + 1 };
+    expect(templateOutdated('D:\\ws', marker(newer))).toBe(false);
+  });
+
+  it.each([
+    ['version 0', { ...current, templateVersion: 0 }],
+    [
+      'another batch schema version',
+      { ...current, batchSchemaVersion: BATCH_SCHEMA_VERSION + 1 },
+    ],
+    ['a missing batch schema version', { templateVersion: TEMPLATE_VERSION }],
+    ['a non-numeric version', { ...current, templateVersion: 'x' }],
+    ['null', null],
+  ])('is true for %s', (_label, value) => {
+    expect(templateOutdated('D:\\ws', marker(value))).toBe(true);
+  });
+
+  it('is true for a missing, unparseable or unreadable marker', () => {
+    expect(templateOutdated('D:\\ws', new FakeFileSystem())).toBe(true);
+    const bad = new FakeFileSystem();
+    bad.writeText(MARKER, '{');
+    expect(templateOutdated('D:\\ws', bad)).toBe(true);
+    const locked = marker(current);
+    locked.unreadable.add(MARKER);
+    expect(templateOutdated('D:\\ws', locked)).toBe(true);
   });
 });
 

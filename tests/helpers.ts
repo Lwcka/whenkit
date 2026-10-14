@@ -2,7 +2,9 @@ import { cpSync, mkdirSync, mkdtempSync, rmSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
+import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
 import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
+import { main } from '../src/cli/main';
 import { WhenkitError } from '../src/core/errors';
 import type {
   CatalogStoreOpener,
@@ -109,4 +111,42 @@ export function errorCodeOf(action: () => unknown): string {
     throw error;
   }
   throw new Error('expected a WhenkitError');
+}
+
+/**
+ * Runs the CLI in-process on the real file system and SQLite, with the given
+ * environment variables and app root injected.
+ */
+export async function runWhenkit(
+  args: string[],
+  options: {
+    vars: Record<string, string | undefined>;
+    appRoot: string;
+    cwd: string;
+  },
+): Promise<{ exitCode: number; stdout: string; stderr: string }> {
+  let stdout = '';
+  let stderr = '';
+  const exitCode = await main(
+    args,
+    {
+      stdout: (text) => {
+        stdout += text;
+      },
+      stderr: (text) => {
+        stderr += text;
+      },
+    },
+    {
+      env: fakeEnvironment(options.vars, options.appRoot),
+      fs: nodeFileSystem,
+      clock: fixedClock(),
+      ids: sequentialIds(),
+      openStore: testStoreOpener(),
+      http: unusedHttp,
+      github: notFoundGithub,
+      cwd: options.cwd,
+    },
+  );
+  return { exitCode, stdout, stderr };
 }

@@ -1,7 +1,14 @@
-import type { EntryDto, EntrySummaryDto, RejectionDto } from '../core/dto';
+import type {
+  CategoryDto,
+  EntryDto,
+  EntrySummaryDto,
+  RejectionDto,
+} from '../core/dto';
+import { ZONES } from '../core/entry';
 import type { ImportOutcome, ImportReport } from '../core/import-report-schema';
 import type { VerdictReason } from '../core/verification/reason-codes';
 import {
+  categoryStrings,
   entryStrings,
   importStrings,
   kindLabels,
@@ -123,6 +130,20 @@ export function renderRejections(
       rejection.rejectedAt,
     );
   });
+}
+
+/** Categories grouped by zone, in the order given (Toolbox first). */
+export function renderCategories(categories: readonly CategoryDto[]): string[] {
+  const lines: string[] = [];
+  for (const zone of ZONES) {
+    lines.push(categoryStrings.zoneHeader(zoneLabels[zone]));
+    for (const category of categories) {
+      if (category.zone === zone) {
+        lines.push(categoryStrings.line(category.name));
+      }
+    }
+  }
+  return lines;
 }
 
 export function renderEntry(entry: EntryDto): string[] {

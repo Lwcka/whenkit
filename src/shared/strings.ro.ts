@@ -20,6 +20,7 @@ export const cliStrings = {
     '  list [--json]                   afișează toate fișele (fără conținutul conceptelor)',
     '  show <id> [--json]              afișează o fișă completă',
     '  rejections [--json]             afișează jurnalul respinselor (elementele din lot, cu motive)',
+    '  categories [--json]             afișează categoriile, pe zone (Toolbox, apoi Learn)',
     '  schema                          afișează JSON Schema a lotului de import',
     '',
     'Opțiuni:',
@@ -38,6 +39,8 @@ export const cliStrings = {
   missingOptionValue: (command: string, option: string, value: string) =>
     `Opțiunea „${option}” cere o valoare (<${value}>) pentru „${command}”. Rulează „whenkit --help”.`,
   initDone: (workspace: string) => `Workspace-ul e gata: ${workspace}`,
+  templateOutdated:
+    'Atenție: fișierele workspace-ului (CLAUDE.md, skill-uri, schema lotului) sunt mai vechi decât aplicația. Rulează „whenkit init” ca să le actualizezi.',
   errorPrefix: 'Eroare',
   issueLine: (path: string, message: string) =>
     `  - ${path === '' ? '(lot)' : path}: ${message}`,
@@ -192,4 +195,9 @@ export const entryStrings = {
   parentIds: 'Umbrele (id)',
   childIds: 'Copii (id)',
   id: 'Id',
+} as const;
+
+export const categoryStrings = {
+  zoneHeader: (zone: string) => `${zone}:`,
+  line: (name: string) => `  ${name}`,
 } as const;

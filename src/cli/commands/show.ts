@@ -1,7 +1,7 @@
 import { showOutputSchema } from '../../core/cli-schemas';
 import { toEntryDto } from '../../core/dto';
 import { WhenkitError } from '../../core/errors';
-import { catalogPath, resolveWorkspace } from '../../core/workspace';
+import { catalogPath } from '../../core/workspace';
 import { CLI_OUTPUT_VERSION } from '../../core/versions';
 import { EXIT_OK } from '../exit-codes';
 import {
@@ -9,6 +9,7 @@ import {
   printJson,
   printLines,
   type CommandContext,
+  resolveCommandWorkspace,
 } from '../command';
 import { renderEntry } from '../render';
 
@@ -16,8 +17,7 @@ import { renderEntry } from '../render';
 export function runShow(args: readonly string[], ctx: CommandContext): number {
   const [id] = parseArgs('show', args, { required: ['id'], json: true });
   const { deps } = ctx;
-  const workspace = resolveWorkspace(deps.env, deps.fs);
-  ctx.workspace = workspace;
+  const workspace = resolveCommandWorkspace(ctx);
 
   const store = deps.openStore(catalogPath(deps.fs, workspace), {
     readOnly: true,

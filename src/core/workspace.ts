@@ -1,7 +1,12 @@
+import { batchJsonSchemaText } from './batch-json-schema';
 import { WhenkitError } from './errors';
 import type { Environment, FileSystem, OpenStoreOptions } from './ports';
 import { parseBlockedDomains } from './verification/blocked-domains';
-import { CONFIG_VERSION } from './versions';
+import {
+  BATCH_SCHEMA_VERSION,
+  CONFIG_VERSION,
+  TEMPLATE_VERSION,
+} from './versions';
 
 // The single source of the workspace path (AD-8): WHENKIT_WORKSPACE, then
 // %APPDATA%\whenkit\config.json, then WORKSPACE_NOT_CONFIGURED. There is no
@@ -33,6 +38,103 @@ export function blockedDomainsPath(fs: FileSystem, workspace: string): string {
   return fs.joinPath(workspace, 'data', BLOCKED_DOMAINS_FILE);
 }
 
+/** Marker of the template version a workspace was initialized with (AD-17). */
+const TEMPLATE_MARKER_FILE = '.whenkit-template.json';
+const BATCH_SCHEMA_FILE = 'batch.schema.json';
+
+/** First path segments whose files belong to the user: never overwritten. */
+const USER_OWNED_ROOTS: readonly string[] = ['data', 'input'];
+
+interface TemplateFile {
+  /** The path relative to the template root, one array item per folder or file name. */
+  segments: string[];
+  text: string;
+  /** True for a user file the workspace already has: left alone. */
+  skip: boolean;
+}
+
+function templateRoot(env: Environment, fs: FileSystem): string {
+  return fs.joinPath(env.appRoot(), 'workspace-template');
+}
+
+function isUserOwned(segments: readonly string[]): boolean {
+  return USER_OWNED_ROOTS.includes(segments[0]);
+}
+
+/**
+ * Reads every file of `workspace-template/` (recursively, `.gitkeep` files
+ * skipped) before anything is written, so a broken install fails with nothing
+ * created (AD-11). A file under `data/` or `input/` is the user's: it is
+ * planned only when the workspace lacks it. Everything else is template-
+ * managed and always planned (AD-17). A missing, empty or unreadable template
+ * is INTERNAL.
+ */
+function planTemplate(
+  workspace: string,
+  { env, fs }: { env: Environment; fs: FileSystem },
+): TemplateFile[] {
+  const root = templateRoot(env, fs);
+  try {
+    const relatives = fs
+      .listFiles(root)
+      .filter((relative) => relative.split('/').at(-1) !== '.gitkeep');
+    if (relatives.length === 0) throw new Error('the template has no files');
+    return relatives.map((relative) => {
+      const segments = relative.split('/');
+      const text = fs.readText(fs.joinPath(root, ...segments));
+      const skip =
+        isUserOwned(segments) && fs.exists(fs.joinPath(workspace, ...segments));
+      return { segments, text, skip };
+    });
+  } catch (cause) {
+    throw new WhenkitError('INTERNAL', {
+      cause,
+      detail: `cannot read the template ${root}`,
+    });
+  }
+}
+
+/** Writes the planned template files into the workspace. */
+function writeTemplate(
+  workspace: string,
+  fs: FileSystem,
+  plan: readonly TemplateFile[],
+): void {
+  for (const file of plan) {
+    if (file.skip) continue;
+    fs.mkdir(fs.joinPath(workspace, ...file.segments.slice(0, -1)));
+    fs.writeText(fs.joinPath(workspace, ...file.segments), file.text);
+  }
+}
+
+/**
+ * True when the workspace's template marker is missing or unreadable, its
+ * `templateVersion` is lower than the code's, or its `batchSchemaVersion`
+ * differs (a changed batch schema makes `batch.schema.json` stale even when
+ * `TEMPLATE_VERSION` was not bumped). Never throws (AD-17).
+ */
+export function templateOutdated(workspace: string, fs: FileSystem): boolean {
+  try {
+    const parsed: unknown = JSON.parse(
+      fs
+        .readText(fs.joinPath(workspace, TEMPLATE_MARKER_FILE))
+        .replace(/^\uFEFF/, ''),
+    );
+    if (typeof parsed !== 'object' || parsed === null) return true;
+    const { templateVersion, batchSchemaVersion } = parsed as Record<
+      string,
+      unknown
+    >;
+    return (
+      typeof templateVersion !== 'number' ||
+      templateVersion < TEMPLATE_VERSION ||
+      batchSchemaVersion !== BATCH_SCHEMA_VERSION
+    );
+  } catch {
+    return true;
+  }
+}
+
 /**
  * The template text for `data/blocked-domains.txt` when the workspace lacks
  * the file, or undefined when it has it (the file is the user's and is never
@@ -45,8 +147,7 @@ function missingBlockedDomainsText(
 ): string | undefined {
   if (fs.exists(blockedDomainsPath(fs, workspace))) return undefined;
   const template = fs.joinPath(
-    env.appRoot(),
-    'workspace-template',
+    templateRoot(env, fs),
     'data',
     BLOCKED_DOMAINS_FILE,
   );
@@ -226,12 +327,13 @@ export interface InitWorkspacePorts {
 }
 
 /**
- * Minimal `whenkit init` (ticket 10 adds the template): creates the folders,
- * the migrated catalog and, when missing, `data/blocked-domains.txt` from
- * the template, then records the path in config.json unless
- * WHENKIT_WORKSPACE is set (a development run never moves the real
- * configuration). Re-running on an existing workspace changes nothing.
- * Returns the workspace path.
+ * `whenkit init` (AD-17): creates the folders and the migrated catalog,
+ * copies `workspace-template/` (template-managed files are overwritten, the
+ * user's files under `data/` and `input/` are created only when missing),
+ * writes `batch.schema.json` and, last, `.whenkit-template.json`, then
+ * records the path in config.json unless WHENKIT_WORKSPACE is set (a
+ * development run never moves the real configuration). Re-running keeps the
+ * catalog and the user's files. Returns the workspace path.
  */
 export function initWorkspace(
   options: { path?: string },
@@ -257,15 +359,27 @@ export function initWorkspace(
 
   // Read before anything is created: a missing template fails with nothing
   // written (AD-11).
-  const blockedDomainsText = missingBlockedDomainsText(workspace, { env, fs });
+  const plan = planTemplate(workspace, { env, fs });
 
   for (const folder of WORKSPACE_FOLDERS) {
     fs.mkdir(fs.joinPath(workspace, ...folder));
   }
   // The only place that may create the catalog file.
   openStore(catalogPath(fs, workspace), { create: true }).close();
-  // The user's file: created when missing, never overwritten (AD-17).
-  writeBlockedDomains(workspace, fs, blockedDomainsText);
+  writeTemplate(workspace, fs, plan);
+  fs.writeText(
+    fs.joinPath(workspace, BATCH_SCHEMA_FILE),
+    batchJsonSchemaText(),
+  );
+  // Last: an interrupted init leaves the old marker, so commands still warn.
+  const marker = {
+    templateVersion: TEMPLATE_VERSION,
+    batchSchemaVersion: BATCH_SCHEMA_VERSION,
+  };
+  fs.writeText(
+    fs.joinPath(workspace, TEMPLATE_MARKER_FILE),
+    `${JSON.stringify(marker, null, 2)}\n`,
+  );
 
   if (dir !== undefined) {
     const content: WorkspaceConfig = {

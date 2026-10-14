@@ -7,11 +7,7 @@ import {
 } from '../../core/import-batch';
 import { importReportSchema } from '../../core/import-report-schema';
 import { verifyBatch } from '../../core/verification/verify';
-import {
-  catalogPath,
-  readBlockedDomains,
-  resolveWorkspace,
-} from '../../core/workspace';
+import { catalogPath, readBlockedDomains } from '../../core/workspace';
 import { EXIT_OK } from '../exit-codes';
 import {
   extractForce,
@@ -19,6 +15,7 @@ import {
   printJson,
   printLines,
   type CommandContext,
+  resolveCommandWorkspace,
 } from '../command';
 import { renderImportReport } from '../render';
 
@@ -30,8 +27,7 @@ export async function runImport(
   const { force, rest } = extractForce('import', args);
   const [file] = parseArgs('import', rest, { required: ['lot'], json: true });
   const { deps } = ctx;
-  const workspace = resolveWorkspace(deps.env, deps.fs);
-  ctx.workspace = workspace;
+  const workspace = resolveCommandWorkspace(ctx);
 
   // Phase 1 runs before the catalog is opened: an invalid batch touches
   // nothing.

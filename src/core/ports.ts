@@ -30,6 +30,12 @@ export interface FileSystem {
   mkdir(path: string): void;
   readText(path: string): string;
   writeText(path: string, text: string): void;
+  /**
+   * Every file under `dir`, recursively, as paths relative to `dir` with `/`
+   * separators, sorted. Directories are not listed. Throws when `dir` cannot
+   * be read.
+   */
+  listFiles(dir: string): string[];
   joinPath(...parts: string[]): string;
 }
 

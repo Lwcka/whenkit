@@ -1,4 +1,4 @@
-import { batchJsonSchema } from '../../core/batch-json-schema';
+import { batchJsonSchemaText } from '../../core/batch-json-schema';
 import { EXIT_OK } from '../exit-codes';
 import { parseArgs, type CommandContext } from '../command';
 
@@ -11,6 +11,6 @@ export function runSchema(
   ctx: CommandContext,
 ): number {
   parseArgs('schema', args, { required: [], json: false });
-  ctx.io.stdout(`${JSON.stringify(batchJsonSchema(), null, 2)}\n`);
+  ctx.io.stdout(batchJsonSchemaText());
   return EXIT_OK;
 }

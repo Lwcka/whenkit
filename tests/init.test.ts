@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   statSync,
   writeFileSync,
 } from 'node:fs';
@@ -10,7 +11,8 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { main } from '../src/cli/main';
+import { COMMAND_NAMES, main } from '../src/cli/main';
+import { BATCH_SCHEMA_VERSION, TEMPLATE_VERSION } from '../src/core/versions';
 import { errorMessages } from '../src/shared/strings.ro';
 import {
   fakeAppRoot,
@@ -185,6 +187,114 @@ describe('whenkit init', () => {
     writeFileSync(list, 'exemplu.com\n');
     expect((await runCli(s, ['init'])).exitCode).toBe(0);
     expect(readFileSync(list, 'utf8')).toBe('exemplu.com\n');
+  });
+
+  it('installs the whole template, the batch schema and the marker, without .gitkeep', async () => {
+    const s = setup();
+    const workspace = path.join(s.root, 'ws');
+    const template = path.join(s.appRoot, 'workspace-template');
+    mkdirSync(path.join(template, '.claude', 'skills'), { recursive: true });
+    mkdirSync(path.join(template, 'input'), { recursive: true });
+    writeFileSync(path.join(template, '.claude', 'skills', '.gitkeep'), '');
+    writeFileSync(path.join(template, '.claude', 'skills', 'x.md'), 'x');
+    writeFileSync(path.join(template, 'input', '.gitkeep'), '');
+    expect((await runCli(s, ['init', workspace])).exitCode).toBe(0);
+
+    const templateClaude = readFileSync(
+      path.join(s.appRoot, 'workspace-template', 'CLAUDE.md'),
+      'utf8',
+    );
+    expect(readFileSync(path.join(workspace, 'CLAUDE.md'), 'utf8')).toBe(
+      templateClaude,
+    );
+    expect(
+      readFileSync(path.join(workspace, 'batch.schema.json'), 'utf8'),
+    ).toBe((await runCli(s, ['schema'])).stdout);
+    expect(
+      JSON.parse(
+        readFileSync(path.join(workspace, '.whenkit-template.json'), 'utf8'),
+      ),
+    ).toEqual({
+      templateVersion: TEMPLATE_VERSION,
+      batchSchemaVersion: BATCH_SCHEMA_VERSION,
+    });
+    expect(
+      existsSync(path.join(workspace, 'data', 'blocked-domains.txt')),
+    ).toBe(true);
+    for (const dir of [
+      workspace,
+      path.join(workspace, 'input'),
+      path.join(workspace, '.claude', 'skills'),
+    ]) {
+      expect(readdirSync(dir)).not.toContain('.gitkeep');
+    }
+  });
+
+  it('restores template-managed files on a second init and keeps the user files', async () => {
+    const s = setup();
+    const workspace = path.join(s.root, 'ws');
+    expect((await runCli(s, ['init', workspace])).exitCode).toBe(0);
+    const claude = path.join(workspace, 'CLAUDE.md');
+    const schema = path.join(workspace, 'batch.schema.json');
+    const list = path.join(workspace, 'data', 'blocked-domains.txt');
+    const note = path.join(workspace, 'input', 'note.txt');
+    const old = path.join(workspace, 'old-file.md');
+    const originalClaude = readFileSync(claude, 'utf8');
+    const originalSchema = readFileSync(schema, 'utf8');
+    writeFileSync(claude, 'edited');
+    writeFileSync(schema, 'edited');
+    writeFileSync(list, 'exemplu.com\n');
+    writeFileSync(note, 'keep me');
+    writeFileSync(old, 'not in the template any more');
+    const dbPath = path.join(workspace, 'data', 'catalog.sqlite');
+    const db = new DatabaseSync(dbPath);
+    db.exec(
+      "INSERT INTO categories (id, owner_id, zone, name, name_key) SELECT 'extra', owner_id, 'learn', 'Extra', 'extra' FROM meta",
+    );
+    db.close();
+
+    expect((await runCli(s, ['init'])).exitCode).toBe(0);
+    expect(readFileSync(claude, 'utf8')).toBe(originalClaude);
+    expect(readFileSync(schema, 'utf8')).toBe(originalSchema);
+    expect(readFileSync(list, 'utf8')).toBe('exemplu.com\n');
+    expect(readFileSync(note, 'utf8')).toBe('keep me');
+    expect(readFileSync(old, 'utf8')).toBe('not in the template any more');
+    expect(query(dbPath, 'SELECT count(*) AS n FROM categories')).toEqual({
+      n: 17,
+    });
+  });
+
+  it('fails with exit 4 and creates nothing when the template is missing', async () => {
+    const s = setup();
+    rmSync(path.join(s.appRoot, 'workspace-template'), { recursive: true });
+    const workspace = path.join(s.root, 'ws');
+    const result = await runCli(s, ['init', workspace]);
+
+    expect(result.exitCode).toBe(4);
+    expect(result.stderr).toContain(errorMessages.INTERNAL);
+    expect(existsSync(workspace)).toBe(false);
+    expect(existsSync(s.configFile)).toBe(false);
+  });
+
+  it('the template CLAUDE.md names every CLI command and the contract files', () => {
+    const claude = readFileSync(
+      path.join(__dirname, '..', 'workspace-template', 'CLAUDE.md'),
+      'utf8',
+    );
+    for (const name of COMMAND_NAMES) {
+      expect(claude).toContain(`whenkit ${name}`);
+    }
+    for (const needle of [
+      '.claude/skills/importa/',
+      '.claude/skills/gaseste/',
+      '.claude/skills/reguli-fise.md',
+      'batch.schema.json',
+      'batches/',
+      'Notițele mele',
+      'data/',
+    ]) {
+      expect(claude).toContain(needle);
+    }
   });
 
   it.each([

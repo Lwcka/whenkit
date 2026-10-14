@@ -1,6 +1,6 @@
 import { listOutputSchema } from '../../core/cli-schemas';
 import { toEntrySummaryDto } from '../../core/dto';
-import { catalogPath, resolveWorkspace } from '../../core/workspace';
+import { catalogPath } from '../../core/workspace';
 import { CLI_OUTPUT_VERSION } from '../../core/versions';
 import { EXIT_OK } from '../exit-codes';
 import {
@@ -8,6 +8,7 @@ import {
   printJson,
   printLines,
   type CommandContext,
+  resolveCommandWorkspace,
 } from '../command';
 import { renderEntryList } from '../render';
 
@@ -15,8 +16,7 @@ import { renderEntryList } from '../render';
 export function runList(args: readonly string[], ctx: CommandContext): number {
   parseArgs('list', args, { required: [], json: true });
   const { deps } = ctx;
-  const workspace = resolveWorkspace(deps.env, deps.fs);
-  ctx.workspace = workspace;
+  const workspace = resolveCommandWorkspace(ctx);
 
   const store = deps.openStore(catalogPath(deps.fs, workspace), {
     readOnly: true,

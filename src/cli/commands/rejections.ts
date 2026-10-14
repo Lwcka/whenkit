@@ -1,13 +1,14 @@
 import { rejectionsOutputSchema } from '../../core/cli-schemas';
 import { toRejectionDto } from '../../core/dto';
 import { CLI_OUTPUT_VERSION } from '../../core/versions';
-import { catalogPath, resolveWorkspace } from '../../core/workspace';
+import { catalogPath } from '../../core/workspace';
 import { EXIT_OK } from '../exit-codes';
 import {
   parseArgs,
   printJson,
   printLines,
   type CommandContext,
+  resolveCommandWorkspace,
 } from '../command';
 import { renderRejections } from '../render';
 
@@ -18,8 +19,7 @@ export function runRejections(
 ): number {
   parseArgs('rejections', args, { required: [], json: true });
   const { deps } = ctx;
-  const workspace = resolveWorkspace(deps.env, deps.fs);
-  ctx.workspace = workspace;
+  const workspace = resolveCommandWorkspace(ctx);
 
   const store = deps.openStore(catalogPath(deps.fs, workspace), {
     readOnly: true,

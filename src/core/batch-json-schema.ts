@@ -49,3 +49,11 @@ export function batchJsonSchema(): JsonObject {
   item.allOf = OP_ID_PAIRING;
   return schema;
 }
+
+/**
+ * The exact text `whenkit schema` prints and `init` writes to
+ * `batch.schema.json`.
+ */
+export function batchJsonSchemaText(): string {
+  return `${JSON.stringify(batchJsonSchema(), null, 2)}\n`;
+}
