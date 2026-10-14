@@ -82,7 +82,7 @@ Proiectul e și pentru învățare: explică raționamentul, nu doar codul. La d
 Cum rulăm `bmad-build` (decis de autor, 2026-10-14; scopul e să nu consumăm limita prea repede):
 
 - **O sesiune nouă pe tichet.** Planul stă pe disc; la final sesiunea se închide, iar următorul tichet pornește într-o sesiune curată cu `/bmad-build <ref>` (ex. `/bmad-build 1.7`). Nu continuăm un tichet nou într-o conversație deja lungă.
-- **Implementarea**, în subagent, rulează pe **Sonnet** (`model: sonnet`); **revizia** rulează mereu, în subagent, pe **Opus** (`model: opus`). Code review-ul nu se sare.
+- **Implementarea**, în subagent, rulează pe **Sonnet** cu efort **high** (`model: sonnet`, `effort: high`); **revizia** rulează mereu, în subagent, pe **Opus** (`model: opus`). Code review-ul nu se sare.
 - Sesiunea principală nu citește tot diff-ul: rulează verificarea, citește rapoartele, face triajul pe codul vizat de constatări.
 
 ## Flux de lucru cu git
