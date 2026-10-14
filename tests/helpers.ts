@@ -8,6 +8,7 @@ import type {
   CatalogStoreOpener,
   Clock,
   Environment,
+  GitHubClient,
   HttpClient,
   IdGenerator,
 } from '../src/core/ports';
@@ -87,6 +88,11 @@ export function fakeAppRoot(dir: string): string {
 /** An HttpClient that answers 200 for every link, without any network. */
 export const okHttp: HttpClient = {
   check: (url) => Promise.resolve({ kind: 'ok', status: 200, finalUrl: url }),
+};
+
+/** A GitHubClient that finds no repository: the import writes no GitHub data. */
+export const notFoundGithub: GitHubClient = {
+  repo: () => Promise.resolve({ kind: 'notFound' }),
 };
 
 /** An HttpClient that fails the test if anything checks a link. */

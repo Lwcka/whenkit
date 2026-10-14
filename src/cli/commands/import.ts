@@ -50,6 +50,7 @@ export async function runImport(
     batch,
     {
       http: deps.http,
+      github: deps.github,
       blockedDomains: readBlockedDomains(workspace, deps),
       retryDelayMs: deps.retryDelayMs,
     },

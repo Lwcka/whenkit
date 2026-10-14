@@ -51,3 +51,81 @@ export function dedupKey(entry: { url?: string | null; name: string }): string {
     ? `title:${nameKey(entry.name)}`
     : `url:${normalizeUrl(entry.url)}`;
 }
+
+/** First path segments of github.com that are site pages, not account names. */
+const GITHUB_RESERVED = new Set([
+  'about',
+  'account',
+  'advisories',
+  'apps',
+  'codespaces',
+  'collections',
+  'contact',
+  'copilot',
+  'customer-stories',
+  'dashboard',
+  'enterprise',
+  'events',
+  'explore',
+  'features',
+  'issues',
+  'join',
+  'login',
+  'logout',
+  'marketplace',
+  'new',
+  'notifications',
+  'orgs',
+  'organizations',
+  'premium-support',
+  'pricing',
+  'pulls',
+  'readme',
+  'resources',
+  'search',
+  'security',
+  'sessions',
+  'settings',
+  'signup',
+  'site',
+  'solutions',
+  'sponsors',
+  'stars',
+  'team',
+  'topics',
+  'trending',
+  'users',
+  'watching',
+]);
+
+const GITHUB_OWNER = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+const GITHUB_REPO = /^[a-z0-9._-]+$/i;
+
+/**
+ * The repository a URL points at (AD-7): the first two path segments of a
+ * `github.com` or `www.github.com` http(s) URL, `.git` stripped from the
+ * repo name, case kept as written. Subpaths (`/tree/main/docs`) still name
+ * their repo. Anything else (other hosts, gists, `/topics/x`, an account
+ * page) is undefined.
+ */
+export function githubRepo(
+  input: string,
+): { owner: string; repo: string } | undefined {
+  let url: URL;
+  try {
+    url = new URL(input.trim());
+  } catch {
+    return undefined;
+  }
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') return undefined;
+  if (url.hostname !== 'github.com' && url.hostname !== 'www.github.com') {
+    return undefined;
+  }
+  const [owner, rawRepo] = url.pathname.split('/').filter((s) => s !== '');
+  if (owner === undefined || rawRepo === undefined) return undefined;
+  if (GITHUB_RESERVED.has(owner.toLowerCase())) return undefined;
+  const repo = rawRepo.replace(/\.git$/i, '');
+  if (!GITHUB_OWNER.test(owner) || !GITHUB_REPO.test(repo)) return undefined;
+  if (repo === '.' || repo === '..') return undefined;
+  return { owner, repo };
+}

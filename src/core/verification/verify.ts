@@ -1,6 +1,7 @@
 import type { Batch, BatchItem } from '../batch-schema';
 import { WhenkitError } from '../errors';
-import type { HttpClient, HttpResult } from '../ports';
+import type { GitHubClient, HttpClient, HttpResult } from '../ports';
+import { githubRepo } from '../url';
 import { isBlocked } from './blocked-domains';
 import type { VerdictReason } from './reason-codes';
 import { isValidHttpUrl } from './url-syntax';
@@ -20,6 +21,8 @@ const MAX_CONCURRENT_CHECKS = 4;
 
 export interface VerificationContext {
   http: HttpClient;
+  /** Reads repository metadata for an item whose own URL is a GitHub repo. */
+  github: GitHubClient;
   /** Rules from parseBlockedDomains(). */
   blockedDomains: readonly string[];
   /** Waits before a retry; tests inject one that does not sleep. */
@@ -37,6 +40,13 @@ export type LinkVerdict =
   | { kind: 'rejected'; reason: VerdictReason }
   /** No network: the import must stop. */
   | { kind: 'offline' };
+
+/** What the GitHub API said about an item's repository (only on `ok`). */
+export interface GithubMetadata {
+  stars: number;
+  pushedAt: string | null;
+  archived: boolean;
+}
 
 export type ItemOutcome = 'accepted' | 'warned' | 'rejected';
 
@@ -58,6 +68,12 @@ export interface ItemVerdict {
    */
   warnings?: VerdictReason[];
   forcedSources?: string[];
+  /**
+   * Present only when the item's own URL is a GitHub repo, its link check
+   * was accepted or warned and the API answered. Absent otherwise, even on
+   * a rate limit: GitHub data never decides an outcome (AD-7).
+   */
+  github?: GithubMetadata;
 }
 
 /** Verdicts of a batch, by item `ref`. */
@@ -188,6 +204,25 @@ async function check(url: string, ctx: CheckContext): Promise<LinkVerdict> {
   }
 }
 
+/** One GitHub lookup through the shared limit, honouring the stop flag. */
+async function fetchGithub(
+  url: string,
+  ctx: CheckContext,
+): Promise<GithubMetadata | undefined> {
+  const repo = githubRepo(url);
+  if (repo === undefined) return undefined;
+  return ctx.limit(async () => {
+    if (ctx.stop.stopped) return undefined;
+    const result = await ctx.github.repo(repo.owner, repo.repo);
+    if (result.kind !== 'ok') return undefined;
+    return {
+      stars: result.stars,
+      pushedAt: result.pushedAt,
+      archived: result.archived,
+    };
+  });
+}
+
 /**
  * Checks one link by the AD-7 table: syntax, the blocked domains (on the
  * submitted URL, then on the URL the check reached), then the HTTP result,
@@ -249,6 +284,15 @@ async function verify(
     else if (own.note !== undefined) notes.push(own.note);
   }
 
+  // GitHub data (AD-7) only for a link that works; it never changes the
+  // outcome, an archived repo only gains a note.
+  const github =
+    item.url !== undefined &&
+    (own?.kind === 'accepted' || own?.kind === 'warned')
+      ? await fetchGithub(item.url, ctx)
+      : undefined;
+  if (github?.archived === true) notes.push({ code: 'github_archived' });
+
   sources.forEach((url, index) => {
     const verdict = sourceVerdicts[index] as LinkVerdict;
     if (verdict.kind === 'offline') throw offline();
@@ -279,12 +323,14 @@ async function verify(
       sources: kept,
       warnings: [...warnings, ...notes],
       forcedSources: forcedKept,
+      ...(github === undefined ? {} : { github }),
     };
   }
   return {
     outcome: warnings.length > 0 ? 'warned' : 'accepted',
     reasons: [...warnings, ...notes],
     sources: kept,
+    ...(github === undefined ? {} : { github }),
   };
 }
 

@@ -19,6 +19,7 @@ import {
   sequentialIds,
   tempDir,
   testStoreOpener,
+  notFoundGithub,
   unusedHttp,
 } from './helpers';
 
@@ -67,6 +68,7 @@ async function runCli(s: Setup, args: string[], cwd = s.root) {
       ids: sequentialIds(),
       openStore: testStoreOpener(),
       http: unusedHttp,
+      github: notFoundGithub,
       cwd,
     },
   );

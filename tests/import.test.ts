@@ -18,6 +18,7 @@ import {
   fakeAppRoot,
   fakeEnvironment,
   fixedClock,
+  notFoundGithub,
   okHttp,
   sequentialIds,
   tempDir,
@@ -65,6 +66,7 @@ function setup(
       ids: sequentialIds(),
       openStore: options.openStore ?? testStoreOpener(),
       http: options.http ?? okHttp,
+      github: notFoundGithub,
       cwd: root,
     },
   };

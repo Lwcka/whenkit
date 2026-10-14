@@ -1,6 +1,5 @@
 // Ports: every effect core needs from the outside world (AD-2). Adapters in
 // src/adapters implement them and the drivers (cli, desktop/main) inject them.
-// GitHubClient arrives with the ticket that needs it.
 
 import type { Zone } from './category-seed';
 import type { EntryKind, ResourceType } from './entry';
@@ -66,6 +65,26 @@ export interface HttpClient {
   check(url: string): Promise<HttpResult>;
 }
 
+/**
+ * What the GitHub API said about a repository (AD-7). A closed union: every
+ * outcome is a value. Only `ok` carries data; the others mean "no metadata"
+ * and never reject an item.
+ */
+export type GitHubResult =
+  /** `pushedAt` is the API's `pushed_at`; null for a repo never pushed to. */
+  | { kind: 'ok'; stars: number; pushedAt: string | null; archived: boolean }
+  /** The public rate limit is used up (403 with no requests left, or 429). */
+  | { kind: 'rateLimited' }
+  /** 404: the repo does not exist or is private. */
+  | { kind: 'notFound' }
+  /** Server error, timeout, network failure or an unreadable answer. */
+  | { kind: 'failed' };
+
+/** Reads repository metadata from GitHub; never throws. */
+export interface GitHubClient {
+  repo(owner: string, repo: string): Promise<GitHubResult>;
+}
+
 /** A category row, in camelCase. */
 export interface StoredCategory {
   id: string;
@@ -129,6 +148,10 @@ export interface NewEntryRow {
   dedupKey: string;
   /** True when the author forced the entry past the verification (AD-7). */
   forced: boolean;
+  /** GitHub metadata; all three null when the API did not answer (AD-7). */
+  githubStars: number | null;
+  githubPushedAt: string | null;
+  githubArchived: boolean | null;
   addedAt: string;
   verifiedAt: string | null;
 }

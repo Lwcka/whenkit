@@ -41,6 +41,8 @@ export const REASON_CODES = [
   'parent_cycle',
   /** A note: the author forced the entry past the verification (`--force`). */
   'forced_by_user',
+  /** A note: the GitHub API reports the repository as archived. */
+  'github_archived',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

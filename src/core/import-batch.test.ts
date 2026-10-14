@@ -390,6 +390,9 @@ describe('applyBatch (phase 3)', () => {
         verificationNotes: [],
         dedupKey: 'url:a.dev',
         forced: false,
+        githubStars: null,
+        githubPushedAt: null,
+        githubArchived: null,
         addedAt: '2026-10-13T12:00:00.000Z',
         verifiedAt: '2026-10-13T12:00:00.000Z',
         categoryIds: ['seed-1'],
@@ -776,6 +779,9 @@ describe('applyBatch with op update', () => {
       verificationNotes: [],
       dedupKey: 'url:nou.dev',
       forced: false,
+      githubStars: null,
+      githubPushedAt: null,
+      githubArchived: null,
       addedAt: NOW.toISOString(),
       verifiedAt: LATER.toISOString(),
       categoryIds: ['seed-2'],
@@ -1667,5 +1673,106 @@ describe('applyBatch rejection journal and --force', () => {
         verificationNotes: [],
       });
     });
+  });
+});
+
+describe('applyBatch GitHub metadata (AD-6, AD-7)', () => {
+  const github = {
+    stars: 1200,
+    pushedAt: '2026-09-01T10:00:00Z',
+    archived: false,
+  };
+  const withGithub = (overrides: Partial<ItemVerdict> = {}): ItemVerdict => ({
+    outcome: 'accepted',
+    reasons: [],
+    sources: [],
+    github,
+    ...overrides,
+  });
+
+  it('writes the three fields of an add from the verdict', () => {
+    const store = new FakeStore(SEED);
+    run(store, [tool('a')], {}, { a: withGithub() });
+    expect(store.entries[0]).toMatchObject({
+      githubStars: 1200,
+      githubPushedAt: '2026-09-01T10:00:00Z',
+      githubArchived: false,
+    });
+  });
+
+  it('writes null fields when the verdict has no GitHub data', () => {
+    const store = new FakeStore(SEED);
+    run(store, [tool('a')]);
+    expect(store.entries[0]).toMatchObject({
+      githubStars: null,
+      githubPushedAt: null,
+      githubArchived: null,
+    });
+  });
+
+  it('keeps an archived repo added and carries its note', () => {
+    const store = new FakeStore(SEED);
+    const report = run(
+      store,
+      [tool('a')],
+      {},
+      {
+        a: withGithub({
+          reasons: [{ code: 'github_archived' }],
+          github: { ...github, archived: true },
+        }),
+      },
+    );
+    expect(report.items[0]).toMatchObject({
+      outcome: 'added',
+      reasons: [{ code: 'github_archived' }],
+    });
+    expect(store.entries[0]).toMatchObject({
+      githubArchived: true,
+      verificationNotes: [{ code: 'github_archived' }],
+    });
+  });
+
+  it('replaces the fields on an update and nulls them when the API did not answer', () => {
+    const store = new FakeStore(SEED);
+    const id = '00000000-0000-4000-8000-000000000001';
+    run(store, [tool('a')], {}, { a: withGithub() });
+    store.entries[0] = { ...store.entries[0], id };
+
+    const update = (verdict?: ItemVerdict) => {
+      const batch = parseBatch(batchText([tool('a', { op: 'update', id })]));
+      const verdicts = verdictsFor(batch, verdict ? { a: verdict } : {});
+      applyBatch(store, batch, verdicts, context());
+    };
+
+    update(withGithub({ github: { ...github, stars: 1300 } }));
+    expect(store.entries[0]).toMatchObject({ githubStars: 1300 });
+
+    update();
+    expect(store.entries[0]).toMatchObject({
+      githubStars: null,
+      githubPushedAt: null,
+      githubArchived: null,
+    });
+  });
+
+  it('writes the fields of a forced item', () => {
+    const store = new FakeStore(SEED);
+    const batch = parseBatch(batchText([tool('a', { flaggedByClaude: 'x' })]));
+    const verdicts = new Map<string, ItemVerdict>([
+      [
+        'a',
+        {
+          outcome: 'rejected',
+          reasons: [{ code: 'flagged_by_claude', params: { text: 'x' } }],
+          sources: [],
+          warnings: [],
+          forcedSources: [],
+          github,
+        },
+      ],
+    ]);
+    applyBatch(store, batch, verdicts, { ...context(), force: ['a'] });
+    expect(store.entries[0]).toMatchObject({ forced: true, githubStars: 1200 });
   });
 });

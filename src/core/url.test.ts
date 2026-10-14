@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dedupKey, normalizeUrl } from './url';
+import { dedupKey, githubRepo, normalizeUrl } from './url';
 
 describe('normalizeUrl', () => {
   it.each([
@@ -61,5 +61,39 @@ describe('dedupKey', () => {
     expect(dedupKey({ url: null, name: 'Arhitectură' })).toBe(
       'title:arhitectura',
     );
+  });
+});
+
+describe('githubRepo', () => {
+  it.each([
+    ['https://github.com/o/r', { owner: 'o', repo: 'r' }],
+    ['http://www.github.com/o/r/', { owner: 'o', repo: 'r' }],
+    ['https://GitHub.com/O/R?tab=readme#top', { owner: 'O', repo: 'R' }],
+    ['https://github.com/O/R/tree/main/docs', { owner: 'O', repo: 'R' }],
+    ['https://github.com/o/r.git', { owner: 'o', repo: 'r' }],
+    ['https://github.com/o/r.js', { owner: 'o', repo: 'r.js' }],
+    ['  https://github.com/o/r  ', { owner: 'o', repo: 'r' }],
+  ])('recognizes %s', (url, expected) => {
+    expect(githubRepo(url)).toEqual(expected);
+  });
+
+  it.each([
+    'https://example.com/o/r',
+    'https://gist.github.com/u/1',
+    'https://github.io/o/r',
+    'https://notgithub.com/o/r',
+    'https://github.com/o',
+    'https://github.com/',
+    'https://github.com/topics/x',
+    'https://github.com/orgs/o',
+    'https://github.com/advisories/GHSA-aaaa-bbbb-cccc',
+    'https://github.com/Settings/profile',
+    'https://github.com/o/.git',
+    'ftp://github.com/o/r',
+    'github.com/o/r',
+    'not a url',
+    '',
+  ])('does not recognize %j', (url) => {
+    expect(githubRepo(url)).toBeUndefined();
   });
 });

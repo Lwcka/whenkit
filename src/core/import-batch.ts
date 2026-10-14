@@ -476,7 +476,8 @@ function journalRejections(
  * batch or to another catalog entry (re-checked here, under the lock; an
  * update never duplicates its own entry); otherwise written, with the
  * sources the verification kept, its warnings and notes as verification
- * notes and `verified_at` = now, creating the declared categories it uses.
+ * notes, the GitHub metadata the verification found (null when none) and
+ * `verified_at` = now, creating the declared categories it uses.
  * An add inserts a new entry (added, or warned); an update fully replaces
  * Claude's fields and the categories of its entry, increments its revision
  * and keeps the author's fields (updated, or warned). A rejected or
@@ -597,6 +598,10 @@ export function applyBatch(
         verificationNotes: notes,
         dedupKey: key,
         forced,
+        // Written on every add and update; null when the API did not answer.
+        githubStars: verdict.github?.stars ?? null,
+        githubPushedAt: verdict.github?.pushedAt ?? null,
+        githubArchived: verdict.github?.archived ?? null,
         verifiedAt: now,
       };
       let id: string;

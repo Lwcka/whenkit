@@ -4,6 +4,7 @@ import type {
   Clock,
   Environment,
   FileSystem,
+  GitHubClient,
   HttpClient,
   IdGenerator,
 } from '../core/ports';
@@ -27,6 +28,8 @@ export interface CliDeps {
   openStore: CatalogStoreOpener;
   /** Checks links during the import's verification (node-http-client in bin.ts). */
   http: HttpClient;
+  /** Reads GitHub repo metadata during the verification (node-github-client in bin.ts). */
+  github: GitHubClient;
   /** Pause before a link check is retried; 1 s when unset. Tests pass 0. */
   retryDelayMs?: number;
   /** Directory relative paths are resolved against. */

@@ -30,6 +30,7 @@ import {
   fakeAppRoot,
   fakeEnvironment,
   fixedClock,
+  notFoundGithub,
   okHttp,
   sequentialIds,
   tempDir,
@@ -191,6 +192,7 @@ async function initialized(httpClient: HttpClient): Promise<Setup> {
       ids: sequentialIds(),
       openStore: testStoreOpener(),
       http: httpClient,
+      github: notFoundGithub,
       // Retries happen at once; the 1 s default is covered in core.
       retryDelayMs: 0,
       cwd: root,

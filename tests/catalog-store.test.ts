@@ -385,6 +385,9 @@ function entryRow(overrides: Partial<NewEntryRow> = {}): NewEntryRow {
     verificationNotes: [],
     dedupKey: 'url:remove.bg',
     forced: false,
+    githubStars: null,
+    githubPushedAt: null,
+    githubArchived: null,
     addedAt: '2026-10-13T12:00:00.000Z',
     verifiedAt: null,
     ...overrides,
@@ -546,6 +549,48 @@ describe('SqliteCatalogStore reads and writes', () => {
         "INSERT INTO entries_fts (entries_fts, rank) VALUES ('integrity-check', 1)",
       );
     });
+  });
+
+  it('stores the GitHub fields on insert and replaces or clears them on update', () => {
+    const store = open(newDbPath());
+    store.writeTransaction((tx) =>
+      tx.insertEntry(
+        entryRow({
+          githubStars: 1200,
+          githubPushedAt: '2026-09-01T10:00:00Z',
+          githubArchived: true,
+        }),
+      ),
+    );
+    expect(store.entryById('e1')).toMatchObject({
+      githubStars: 1200,
+      githubPushedAt: '2026-09-01T10:00:00Z',
+      githubArchived: true,
+    });
+
+    store.writeTransaction((tx) =>
+      tx.updateEntry(
+        entryRow({
+          githubStars: 5,
+          githubPushedAt: '2026-10-01T00:00:00Z',
+          githubArchived: false,
+        }),
+      ),
+    );
+    expect(store.entryById('e1')).toMatchObject({
+      githubStars: 5,
+      githubPushedAt: '2026-10-01T00:00:00Z',
+      githubArchived: false,
+      revision: 2,
+    });
+
+    store.writeTransaction((tx) => tx.updateEntry(entryRow()));
+    expect(store.entryById('e1')).toMatchObject({
+      githubStars: null,
+      githubPushedAt: null,
+      githubArchived: null,
+    });
+    store.close();
   });
 
   it('refuses to update an entry that does not exist', () => {

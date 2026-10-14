@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { parseBatch } from '../import-batch';
 import { WhenkitError } from '../errors';
-import type { HttpClient, HttpResult } from '../ports';
+import type {
+  GitHubClient,
+  GitHubResult,
+  HttpClient,
+  HttpResult,
+} from '../ports';
 import {
   checkLink,
   verifyBatch,
@@ -54,11 +59,30 @@ class FakeHttp implements HttpClient {
   }
 }
 
+/** Answers each `owner/repo` with its scripted result; records every call. */
+class FakeGithub implements GitHubClient {
+  readonly calls: string[] = [];
+
+  constructor(private readonly script: Record<string, GitHubResult> = {}) {}
+
+  repo(owner: string, repo: string): Promise<GitHubResult> {
+    this.calls.push(`${owner}/${repo}`);
+    return Promise.resolve(
+      this.script[`${owner}/${repo}`] ?? { kind: 'notFound' },
+    );
+  }
+}
+
 const RULES = ['libgen.*', 'pdfdrive.com'];
 
-function context(http: HttpClient, waits: number[] = []): VerificationContext {
+function context(
+  http: HttpClient,
+  waits: number[] = [],
+  github: GitHubClient = new FakeGithub(),
+): VerificationContext {
   return {
     http,
+    github,
     blockedDomains: RULES,
     wait: (ms) => {
       waits.push(ms);
@@ -386,6 +410,130 @@ describe('verifyItem', () => {
     await expect(
       verifyItem(single(concept(['https://s.dev/'])), context(http)),
     ).rejects.toMatchObject({ code: 'OFFLINE' });
+  });
+});
+
+describe('verifyItem GitHub data (AD-7)', () => {
+  const REPO = 'https://github.com/o/r';
+  const active: GitHubResult = {
+    kind: 'ok',
+    stars: 1200,
+    pushedAt: '2026-09-01T10:00:00Z',
+    archived: false,
+  };
+
+  it('puts the metadata of an active repo on the verdict, without a note', async () => {
+    const github = new FakeGithub({ 'o/r': active });
+    const verdict = await verifyItem(
+      single(item({ url: REPO })),
+      context(new FakeHttp(), [], github),
+    );
+    expect(verdict).toEqual({
+      outcome: 'accepted',
+      reasons: [],
+      sources: [],
+      github: {
+        stars: 1200,
+        pushedAt: '2026-09-01T10:00:00Z',
+        archived: false,
+      },
+    });
+    expect(github.calls).toEqual(['o/r']);
+  });
+
+  it('keeps an archived repo accepted and adds the github_archived note', async () => {
+    const github = new FakeGithub({ 'o/r': { ...active, archived: true } });
+    const verdict = await verifyItem(
+      single(item({ url: REPO })),
+      context(new FakeHttp(), [], github),
+    );
+    expect(verdict.outcome).toBe('accepted');
+    expect(verdict.reasons).toEqual([{ code: 'github_archived' }]);
+    expect(verdict.github?.archived).toBe(true);
+  });
+
+  it('reads the repo of a subpath or a .git URL', async () => {
+    const github = new FakeGithub({ 'O/R': active });
+    await verifyItem(
+      single(item({ url: 'https://github.com/O/R/tree/main/docs' })),
+      context(new FakeHttp(), [], github),
+    );
+    await verifyItem(
+      single(item({ url: 'https://github.com/O/R.git' })),
+      context(new FakeHttp(), [], github),
+    );
+    expect(github.calls).toEqual(['O/R', 'O/R']);
+  });
+
+  it.each([
+    { kind: 'rateLimited' },
+    { kind: 'notFound' },
+    { kind: 'failed' },
+  ] as const)('leaves no metadata and no note on %j', async (answer) => {
+    const github = new FakeGithub({ 'o/r': answer });
+    const verdict = await verifyItem(
+      single(item({ url: REPO })),
+      context(new FakeHttp(), [], github),
+    );
+    expect(verdict).toEqual({ outcome: 'accepted', reasons: [], sources: [] });
+  });
+
+  it.each([
+    'https://example.com/',
+    'https://github.com/topics/x',
+    'https://gist.github.com/u/1',
+    'https://github.com/o',
+  ])('makes no API call for %s', async (url) => {
+    const github = new FakeGithub({ 'o/r': active });
+    const verdict = await verifyItem(
+      single(item({ url })),
+      context(new FakeHttp(), [], github),
+    );
+    expect(github.calls).toEqual([]);
+    expect(verdict.github).toBeUndefined();
+  });
+
+  it('fetches for a warned link', async () => {
+    const http = new FakeHttp({ [REPO]: [status(500, REPO)] });
+    const github = new FakeGithub({ 'o/r': active });
+    const verdict = await verifyItem(
+      single(item({ url: REPO })),
+      context(http, [], github),
+    );
+    expect(verdict.outcome).toBe('warned');
+    expect(verdict.github?.stars).toBe(1200);
+  });
+
+  it('makes no API call for a rejected link', async () => {
+    const http = new FakeHttp({ [REPO]: [status(404, REPO)] });
+    const github = new FakeGithub({ 'o/r': active });
+    const verdict = await verifyItem(
+      single(item({ url: REPO })),
+      context(http, [], github),
+    );
+    expect(verdict.outcome).toBe('rejected');
+    expect(github.calls).toEqual([]);
+  });
+
+  it('makes no API call for an item Claude flagged', async () => {
+    const github = new FakeGithub({ 'o/r': active });
+    await verifyItem(
+      single(item({ url: REPO, flaggedByClaude: 'dubios' })),
+      context(new FakeHttp(), [], github),
+    );
+    expect(github.calls).toEqual([]);
+  });
+
+  it('keeps the metadata on a forced item that is rejected for another reason', async () => {
+    const github = new FakeGithub({ 'o/r': { ...active, archived: true } });
+    const verdict = await verifyItem(
+      single(item({ url: REPO, flaggedByClaude: 'dubios' })),
+      context(new FakeHttp(), [], github),
+      true,
+    );
+    expect(verdict.outcome).toBe('rejected');
+    expect(verdict.github?.stars).toBe(1200);
+    expect(verdict.warnings).toEqual([{ code: 'github_archived' }]);
   });
 });
 

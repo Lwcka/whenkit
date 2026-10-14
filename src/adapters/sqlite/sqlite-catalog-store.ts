@@ -130,6 +130,11 @@ const NO_LINKS = (): LinkIds => ({
   childIds: [],
 });
 
+/** The nullable boolean column: 1, 0 or NULL. */
+function githubArchivedColumn(archived: boolean | null): number | null {
+  return archived === null ? null : archived ? 1 : 0;
+}
+
 function toCategory(row: CategoryRow): StoredCategory {
   return {
     id: row.id,
@@ -354,8 +359,9 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
       .prepare(
         `INSERT INTO entries (id, owner_id, kind, name, url, resource_type,
            what_it_does, situations, keywords, sources, content,
-           verification_notes, dedup_key, forced, added_at, verified_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           verification_notes, dedup_key, forced, github_stars,
+           github_pushed_at, github_archived, added_at, verified_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         entry.id,
@@ -372,6 +378,9 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         JSON.stringify(entry.verificationNotes),
         entry.dedupKey,
         entry.forced ? 1 : 0,
+        entry.githubStars,
+        entry.githubPushedAt,
+        githubArchivedColumn(entry.githubArchived),
         entry.addedAt,
         entry.verifiedAt,
       );
@@ -394,7 +403,8 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         `UPDATE entries SET kind = ?, name = ?, url = ?, resource_type = ?,
            what_it_does = ?, situations = ?, keywords = ?, sources = ?,
            content = ?, verification_notes = ?, dedup_key = ?,
-           forced = forced OR ?, verified_at = ?, revision = revision + 1
+           forced = forced OR ?, github_stars = ?, github_pushed_at = ?,
+           github_archived = ?, verified_at = ?, revision = revision + 1
          WHERE owner_id = ? AND id = ?`,
       )
       .run(
@@ -410,6 +420,9 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         JSON.stringify(entry.verificationNotes),
         entry.dedupKey,
         entry.forced ? 1 : 0,
+        entry.githubStars,
+        entry.githubPushedAt,
+        githubArchivedColumn(entry.githubArchived),
         entry.verifiedAt,
         this.owner,
         entry.id,

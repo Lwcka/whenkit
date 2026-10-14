@@ -1,5 +1,6 @@
 import { createProcessEnvironment } from '../adapters/env/process-environment';
 import { nodeFileSystem } from '../adapters/fs/node-file-system';
+import { createGitHubClient } from '../adapters/github/node-github-client';
 import { createHttpClient } from '../adapters/http/node-http-client';
 import { openCatalogStore } from '../adapters/sqlite/sqlite-catalog-store';
 import { randomIdGenerator, systemClock } from '../adapters/system';
@@ -30,6 +31,7 @@ process.exitCode = await main(
         busyTimeoutMs: CLI_BUSY_TIMEOUT_MS,
       }),
     http: createHttpClient(),
+    github: createGitHubClient(),
     cwd: process.cwd(),
   },
 );

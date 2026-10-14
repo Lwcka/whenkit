@@ -19,6 +19,7 @@ const noDeps: CliDeps = {
   ids: { newId: untouched },
   openStore: untouched,
   http: { check: untouched },
+  github: { repo: untouched },
   cwd: '',
 };
 
