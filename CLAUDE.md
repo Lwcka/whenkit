@@ -79,6 +79,12 @@ Datele de test reale (screenshot-uri și `inspire.txt`) sunt în `C:\Users\Luca\
 
 Proiectul e și pentru învățare: explică raționamentul, nu doar codul. La deciziile importante dă 2–3 opțiuni cu pro și contra și contrazice-l direct când greșește. Planificarea tehnică (spec, arhitectură, tichete) și implementarea se fac prin skill-urile BMad, nu printr-un plan separat în plan mode, ca să nu planificăm de două ori. Ordinea pașilor o alege autorul; dacă nu e clar ce urmează, întreabă skill-ul `bmad`. Se lucrează pas cu pas.
 
+Cum rulăm `bmad-build` (decis de autor, 2026-10-14; scopul e să nu consumăm limita prea repede):
+
+- **O sesiune nouă pe tichet.** Planul stă pe disc; la final sesiunea se închide, iar următorul tichet pornește într-o sesiune curată cu `/bmad-build <ref>` (ex. `/bmad-build 1.7`). Nu continuăm un tichet nou într-o conversație deja lungă.
+- **Implementarea**, în subagent, rulează pe **Sonnet** (`model: sonnet`); **revizia** rulează mereu, în subagent, pe **Opus** (`model: opus`). Code review-ul nu se sare.
+- Sesiunea principală nu citește tot diff-ul: rulează verificarea, citește rapoartele, face triajul pe codul vizat de constatări.
+
 ## Flux de lucru cu git
 
 - **Documente de planificare** (spec, arhitectură, CLAUDE.md): commit direct pe `main`.
