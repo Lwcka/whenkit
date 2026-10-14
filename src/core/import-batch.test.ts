@@ -12,6 +12,7 @@ import type {
   NewEntryRow,
   StoredCategory,
   StoredEntry,
+  StoredRejection,
 } from './ports';
 import type { ItemVerdict } from './verification/verify';
 
@@ -22,6 +23,7 @@ class FakeStore implements CatalogStore {
   categories: StoredCategory[] = [];
   entries: (NewEntryRow & { categoryIds: string[] })[] = [];
   links: { type: LinkType; fromId: string; toId: string }[] = [];
+  rejectionRows: StoredRejection[] = [];
   transactions = 0;
   /** Revisions of the entries an update rewrote; 1 when absent. */
   revisions = new Map<string, number>();
@@ -73,7 +75,6 @@ class FakeStore implements CatalogStore {
       githubStars: null,
       githubPushedAt: null,
       githubArchived: null,
-      forced: false,
       revision: this.revisions.get(id) ?? 1,
     };
   }
@@ -82,6 +83,9 @@ class FakeStore implements CatalogStore {
       .filter((l) => l.type === 'parent' && l.toId === id)
       .map((l) => l.fromId)
       .sort();
+  }
+  rejections() {
+    return this.rejectionRows.map((r) => ({ ...r }));
   }
   entrySummaries(): never {
     throw new Error('not used by import');
@@ -98,6 +102,7 @@ class FakeStore implements CatalogStore {
       categories: [...this.categories],
       entries: [...this.entries],
       links: [...this.links],
+      rejectionRows: [...this.rejectionRows],
       revisions: new Map(this.revisions),
     };
     const indexOf = (id: string) => {
@@ -111,6 +116,23 @@ class FakeStore implements CatalogStore {
       entrySummaries: () => this.entrySummaries(),
       entryIdByDedupKey: (key) => this.entryIdByDedupKey(key),
       parentIdsOf: (id) => this.parentIdsOf(id),
+      rejections: () => this.rejections(),
+      insertRejection: (rejection) => {
+        this.rejectionRows = this.rejectionRows.filter(
+          (r) => r.dedupKey !== rejection.dedupKey,
+        );
+        this.rejectionRows.push({ ...rejection });
+      },
+      deleteRejections: (dedupKey) => {
+        this.rejectionRows = this.rejectionRows.filter(
+          (r) => r.dedupKey !== dedupKey,
+        );
+      },
+      deleteUpdateRejections: (entryId) => {
+        this.rejectionRows = this.rejectionRows.filter(
+          (r) => !(r.op === 'update' && r.element.id === entryId),
+        );
+      },
       insertLink: (type, fromId, toId) => {
         const [from, to] =
           type === 'related' && fromId > toId ? [toId, fromId] : [fromId, toId];
@@ -153,6 +175,7 @@ class FakeStore implements CatalogStore {
         }
         this.entries[index] = {
           ...entry,
+          forced: old.forced || entry.forced,
           addedAt: old.addedAt,
           categoryIds: old.categoryIds,
         };
@@ -191,6 +214,7 @@ class FakeStore implements CatalogStore {
       this.categories = snapshot.categories;
       this.entries = snapshot.entries;
       this.links = snapshot.links;
+      this.rejectionRows = snapshot.rejectionRows;
       this.revisions = snapshot.revisions;
       throw error;
     }
@@ -365,6 +389,7 @@ describe('applyBatch (phase 3)', () => {
         content: null,
         verificationNotes: [],
         dedupKey: 'url:a.dev',
+        forced: false,
         addedAt: '2026-10-13T12:00:00.000Z',
         verifiedAt: '2026-10-13T12:00:00.000Z',
         categoryIds: ['seed-1'],
@@ -750,6 +775,7 @@ describe('applyBatch with op update', () => {
       content: null,
       verificationNotes: [],
       dedupKey: 'url:nou.dev',
+      forced: false,
       addedAt: NOW.toISOString(),
       verifiedAt: LATER.toISOString(),
       categoryIds: ['seed-2'],
@@ -1283,5 +1309,363 @@ describe('applyBatch links', () => {
       applyBatch(store, batch, verdictsFor(batch), { ...ctx(2), ids }),
     ).toThrow('boom');
     expect(store.links).toEqual([]);
+  });
+});
+
+describe('applyBatch rejection journal and --force', () => {
+  const uuid = (n: number) =>
+    `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const LATER = new Date('2026-10-14T08:00:00.000Z');
+
+  const deadLink: ItemVerdict = {
+    outcome: 'rejected',
+    reasons: [{ code: 'http_error', params: { status: '404' } }],
+    sources: [],
+  };
+  const blocked: ItemVerdict = {
+    outcome: 'rejected',
+    reasons: [{ code: 'blocked_domain', params: { domain: 'a.dev' } }],
+    sources: [],
+  };
+
+  /** Ids continue from the store's size, so repeated calls never collide. */
+  function apply(
+    store: FakeStore,
+    items: unknown[],
+    options: {
+      force?: string[];
+      verdicts?: Record<string, ItemVerdict>;
+      now?: Date;
+    } = {},
+  ) {
+    const batch = parseBatch(batchText(items));
+    let n = 100 + store.rejectionRows.length + store.entries.length * 10;
+    return applyBatch(store, batch, verdictsFor(batch, options.verdicts), {
+      clock: { now: () => options.now ?? NOW },
+      ids: { newId: () => uuid(++n) },
+      workspace: 'D:\\ws',
+      force: options.force,
+    });
+  }
+
+  it('journals a rejected item with the element as it passed the schema', () => {
+    const store = new FakeStore(SEED);
+    apply(store, [tool('a')], { verdicts: { a: deadLink } });
+    expect(store.entries).toEqual([]);
+    expect(store.rejectionRows).toEqual([
+      {
+        id: expect.any(String),
+        op: 'add',
+        element: parseBatch(batchText([tool('a')])).items[0],
+        reasons: deadLink.reasons,
+        dedupKey: 'url:a.dev',
+        batchSchemaVersion: 1,
+        rejectedAt: NOW.toISOString(),
+      },
+    ]);
+    // The journaled element is a valid batch item again.
+    const again = JSON.stringify({
+      schemaVersion: 1,
+      items: [store.rejectionRows[0].element],
+    });
+    expect(() => parseBatch(again)).not.toThrow();
+  });
+
+  it('journals every rejection, whatever the reason', () => {
+    const store = new FakeStore(SEED);
+    apply(store, [
+      tool('a', { flaggedByClaude: 'pare dubios' }),
+      tool('b', { categories: ['Inexistentă'] }),
+      tool('c', { op: 'update', id: uuid(9) }),
+    ]);
+    expect(store.rejectionRows.map((r) => r.dedupKey)).toEqual([
+      'url:a.dev',
+      'url:b.dev',
+      'url:c.dev',
+    ]);
+    expect(store.rejectionRows.map((r) => r.op)).toEqual([
+      'add',
+      'add',
+      'update',
+    ]);
+  });
+
+  it('does not journal a duplicate', () => {
+    const store = new FakeStore(SEED);
+    apply(store, [tool('a')]);
+    apply(store, [tool('a', { ref: 'again' })]);
+    expect(store.rejectionRows).toEqual([]);
+  });
+
+  it('keeps one row per dedup key: the latest rejection replaces the older', () => {
+    const store = new FakeStore(SEED);
+    apply(store, [tool('a')], { verdicts: { a: deadLink } });
+    apply(store, [tool('a')], { verdicts: { a: blocked }, now: LATER });
+    expect(store.rejectionRows).toHaveLength(1);
+    expect(store.rejectionRows[0]).toMatchObject({
+      reasons: blocked.reasons,
+      rejectedAt: LATER.toISOString(),
+    });
+  });
+
+  it('clears the journal row of a key once an item with it is written', () => {
+    const store = new FakeStore(SEED);
+    apply(store, [tool('a')], { verdicts: { a: deadLink } });
+    apply(store, [tool('b')], { verdicts: { b: deadLink } });
+    apply(store, [tool('a')]);
+    expect(store.rejectionRows.map((r) => r.dedupKey)).toEqual(['url:b.dev']);
+  });
+
+  it('forces an item only the verification rejected: warned, forced, noted', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(store, [tool('a')], {
+      force: ['a'],
+      verdicts: { a: blocked },
+    });
+    const reasons = [...blocked.reasons, { code: 'forced_by_user' }];
+    expect(report.items).toEqual([
+      {
+        ref: 'a',
+        op: 'add',
+        outcome: 'warned',
+        id: expect.any(String),
+        reasons,
+      },
+    ]);
+    expect(store.entries[0]).toMatchObject({
+      forced: true,
+      verificationNotes: reasons,
+    });
+    expect(store.rejectionRows).toEqual([]);
+  });
+
+  it('forces an item flagged by Claude', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(store, [tool('a', { flaggedByClaude: 'dubios' })], {
+      force: ['a'],
+    });
+    expect(report.items[0]).toMatchObject({
+      outcome: 'warned',
+      reasons: [
+        { code: 'flagged_by_claude', params: { text: 'dubios' } },
+        { code: 'forced_by_user' },
+      ],
+    });
+    expect(store.entries[0].forced).toBe(true);
+  });
+
+  it('never forces an unknown category, keeping every reason, and journals it', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(store, [tool('a', { categories: ['Inexistentă'] })], {
+      force: ['a'],
+      verdicts: { a: deadLink },
+    });
+    expect(report.items[0]).toEqual({
+      ref: 'a',
+      op: 'add',
+      outcome: 'rejected',
+      reasons: [
+        ...deadLink.reasons,
+        { code: 'unknown_category', params: { name: 'Inexistentă' } },
+      ],
+    });
+    expect(store.entries).toEqual([]);
+    expect(store.rejectionRows).toHaveLength(1);
+  });
+
+  it('never forces an unknown id', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(store, [tool('a', { op: 'update', id: uuid(9) })], {
+      force: ['a'],
+    });
+    expect(report.items[0]).toMatchObject({
+      outcome: 'rejected',
+      reasons: [{ code: 'unknown_id', params: { id: uuid(9) } }],
+    });
+  });
+
+  it('never forces a duplicate', () => {
+    const store = new FakeStore(SEED);
+    apply(store, [tool('a')]);
+    const report = apply(store, [tool('x', { url: 'https://a.dev' })], {
+      force: ['x'],
+      verdicts: { x: blocked },
+    });
+    expect(report.items[0]).toMatchObject({ outcome: 'duplicate' });
+    expect(store.entries).toHaveLength(1);
+    expect(store.rejectionRows).toEqual([]);
+  });
+
+  it('ignores --force on an item that was not rejected', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(store, [tool('a')], { force: ['a'] });
+    expect(report.items[0]).toMatchObject({ outcome: 'added', reasons: [] });
+    expect(store.entries[0]).toMatchObject({
+      forced: false,
+      verificationNotes: [],
+    });
+  });
+
+  it('makes the import invalid when a --force ref is not in the batch', () => {
+    const store = new FakeStore(SEED);
+    const error = errorOf(() => apply(store, [tool('a')], { force: ['nope'] }));
+    expect(error.code).toBe('BATCH_INVALID');
+    expect(store.transactions).toBe(0);
+  });
+
+  const umbrella = (ref: string, overrides: Record<string, unknown> = {}) => ({
+    ref,
+    op: 'add',
+    kind: 'concept',
+    name: `Concept ${ref}`,
+    categories: ['Backend & API-uri'],
+    whatItDoes: 'Explică ceva.',
+    situations: ['Când învăț'],
+    content: '# C',
+    ...overrides,
+  });
+
+  it('journals an element that passes the schema alone: refs become ids or are dropped', () => {
+    const store = new FakeStore(SEED);
+    apply(
+      store,
+      [
+        umbrella('u', { children: ['c', 'd', uuid(7)], related: ['t'] }),
+        umbrella('c'),
+        umbrella('d', { url: 'https://dead.dev' }),
+        tool('t'),
+      ],
+      { verdicts: { u: deadLink, d: deadLink } },
+    );
+    const written = new Map(store.entries.map((e) => [e.name, e.id]));
+    const row = store.rejectionRows.find(
+      (r) => r.dedupKey === 'title:concept u',
+    );
+    expect(row?.element).toMatchObject({
+      children: [written.get('Concept c'), uuid(7)],
+      related: [written.get('Tool t')],
+    });
+    // Imported again alone, the element is a valid batch.
+    for (const r of store.rejectionRows) {
+      expect(() =>
+        parseBatch(JSON.stringify({ schemaVersion: 1, items: [r.element] })),
+      ).not.toThrow();
+    }
+  });
+
+  it('does not journal a rejected add whose key is already in the catalog, in either order', () => {
+    const existing = tool('a');
+    const clone = tool('x', { url: 'https://a.dev' });
+
+    const first = new FakeStore(SEED);
+    apply(first, [existing, clone], { verdicts: { x: blocked } });
+    expect(first.entries).toHaveLength(1);
+    expect(first.rejectionRows).toEqual([]);
+
+    const second = new FakeStore(SEED);
+    apply(second, [clone, existing], { verdicts: { x: blocked } });
+    expect(second.entries).toHaveLength(1);
+    expect(second.rejectionRows).toEqual([]);
+
+    const third = new FakeStore(SEED);
+    apply(third, [existing]);
+    apply(third, [clone], { verdicts: { x: blocked } });
+    expect(third.rejectionRows).toEqual([]);
+  });
+
+  it('stores the sources a forced concept keeps and notes the rest', () => {
+    const store = new FakeStore(SEED);
+    const forcedVerdict: ItemVerdict = {
+      outcome: 'rejected',
+      reasons: [
+        {
+          code: 'source_blocked_domain',
+          params: { url: 'https://libgen.is/x', domain: 'libgen.*' },
+        },
+      ],
+      sources: [],
+      warnings: [
+        { code: 'source_link_removed', params: { url: 'https://dead.dev/' } },
+      ],
+      forcedSources: ['https://libgen.is/x'],
+    };
+    const report = apply(
+      store,
+      [
+        umbrella('u', {
+          sources: ['https://libgen.is/x', 'https://dead.dev/'],
+        }),
+      ],
+      { force: ['u'], verdicts: { u: forcedVerdict } },
+    );
+    expect(store.entries[0].sources).toEqual(['https://libgen.is/x']);
+    expect(store.entries[0].verificationNotes).toEqual([
+      ...forcedVerdict.reasons,
+      ...(forcedVerdict.warnings ?? []),
+      { code: 'forced_by_user' },
+    ]);
+    expect(report.items[0].reasons).toEqual(store.entries[0].verificationNotes);
+  });
+
+  describe('sticky forced', () => {
+    function forcedStore() {
+      const store = new FakeStore(SEED);
+      apply(store, [tool('a')], { force: ['a'], verdicts: { a: blocked } });
+      return { store, id: store.entries[0].id };
+    }
+
+    it('keeps the flag and appends the note on a plain update that passes', () => {
+      const { store, id } = forcedStore();
+      const report = apply(
+        store,
+        [tool('a', { op: 'update', id, name: 'Nou' })],
+        { now: LATER },
+      );
+      expect(report.items[0]).toMatchObject({
+        outcome: 'updated',
+        reasons: [{ code: 'forced_by_user' }],
+      });
+      expect(store.entries[0]).toMatchObject({
+        name: 'Nou',
+        forced: true,
+        verificationNotes: [{ code: 'forced_by_user' }],
+      });
+    });
+
+    it('writes the note once on a forced update of a forced entry', () => {
+      const { store, id } = forcedStore();
+      apply(store, [tool('a', { op: 'update', id })], {
+        force: ['a'],
+        verdicts: { a: blocked },
+        now: LATER,
+      });
+      expect(store.entries[0].verificationNotes).toEqual([
+        ...blocked.reasons,
+        { code: 'forced_by_user' },
+      ]);
+    });
+
+    it('rejects a plain update the verification rejects again, leaving the entry', () => {
+      const { store, id } = forcedStore();
+      const before = store.entries[0];
+      const report = apply(store, [tool('a', { op: 'update', id })], {
+        verdicts: { a: blocked },
+        now: LATER,
+      });
+      expect(report.items[0]).toMatchObject({ outcome: 'rejected' });
+      expect(store.entries[0]).toBe(before);
+      expect(store.rejectionRows).toHaveLength(1);
+    });
+
+    it('does not note an entry that was never forced', () => {
+      const store = new FakeStore(SEED);
+      apply(store, [tool('a')]);
+      const id = store.entries[0].id;
+      apply(store, [tool('a', { op: 'update', id })], { now: LATER });
+      expect(store.entries[0]).toMatchObject({
+        forced: false,
+        verificationNotes: [],
+      });
+    });
   });
 });

@@ -212,6 +212,7 @@ function failingOnWrite(writes: number): CatalogStoreOpener {
       entrySummaries: () => store.entrySummaries(),
       entryIdByDedupKey: (key) => store.entryIdByDedupKey(key),
       parentIdsOf: (id) => store.parentIdsOf(id),
+      rejections: () => store.rejections(),
       writeTransaction: (fn) =>
         store.writeTransaction((writer) => fn(failing(writer))),
       close: () => store.close(),
@@ -243,7 +244,14 @@ describe('whenkit import with op update', () => {
       ),
     );
     expect(report.items).toEqual([
-      { ref: 'a', op: 'update', outcome: 'updated', id: a, reasons: [] },
+      {
+        ref: 'a',
+        op: 'update',
+        outcome: 'updated',
+        id: a,
+        // `a` was forced once: every later write of it carries the note.
+        reasons: [{ code: 'forced_by_user' }],
+      },
     ]);
 
     const after = await show(s, a);
@@ -259,6 +267,7 @@ describe('whenkit import with op update', () => {
       whatItDoes: 'Face altceva, mai bine.',
       situations: ['Când am altă problemă'],
       keywords: ['nou', 'new'],
+      verificationNotes: [{ code: 'forced_by_user' }],
       revision: before.revision + 1,
       verifiedAt: UPDATED_AT,
     });
@@ -415,7 +424,13 @@ describe('whenkit import with op update', () => {
         id: expect.any(String),
         reasons: [],
       },
-      { ref: 'upd', op: 'update', outcome: 'updated', id: a, reasons: [] },
+      {
+        ref: 'upd',
+        op: 'update',
+        outcome: 'updated',
+        id: a,
+        reasons: [{ code: 'forced_by_user' }],
+      },
       {
         ref: 'slow',
         op: 'update',

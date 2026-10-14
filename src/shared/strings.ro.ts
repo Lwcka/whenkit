@@ -12,17 +12,20 @@ export const cliStrings = {
     'Utilizare: whenkit <comandă> [opțiuni]',
     '',
     'Comenzi:',
-    '  init [cale]           creează workspace-ul (sau îl verifică, dacă există) și',
-    '                        salvează calea; fără cale, folosește workspace-ul configurat',
-    '  import <lot> [--json] importă în catalog fișele dintr-un lot JSON',
-    '  list [--json]         afișează toate fișele (fără conținutul conceptelor)',
-    '  show <id> [--json]    afișează o fișă completă',
-    '  schema                afișează JSON Schema a lotului de import',
+    '  init [cale]                     creează workspace-ul (sau îl verifică, dacă există) și',
+    '                                  salvează calea; fără cale, folosește workspace-ul configurat',
+    '  import <lot> [--json]           importă în catalog fișele dintr-un lot JSON;',
+    '         [--force <ref>]…         --force <ref> (repetabil) scrie totuși elementul respins doar',
+    '                                  de verificare și îl marchează „forțat”',
+    '  list [--json]                   afișează toate fișele (fără conținutul conceptelor)',
+    '  show <id> [--json]              afișează o fișă completă',
+    '  rejections [--json]             afișează jurnalul respinselor (elementele din lot, cu motive)',
+    '  schema                          afișează JSON Schema a lotului de import',
     '',
     'Opțiuni:',
-    '  --json                scrie pe stdout un singur document JSON (și la eroare)',
-    '  --version, -v         afișează versiunea',
-    '  --help, -h            afișează acest ajutor',
+    '  --json                          scrie pe stdout un singur document JSON (și la eroare)',
+    '  --version, -v                   afișează versiunea',
+    '  --help, -h                      afișează acest ajutor',
   ].join('\n'),
   unknownCommand: (name: string) =>
     `Comandă necunoscută: „${name}”. Rulează „whenkit --help” pentru lista comenzilor.`,
@@ -32,6 +35,8 @@ export const cliStrings = {
     `Prea multe argumente pentru „${command}”. Rulează „whenkit --help”.`,
   missingArgument: (command: string, argument: string) =>
     `Lipsește argumentul <${argument}> pentru „${command}”. Rulează „whenkit --help”.`,
+  missingOptionValue: (command: string, option: string, value: string) =>
+    `Opțiunea „${option}” cere o valoare (<${value}>) pentru „${command}”. Rulează „whenkit --help”.`,
   initDone: (workspace: string) => `Workspace-ul e gata: ${workspace}`,
   errorPrefix: 'Eroare',
   issueLine: (path: string, message: string) =>
@@ -129,6 +134,7 @@ export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
     `legătura părinte–copil cere concepte, iar fișa ${p.id ?? ''} nu e concept; legătura nu s-a creat sau a fost ștearsă`,
   parent_cycle: (p) =>
     `legătura ar crea un ciclu: fișa ${p.id ?? ''} e deja părinte (direct sau indirect) al umbrelei`,
+  forced_by_user: () => 'verificare ocolită de utilizator',
 };
 
 export const importStrings = {
@@ -154,6 +160,12 @@ export const importStrings = {
     `Domenii propuse pentru blocare (editează tu data\\blocked-domains.txt): ${domains}`,
   summary: (counts: Record<ImportOutcome, number>) =>
     `Rezumat: ${counts.added} adăugate, ${counts.updated} actualizate, ${counts.warned} cu avertisment, ${counts.rejected} respinse, ${counts.duplicate} duplicate.`,
+} as const;
+
+export const rejectionStrings = {
+  emptyJournal: 'Jurnalul de respinse e gol.',
+  line: (name: string, reasons: string, date: string) =>
+    `${name} — ${reasons} (${date})`,
 } as const;
 
 export const entryStrings = {

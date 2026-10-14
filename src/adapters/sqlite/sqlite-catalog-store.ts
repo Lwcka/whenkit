@@ -13,10 +13,12 @@ import type {
   LinkType,
   NewCategoryRow,
   NewEntryRow,
+  NewRejectionRow,
   OpenStoreOptions,
   StoredCategory,
   StoredEntry,
   StoredEntrySummary,
+  StoredRejection,
 } from '../../core/ports';
 import type { VerdictReason } from '../../core/verification/reason-codes';
 import {
@@ -81,6 +83,16 @@ interface CategoryRow {
   zone: Zone;
   name: string;
   name_key: string;
+}
+
+interface RejectionRow {
+  id: string;
+  op: 'add' | 'update';
+  element: string;
+  reasons: string;
+  dedup_key: string;
+  batch_schema_version: number;
+  rejected_at: string;
 }
 
 interface EntryRow {
@@ -306,6 +318,23 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     ).map((row) => row.from_id);
   }
 
+  rejections(): StoredRejection[] {
+    return this.all<RejectionRow>(
+      `SELECT id, op, element, reasons, dedup_key, batch_schema_version,
+         rejected_at FROM rejections WHERE owner_id = ?
+       ORDER BY rejected_at, rowid`,
+      this.owner,
+    ).map((row) => ({
+      id: row.id,
+      op: row.op,
+      element: JSON.parse(row.element) as Record<string, unknown>,
+      reasons: JSON.parse(row.reasons) as VerdictReason[],
+      dedupKey: row.dedup_key,
+      batchSchemaVersion: row.batch_schema_version,
+      rejectedAt: row.rejected_at,
+    }));
+  }
+
   insertCategory(category: NewCategoryRow): void {
     this.db
       .prepare(
@@ -325,8 +354,8 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
       .prepare(
         `INSERT INTO entries (id, owner_id, kind, name, url, resource_type,
            what_it_does, situations, keywords, sources, content,
-           verification_notes, dedup_key, added_at, verified_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+           verification_notes, dedup_key, forced, added_at, verified_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         entry.id,
@@ -342,6 +371,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         entry.content,
         JSON.stringify(entry.verificationNotes),
         entry.dedupKey,
+        entry.forced ? 1 : 0,
         entry.addedAt,
         entry.verifiedAt,
       );
@@ -356,14 +386,15 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
   }
 
   updateEntry(entry: EntryUpdateRow): void {
-    // my_notes, owner_id, added_at and forced are deliberately absent: an
-    // update never touches the author's fields (AD-6).
+    // my_notes, owner_id and added_at are deliberately absent: an update
+    // never touches the author's fields (AD-6). `forced` is sticky: it is
+    // only ever raised, never reset.
     const result = this.db
       .prepare(
         `UPDATE entries SET kind = ?, name = ?, url = ?, resource_type = ?,
            what_it_does = ?, situations = ?, keywords = ?, sources = ?,
            content = ?, verification_notes = ?, dedup_key = ?,
-           verified_at = ?, revision = revision + 1
+           forced = forced OR ?, verified_at = ?, revision = revision + 1
          WHERE owner_id = ? AND id = ?`,
       )
       .run(
@@ -378,6 +409,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         entry.content,
         JSON.stringify(entry.verificationNotes),
         entry.dedupKey,
+        entry.forced ? 1 : 0,
         entry.verifiedAt,
         this.owner,
         entry.id,
@@ -438,6 +470,42 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
       )
       .run(id, id);
     return [...new Set(others)];
+  }
+
+  insertRejection(rejection: NewRejectionRow): void {
+    this.deleteRejections(rejection.dedupKey);
+    this.db
+      .prepare(
+        `INSERT INTO rejections (id, owner_id, dedup_key, op, element, reasons,
+           batch_schema_version, rejected_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      )
+      .run(
+        rejection.id,
+        this.owner,
+        rejection.dedupKey,
+        rejection.op,
+        JSON.stringify(rejection.element),
+        JSON.stringify(rejection.reasons),
+        rejection.batchSchemaVersion,
+        rejection.rejectedAt,
+      );
+  }
+
+  deleteRejections(dedupKey: string): void {
+    this.db
+      .prepare('DELETE FROM rejections WHERE owner_id = ? AND dedup_key = ?')
+      .run(this.owner, dedupKey);
+  }
+
+  deleteUpdateRejections(entryId: string): void {
+    this.db
+      .prepare(
+        `DELETE FROM rejections
+         WHERE owner_id = ? AND op = 'update'
+           AND json_extract(element, '$.id') = ?`,
+      )
+      .run(this.owner, entryId);
   }
 
   writeTransaction<T>(fn: (writer: CatalogWriter) => T): T {

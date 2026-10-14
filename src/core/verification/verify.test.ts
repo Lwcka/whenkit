@@ -255,8 +255,43 @@ describe('verifyItem', () => {
       outcome: 'rejected',
       reasons: [{ code: 'flagged_by_claude', params: { text: 'Piratat.' } }],
       sources: [],
+      warnings: [],
+      forcedSources: [],
     });
     expect(http.calls).toEqual([]);
+  });
+
+  it('still verifies a forced flagged item, the flag first', async () => {
+    const http = new FakeHttp();
+    const verdict = await verifyItem(
+      single(item({ flaggedByClaude: 'Piratat.', url: 'httpss://a.dev' })),
+      context(http),
+      true,
+    );
+    expect(verdict.outcome).toBe('rejected');
+    expect(verdict.reasons).toEqual([
+      { code: 'flagged_by_claude', params: { text: 'Piratat.' } },
+      { code: 'invalid_url' },
+    ]);
+    expect(verdict.warnings).toEqual([]);
+  });
+
+  it('contacts a forced flagged item and its sources', async () => {
+    const dead = 'https://dead.dev/';
+    const http = new FakeHttp({ [dead]: [status(404, dead)] });
+    const verdict = await verifyItem(
+      single(concept([dead, 'https://live.dev/'], { flaggedByClaude: 'Rău.' })),
+      context(http),
+      true,
+    );
+    expect(http.calls.sort()).toEqual([dead, 'https://live.dev/']);
+    expect(verdict).toEqual({
+      outcome: 'rejected',
+      reasons: [{ code: 'flagged_by_claude', params: { text: 'Rău.' } }],
+      sources: ['https://live.dev/'],
+      warnings: [{ code: 'source_link_removed', params: { url: dead } }],
+      forcedSources: ['https://live.dev/'],
+    });
   });
 
   it('skips URL checks for a concept without url or sources', async () => {
@@ -313,7 +348,8 @@ describe('verifyItem', () => {
       single(concept(['https://libgen.is/x', dead])),
       context(http),
     );
-    // Rejected: only the rejection is reported, not the removed source.
+    // Rejected: only the rejection is reported, not the removed source; a
+    // forced write gets the warnings and keeps the blocked source.
     expect(verdict.outcome).toBe('rejected');
     expect(verdict.reasons).toEqual([
       {
@@ -321,6 +357,11 @@ describe('verifyItem', () => {
         params: { url: 'https://libgen.is/x', domain: 'libgen.*' },
       },
     ]);
+    expect(verdict.sources).toEqual([]);
+    expect(verdict.warnings).toEqual([
+      { code: 'source_link_removed', params: { url: dead } },
+    ]);
+    expect(verdict.forcedSources).toEqual(['https://libgen.is/x']);
     expect(http.calls).toEqual([dead]);
   });
 
@@ -334,6 +375,8 @@ describe('verifyItem', () => {
       outcome: 'rejected',
       reasons: [{ code: 'http_error', params: { status: '404' } }],
       sources: ['https://live.dev/'],
+      warnings: [],
+      forcedSources: ['https://live.dev/'],
     });
     expect(http.calls.sort()).toEqual([URL_A, 'https://live.dev/']);
   });
@@ -358,6 +401,21 @@ describe('verifyBatch', () => {
     expect([...verdicts.keys()]).toEqual(['a', 'b']);
     expect(verdicts.get('a')?.outcome).toBe('accepted');
     expect(verdicts.get('b')?.outcome).toBe('rejected');
+  });
+
+  it('verifies the forced refs as forced', async () => {
+    const http = new FakeHttp();
+    const verdicts = await verifyBatch(
+      batchOf(
+        item({ ref: 'a', flaggedByClaude: 'Rău.', url: 'https://a.dev/' }),
+        item({ ref: 'b', flaggedByClaude: 'Rău.', url: 'https://b.dev/' }),
+      ),
+      context(http),
+      ['b'],
+    );
+    expect(http.calls).toEqual(['https://b.dev/']);
+    expect(verdicts.get('a')?.reasons).toHaveLength(1);
+    expect(verdicts.get('b')?.reasons).toHaveLength(1);
   });
 
   it('checks at most four links at a time', async () => {

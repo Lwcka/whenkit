@@ -21,3 +21,6 @@
 - source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-update-si-integritatea-lotului-plan.md`
   summary: Ticket 7 must handle an update that changes the kind of a concept which is an umbrella or a child (AD-5: `parent` links only concept → concept) — reject the update or drop those links, decided in its plan.
   evidence: ticket 1.6 review, finding 3; ticket 1.6 lets an update change `kind`.
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-jurnalul-de-respinse-si-force-plan.md`
+  summary: Ticket 11 (/importa) must re-declare in `newCategories` any category of a journaled element that is missing from `whenkit categories --json` before retrying it, because the journal keeps only the item, not the batch's declared categories.
+  evidence: ticket 8 review loop 1, finding 6: a retried element whose category was declared only in its original batch comes out `unknown_category`.

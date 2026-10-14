@@ -1,11 +1,16 @@
 import { z } from 'zod';
 import { ENTRY_KINDS, RESOURCE_TYPES, ZONES, zoneOf } from './entry';
-import type { StoredCategory, StoredEntry, StoredEntrySummary } from './ports';
+import type {
+  StoredCategory,
+  StoredEntry,
+  StoredEntrySummary,
+  StoredRejection,
+} from './ports';
 import { verdictReasonSchema } from './verification/reason-codes';
 
 // The one set of DTOs (AD-18) that `--json`, IPC and the export share: plain
 // objects, dates as ISO strings. Links appear as id lists on the entry;
-// LinkDto (the export) and RejectionDto arrive with their tickets.
+// LinkDto arrives with the export.
 
 export const categoryDtoSchema = z.strictObject({
   id: z.string(),
@@ -56,6 +61,23 @@ export const entrySummaryDtoSchema = entryDtoSchema.omit({ content: true });
 
 export type EntrySummaryDto = z.infer<typeof entrySummaryDtoSchema>;
 
+/** A journaled rejection (AD-5): what /importa needs to retry the item. */
+export const rejectionDtoSchema = z.strictObject({
+  id: z.string(),
+  op: z.enum(['add', 'update']),
+  /**
+   * The batch item as it passed the schema when it was rejected. Not
+   * re-validated against today's schema: the journal may predate it.
+   */
+  element: z.record(z.string(), z.unknown()),
+  reasons: z.array(verdictReasonSchema),
+  dedupKey: z.string(),
+  batchSchemaVersion: z.number().int(),
+  rejectedAt: z.string(),
+});
+
+export type RejectionDto = z.infer<typeof rejectionDtoSchema>;
+
 export function toCategoryDto(category: StoredCategory): CategoryDto {
   return { id: category.id, zone: category.zone, name: category.name };
 }
@@ -91,4 +113,16 @@ export function toEntrySummaryDto(entry: StoredEntrySummary): EntrySummaryDto {
 
 export function toEntryDto(entry: StoredEntry): EntryDto {
   return { ...toEntrySummaryDto(entry), content: entry.content };
+}
+
+export function toRejectionDto(rejection: StoredRejection): RejectionDto {
+  return {
+    id: rejection.id,
+    op: rejection.op,
+    element: { ...rejection.element },
+    reasons: rejection.reasons.map((reason) => ({ ...reason })),
+    dedupKey: rejection.dedupKey,
+    batchSchemaVersion: rejection.batchSchemaVersion,
+    rejectedAt: rejection.rejectedAt,
+  };
 }

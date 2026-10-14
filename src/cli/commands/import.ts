@@ -1,6 +1,10 @@
 import path from 'node:path';
 import { WhenkitError } from '../../core/errors';
-import { applyBatch, readBatch } from '../../core/import-batch';
+import {
+  applyBatch,
+  assertForceRefs,
+  readBatch,
+} from '../../core/import-batch';
 import { importReportSchema } from '../../core/import-report-schema';
 import { verifyBatch } from '../../core/verification/verify';
 import {
@@ -10,6 +14,7 @@ import {
 } from '../../core/workspace';
 import { EXIT_OK } from '../exit-codes';
 import {
+  extractForce,
   parseArgs,
   printJson,
   printLines,
@@ -17,12 +22,13 @@ import {
 } from '../command';
 import { renderImportReport } from '../render';
 
-/** `whenkit import <lot> [--json]` */
+/** `whenkit import <lot> [--json] [--force <ref>]…` */
 export async function runImport(
   args: readonly string[],
   ctx: CommandContext,
 ): Promise<number> {
-  const [file] = parseArgs('import', args, { required: ['lot'], json: true });
+  const { force, rest } = extractForce('import', args);
+  const [file] = parseArgs('import', rest, { required: ['lot'], json: true });
   const { deps } = ctx;
   const workspace = resolveWorkspace(deps.env, deps.fs);
   ctx.workspace = workspace;
@@ -30,6 +36,7 @@ export async function runImport(
   // Phase 1 runs before the catalog is opened: an invalid batch touches
   // nothing.
   const batch = readBatch(deps.fs, path.resolve(deps.cwd, file));
+  assertForceRefs(batch, force);
 
   // A workspace without a catalog fails before any link is checked or the
   // blocked-domain list is recreated; opening the store checks it again.
@@ -39,11 +46,15 @@ export async function runImport(
   }
 
   // Phase 2 holds no transaction (AD-6). OFFLINE stops here: nothing written.
-  const verdicts = await verifyBatch(batch, {
-    http: deps.http,
-    blockedDomains: readBlockedDomains(workspace, deps),
-    retryDelayMs: deps.retryDelayMs,
-  });
+  const verdicts = await verifyBatch(
+    batch,
+    {
+      http: deps.http,
+      blockedDomains: readBlockedDomains(workspace, deps),
+      retryDelayMs: deps.retryDelayMs,
+    },
+    force,
+  );
 
   const store = deps.openStore(dbPath);
   let report;
@@ -52,6 +63,7 @@ export async function runImport(
       clock: deps.clock,
       ids: deps.ids,
       workspace,
+      force,
     });
   } finally {
     store.close();

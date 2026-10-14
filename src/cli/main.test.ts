@@ -51,6 +51,8 @@ describe('whenkit CLI', () => {
     expect(result.exitCode).toBe(0);
     expect(result.stdout).toContain('--version');
     expect(result.stdout).toContain('init [cale]');
+    expect(result.stdout).toContain('rejections [--json]');
+    expect(result.stdout).toContain('--force <ref>');
     expect(result.stderr).toBe('');
   });
 
@@ -81,6 +83,38 @@ describe('whenkit CLI', () => {
     expect(result.stderr).toContain(args[args.length - 1]);
     expect(result.stderr).not.toMatch(/\bat\s.+:\d+:\d+/);
   });
+});
+
+describe('whenkit import --force usage', () => {
+  // Every port throws if touched, so passing proves the usage error came first.
+  it.each([
+    [['import', 'batch.json', '--force']],
+    [['import', '--force', 'a', '--force']],
+  ])('rejects %j with exit 1', async (args) => {
+    const result = await runCli(args);
+    expect(result.exitCode).toBe(1);
+    expect(result.stdout).toBe('');
+    expect(result.stderr).toContain('--force');
+  });
+
+  it('answers a usage error with one JSON document under --json', async () => {
+    const result = await runCli(['import', 'batch.json', '--force', '--json']);
+    expect(result.exitCode).toBe(1);
+    expect(
+      (JSON.parse(result.stdout) as { error: { code: string } }).error.code,
+    ).toBe('ARGUMENTS_INVALID');
+  });
+});
+
+describe('whenkit rejections usage', () => {
+  it.each([[['rejections', 'x']], [['rejections', '--force', 'a']]])(
+    'rejects %j with exit 1',
+    async (args) => {
+      const result = await runCli(args);
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toBe('');
+    },
+  );
 });
 
 describe('whenkit schema', () => {

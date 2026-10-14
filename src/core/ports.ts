@@ -127,6 +127,8 @@ export interface NewEntryRow {
   content: string | null;
   verificationNotes: VerdictReason[];
   dedupKey: string;
+  /** True when the author forced the entry past the verification (AD-7). */
+  forced: boolean;
   addedAt: string;
   verifiedAt: string | null;
 }
@@ -134,13 +136,31 @@ export interface NewEntryRow {
 /**
  * What core writes when an update rewrites an entry (AD-6): every field
  * Claude writes, plus the recomputed verification and duplicate key. The
- * store also increments `revision`; it never touches `my_notes`, `owner_id`,
- * `added_at` or `forced`.
+ * store also increments `revision`; it never touches `my_notes`, `owner_id`
+ * or `added_at`, and `forced` only ever goes from false to true: a `false`
+ * here keeps the stored value (the flag is sticky).
  */
 export type EntryUpdateRow = Omit<NewEntryRow, 'addedAt'>;
 
 /** What core writes when it creates a category; the store fills `owner_id`. */
 export type NewCategoryRow = StoredCategory;
+
+/**
+ * A journaled rejection (AD-5): the batch element exactly as it passed the
+ * schema, so it can be imported again as a batch item.
+ */
+export interface StoredRejection {
+  id: string;
+  op: 'add' | 'update';
+  element: Record<string, unknown>;
+  reasons: VerdictReason[];
+  dedupKey: string;
+  batchSchemaVersion: number;
+  rejectedAt: string;
+}
+
+/** What core writes when it journals a rejection; the store fills `owner_id`. */
+export type NewRejectionRow = StoredRejection;
 
 /** Reads of the catalog, always scoped to the store's owner. */
 export interface CatalogReader {
@@ -151,6 +171,8 @@ export interface CatalogReader {
   entryIdByDedupKey(dedupKey: string): string | undefined;
   /** The umbrellas of an entry (`parent` links ending at it); sorted by id. */
   parentIdsOf(id: string): string[];
+  /** The rejection journal, oldest first. */
+  rejections(): StoredRejection[];
 }
 
 /** Reads and writes inside one write transaction. */
@@ -180,6 +202,18 @@ export interface CatalogWriter extends CatalogReader {
    * and returns the ids of the entries on their other end (sorted, unique).
    */
   deleteParentLinks(id: string): string[];
+  /**
+   * Journals a rejection; replaces the rows with the same `dedupKey`, so the
+   * journal holds one row per resource.
+   */
+  insertRejection(rejection: NewRejectionRow): void;
+  /** Removes the journal rows with this `dedupKey` (it was written). */
+  deleteRejections(dedupKey: string): void;
+  /**
+   * Removes the journaled `update` rows whose element targets this entry id:
+   * a newer write of the entry makes retrying them harmful.
+   */
+  deleteUpdateRejections(entryId: string): void;
 }
 
 /** The catalog database. Grows with the use cases that need it. */

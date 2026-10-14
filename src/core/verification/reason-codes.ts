@@ -39,6 +39,8 @@ export const REASON_CODES = [
   'parent_requires_concept',
   /** `{ id }`: the child already is an ancestor of the parent. */
   'parent_cycle',
+  /** A note: the author forced the entry past the verification (`--force`). */
+  'forced_by_user',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

@@ -9,5 +9,5 @@ export const BATCH_SCHEMA_VERSION = 1;
 /** Format of the import report printed by `whenkit import --json` (AD-14). */
 export const IMPORT_REPORT_VERSION = 1;
 
-/** Format of the other `--json` outputs: list, show and errors (AD-14). */
+/** Format of the other `--json` outputs: list, show, rejections and errors (AD-14). */
 export const CLI_OUTPUT_VERSION = 1;

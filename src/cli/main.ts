@@ -13,6 +13,7 @@ import {
 import { runImport } from './commands/import';
 import { runInit } from './commands/init';
 import { runList } from './commands/list';
+import { runRejections } from './commands/rejections';
 import { runSchema } from './commands/schema';
 import { runShow } from './commands/show';
 import {
@@ -39,6 +40,7 @@ const COMMANDS: Record<string, Command> = {
   import: { run: runImport, json: true },
   list: { run: runList, json: true },
   show: { run: runShow, json: true },
+  rejections: { run: runRejections, json: true },
   schema: { run: runSchema, json: false },
 };
 

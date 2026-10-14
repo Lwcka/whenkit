@@ -3,7 +3,11 @@ import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
 import { CATEGORY_SEED } from '../src/core/category-seed';
-import type { NewEntryRow, OpenStoreOptions } from '../src/core/ports';
+import type {
+  NewEntryRow,
+  OpenStoreOptions,
+  StoredRejection,
+} from '../src/core/ports';
 import { nameKey } from '../src/core/name-key';
 import {
   bundledMigrations,
@@ -380,6 +384,7 @@ function entryRow(overrides: Partial<NewEntryRow> = {}): NewEntryRow {
     content: null,
     verificationNotes: [],
     dedupKey: 'url:remove.bg',
+    forced: false,
     addedAt: '2026-10-13T12:00:00.000Z',
     verifiedAt: null,
     ...overrides,
@@ -713,5 +718,141 @@ describe('SqliteCatalogStore links', () => {
         n: 0,
       });
     });
+  });
+});
+
+describe('SqliteCatalogStore forced flag and rejection journal', () => {
+  function rejectionRow(overrides: Partial<StoredRejection> = {}) {
+    return {
+      id: 'r1',
+      op: 'add' as const,
+      element: { ref: 'a', name: 'Tool a', url: 'httpss://a.dev' },
+      reasons: [{ code: 'invalid_url' as const }],
+      dedupKey: 'url:a.dev',
+      batchSchemaVersion: 1,
+      rejectedAt: '2026-10-14T08:00:00.000Z',
+      ...overrides,
+    };
+  }
+
+  it('inserts a forced entry and only ever raises the flag on update', () => {
+    const store = open(newDbPath());
+    store.writeTransaction((tx) => tx.insertEntry(entryRow({ forced: true })));
+    expect(store.entryById('e1')?.forced).toBe(true);
+
+    store.writeTransaction((tx) => tx.updateEntry(entryRow({ forced: false })));
+    expect(store.entryById('e1')).toMatchObject({ forced: true, revision: 2 });
+
+    store.writeTransaction((tx) => {
+      tx.insertEntry(entryRow({ id: 'e2', dedupKey: 'url:e2' }));
+      tx.updateEntry(entryRow({ id: 'e2', dedupKey: 'url:e2', forced: true }));
+    });
+    expect(store.entryById('e2')?.forced).toBe(true);
+    store.close();
+  });
+
+  it('journals a rejection and reads it back, oldest first', () => {
+    const store = open(newDbPath());
+    expect(store.rejections()).toEqual([]);
+    store.writeTransaction((tx) => {
+      tx.insertRejection(
+        rejectionRow({
+          id: 'r2',
+          dedupKey: 'url:b',
+          rejectedAt: '2026-10-14T09:00:00.000Z',
+        }),
+      );
+      tx.insertRejection(rejectionRow());
+    });
+    expect(store.rejections()).toEqual([
+      rejectionRow(),
+      rejectionRow({
+        id: 'r2',
+        dedupKey: 'url:b',
+        rejectedAt: '2026-10-14T09:00:00.000Z',
+      }),
+    ]);
+    store.close();
+  });
+
+  it('keeps one row per dedup key: a new rejection replaces the older', () => {
+    const store = open(newDbPath());
+    store.writeTransaction((tx) => tx.insertRejection(rejectionRow()));
+    store.writeTransaction((tx) =>
+      tx.insertRejection(
+        rejectionRow({
+          id: 'r9',
+          op: 'update',
+          reasons: [{ code: 'tls_error' }],
+          rejectedAt: '2026-10-15T09:00:00.000Z',
+        }),
+      ),
+    );
+    expect(store.rejections()).toEqual([
+      rejectionRow({
+        id: 'r9',
+        op: 'update',
+        reasons: [{ code: 'tls_error' }],
+        rejectedAt: '2026-10-15T09:00:00.000Z',
+      }),
+    ]);
+    store.close();
+  });
+
+  it('deletes the rows of a dedup key and leaves the others', () => {
+    const store = open(newDbPath());
+    store.writeTransaction((tx) => {
+      tx.insertRejection(rejectionRow());
+      tx.insertRejection(rejectionRow({ id: 'r2', dedupKey: 'url:b' }));
+      tx.deleteRejections('url:a.dev');
+      tx.deleteRejections('url:none');
+    });
+    expect(store.rejections().map((r) => r.id)).toEqual(['r2']);
+    store.close();
+  });
+
+  it('deletes the journaled updates of an entry and leaves the rest', () => {
+    const store = open(newDbPath());
+    store.writeTransaction((tx) => {
+      tx.insertRejection(
+        rejectionRow({
+          id: 'r1',
+          op: 'update',
+          element: { ref: 'a', id: 'e1', name: 'A' },
+          dedupKey: 'url:a',
+        }),
+      );
+      tx.insertRejection(
+        rejectionRow({
+          id: 'r2',
+          op: 'update',
+          element: { ref: 'b', id: 'e2', name: 'B' },
+          dedupKey: 'url:b',
+        }),
+      );
+      tx.insertRejection(
+        rejectionRow({
+          id: 'r3',
+          op: 'add',
+          element: { ref: 'c', id: 'e1', name: 'C' },
+          dedupKey: 'url:c',
+        }),
+      );
+      tx.deleteUpdateRejections('e1');
+    });
+    expect(store.rejections().map((r) => r.id)).toEqual(['r2', 'r3']);
+    store.close();
+  });
+
+  it('rolls the journal back with the transaction', () => {
+    const store = open(newDbPath());
+    expect(() =>
+      store.writeTransaction((tx) => {
+        tx.insertRejection(rejectionRow());
+        throw new Error('boom');
+      }),
+    ).toThrow('boom');
+    expect(store.rejections()).toEqual([]);
+    store.close();
   });
 });

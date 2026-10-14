@@ -1,5 +1,9 @@
 import { z } from 'zod';
-import { entryDtoSchema, entrySummaryDtoSchema } from './dto';
+import {
+  entryDtoSchema,
+  entrySummaryDtoSchema,
+  rejectionDtoSchema,
+} from './dto';
 import { ERROR_CODES } from './errors';
 import { CLI_OUTPUT_VERSION } from './versions';
 
@@ -23,6 +27,15 @@ export const showOutputSchema = z.strictObject({
 });
 
 export type ShowOutput = z.infer<typeof showOutputSchema>;
+
+export const rejectionsOutputSchema = z.strictObject({
+  schemaVersion: outputVersion,
+  workspace: z.string(),
+  /** The rejection journal, oldest first. */
+  rejections: z.array(rejectionDtoSchema),
+});
+
+export type RejectionsOutput = z.infer<typeof rejectionsOutputSchema>;
 
 export const errorOutputSchema = z.strictObject({
   schemaVersion: outputVersion,

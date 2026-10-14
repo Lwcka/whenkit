@@ -1,4 +1,4 @@
-import type { EntryDto, EntrySummaryDto } from '../core/dto';
+import type { EntryDto, EntrySummaryDto, RejectionDto } from '../core/dto';
 import type { ImportOutcome, ImportReport } from '../core/import-report-schema';
 import type { VerdictReason } from '../core/verification/reason-codes';
 import {
@@ -7,6 +7,7 @@ import {
   kindLabels,
   outcomeLabels,
   reasonTexts,
+  rejectionStrings,
   resourceTypeLabels,
   zoneLabels,
 } from '../shared/strings.ro';
@@ -108,6 +109,20 @@ export function renderEntryList(entries: readonly EntrySummaryDto[]): string[] {
       entry.categories.map((category) => category.name).join(', '),
     ),
   );
+}
+
+export function renderRejections(
+  rejections: readonly RejectionDto[],
+): string[] {
+  if (rejections.length === 0) return [rejectionStrings.emptyJournal];
+  return rejections.map((rejection) => {
+    const name = rejection.element.name;
+    return rejectionStrings.line(
+      typeof name === 'string' ? name : rejection.dedupKey,
+      rejection.reasons.map(reasonText).join('; '),
+      rejection.rejectedAt,
+    );
+  });
 }
 
 export function renderEntry(entry: EntryDto): string[] {

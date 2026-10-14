@@ -87,6 +87,33 @@ export function parseArgs(
   return positionals;
 }
 
+/**
+ * Pulls the repeatable `--force <ref>` pairs out of `args`; the rest goes to
+ * parseArgs. A `--force` without a value (nothing after it, or another
+ * option) is a UsageError.
+ */
+export function extractForce(
+  command: string,
+  args: readonly string[],
+): { force: string[]; rest: string[] } {
+  const force: string[] = [];
+  const rest: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg !== '--force') {
+      rest.push(arg);
+      continue;
+    }
+    const value = args[i + 1];
+    if (value === undefined || value.startsWith('--')) {
+      throw new UsageError(cliStrings.missingOptionValue(command, arg, 'ref'));
+    }
+    force.push(value);
+    i += 1;
+  }
+  return { force, rest };
+}
+
 /** Validates `document` with its schema, then prints it as the one stdout JSON. */
 export function printJson<T>(
   io: CliIo,

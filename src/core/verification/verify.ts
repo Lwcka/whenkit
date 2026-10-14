@@ -49,6 +49,15 @@ export interface ItemVerdict {
   reasons: VerdictReason[];
   /** The concept's sources that stay (all but the removed ones); [] otherwise. */
   sources: string[];
+  /**
+   * Rejected only: what a forced write needs besides the rejection reasons
+   * (AD-7). `warnings`: the warnings and notes the item would have had.
+   * `forcedSources`: the sources that stay when forcing, all but the dead or
+   * invalid ones; a source on a blocked domain is kept, since forcing
+   * bypasses exactly that rejection.
+   */
+  warnings?: VerdictReason[];
+  forcedSources?: string[];
 }
 
 /** Verdicts of a batch, by item `ref`. */
@@ -200,16 +209,23 @@ function offline(): WhenkitError {
 async function verify(
   item: BatchItem,
   ctx: CheckContext,
+  forced: boolean,
 ): Promise<ItemVerdict> {
   const sources = item.kind === 'concept' ? item.sources : [];
-  // Claude's verdict decides alone: a flagged item is never contacted.
-  if (item.flaggedByClaude !== undefined) {
+  const flag: VerdictReason[] =
+    item.flaggedByClaude === undefined
+      ? []
+      : [{ code: 'flagged_by_claude', params: { text: item.flaggedByClaude } }];
+  // Claude's verdict decides alone: a flagged item is never contacted, unless
+  // `--force` asks for it. Then its links are checked like any other's, so a
+  // forced write never stores an unchecked URL or source (AD-3).
+  if (flag.length > 0 && !forced) {
     return {
       outcome: 'rejected',
-      reasons: [
-        { code: 'flagged_by_claude', params: { text: item.flaggedByClaude } },
-      ],
+      reasons: flag,
       sources,
+      warnings: [],
+      forcedSources: sources,
     };
   }
 
@@ -218,10 +234,12 @@ async function verify(
     ...sources.map((source) => check(source, ctx)),
   ]);
 
-  const rejections: VerdictReason[] = [];
+  const rejections: VerdictReason[] = [...flag];
   const warnings: VerdictReason[] = [];
   const notes: VerdictReason[] = [];
   const kept: string[] = [];
+  /** `kept` plus the sources on blocked domains, for a forced write. */
+  const forcedKept: string[] = [];
 
   if (own !== undefined) {
     if (own.kind === 'offline') throw offline();
@@ -240,6 +258,7 @@ async function verify(
           code: 'source_blocked_domain',
           params: { url, domain: verdict.reason.params?.domain ?? '' },
         });
+        forcedKept.push(url);
       } else {
         // A dead or invalid source goes; the concept stays, warned.
         warnings.push({ code: 'source_link_removed', params: { url } });
@@ -247,13 +266,20 @@ async function verify(
       return;
     }
     kept.push(url);
+    forcedKept.push(url);
     if (verdict.kind === 'warned') {
       warnings.push({ code: 'no_response_at_import', params: { url } });
     }
   });
 
   if (rejections.length > 0) {
-    return { outcome: 'rejected', reasons: rejections, sources: kept };
+    return {
+      outcome: 'rejected',
+      reasons: rejections,
+      sources: kept,
+      warnings: [...warnings, ...notes],
+      forcedSources: forcedKept,
+    };
   }
   return {
     outcome: warnings.length > 0 ? 'warned' : 'accepted',
@@ -263,29 +289,34 @@ async function verify(
 }
 
 /**
- * Verifies one batch item: Claude's flag first (rejected, no request), then
- * its URL, when it has one, and a concept's sources. A rejected source is
- * removed (`source_link_removed`, warned) unless it is on a blocked domain,
- * which rejects the concept (`source_blocked_domain`). Throws OFFLINE when a
- * check finds no network.
+ * Verifies one batch item: Claude's flag first (rejected, no request; when
+ * `forced` the links are checked too and the flag is the first rejection),
+ * then its URL, when it has one, and a concept's sources. A rejected source
+ * is removed (`source_link_removed`, warned) unless it is on a blocked
+ * domain, which rejects the concept (`source_blocked_domain`). Throws
+ * OFFLINE when a check finds no network.
  */
 export function verifyItem(
   item: BatchItem,
   ctx: VerificationContext,
+  forced = false,
 ): Promise<ItemVerdict> {
-  return verify(item, checkContext(ctx));
+  return verify(item, checkContext(ctx), forced);
 }
 
 /**
  * Phase 2 (AD-6): verifies every item of a batch, at most four link checks
- * at a time, and returns the verdicts by ref. Holds no transaction. On the
- * first `offline` it starts no new item, lets the running checks finish and
- * throws OFFLINE: nothing may be written or rejected.
+ * at a time, and returns the verdicts by ref. Holds no transaction. The refs
+ * in `force` are verified as forced (see verifyItem). On the first `offline`
+ * it starts no new item, lets the running checks finish and throws OFFLINE:
+ * nothing may be written or rejected.
  */
 export async function verifyBatch(
   batch: Batch,
   ctx: VerificationContext,
+  force: readonly string[] = [],
 ): Promise<BatchVerdicts> {
+  const forceRefs = new Set(force);
   const checkCtx = checkContext(ctx);
   let failure: { error: unknown } | undefined;
 
@@ -294,7 +325,7 @@ export async function verifyBatch(
   const results = await Promise.all(
     batch.items.map(async (item) => {
       try {
-        return await verify(item, checkCtx);
+        return await verify(item, checkCtx, forceRefs.has(item.ref));
       } catch (error) {
         checkCtx.stop.stopped = true;
         failure ??= { error };
