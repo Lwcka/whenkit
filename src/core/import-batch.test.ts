@@ -8,6 +8,7 @@ import type {
   CatalogStore,
   CatalogWriter,
   FileSystem,
+  LinkType,
   NewEntryRow,
   StoredCategory,
   StoredEntry,
@@ -20,6 +21,7 @@ import type { ItemVerdict } from './verification/verify';
 class FakeStore implements CatalogStore {
   categories: StoredCategory[] = [];
   entries: (NewEntryRow & { categoryIds: string[] })[] = [];
+  links: { type: LinkType; fromId: string; toId: string }[] = [];
   transactions = 0;
   /** Revisions of the entries an update rewrote; 1 when absent. */
   revisions = new Map<string, number>();
@@ -56,6 +58,17 @@ class FakeStore implements CatalogStore {
       ...fields,
       ownerId: 'owner',
       categories: this.categories.filter((c) => categoryIds.includes(c.id)),
+      relatedIds: this.links
+        .filter(
+          (l) => l.type === 'related' && (l.fromId === id || l.toId === id),
+        )
+        .map((l) => (l.fromId === id ? l.toId : l.fromId))
+        .sort(),
+      parentIds: this.parentIdsOf(id),
+      childIds: this.links
+        .filter((l) => l.type === 'parent' && l.fromId === id)
+        .map((l) => l.toId)
+        .sort(),
       myNotes: '',
       githubStars: null,
       githubPushedAt: null,
@@ -63,6 +76,12 @@ class FakeStore implements CatalogStore {
       forced: false,
       revision: this.revisions.get(id) ?? 1,
     };
+  }
+  parentIdsOf(id: string) {
+    return this.links
+      .filter((l) => l.type === 'parent' && l.toId === id)
+      .map((l) => l.fromId)
+      .sort();
   }
   entrySummaries(): never {
     throw new Error('not used by import');
@@ -78,6 +97,7 @@ class FakeStore implements CatalogStore {
     const snapshot = {
       categories: [...this.categories],
       entries: [...this.entries],
+      links: [...this.links],
       revisions: new Map(this.revisions),
     };
     const indexOf = (id: string) => {
@@ -90,6 +110,37 @@ class FakeStore implements CatalogStore {
       entryById: (id) => this.entryById(id),
       entrySummaries: () => this.entrySummaries(),
       entryIdByDedupKey: (key) => this.entryIdByDedupKey(key),
+      parentIdsOf: (id) => this.parentIdsOf(id),
+      insertLink: (type, fromId, toId) => {
+        const [from, to] =
+          type === 'related' && fromId > toId ? [toId, fromId] : [fromId, toId];
+        if (from === to) throw new Error('CHECK from_id <> to_id');
+        const exists = this.links.some(
+          (l) => l.type === type && l.fromId === from && l.toId === to,
+        );
+        if (!exists) this.links.push({ type, fromId: from, toId: to });
+      },
+      deleteRelatedLinks: (id) => {
+        this.links = this.links.filter(
+          (l) => !(l.type === 'related' && (l.fromId === id || l.toId === id)),
+        );
+      },
+      deleteChildLinks: (parentId) => {
+        this.links = this.links.filter(
+          (l) => !(l.type === 'parent' && l.fromId === parentId),
+        );
+      },
+      deleteParentLinks: (id) => {
+        const touching = this.links.filter(
+          (l) => l.type === 'parent' && (l.fromId === id || l.toId === id),
+        );
+        this.links = this.links.filter((l) => !touching.includes(l));
+        return [
+          ...new Set(
+            touching.map((l) => (l.fromId === id ? l.toId : l.fromId)),
+          ),
+        ].sort();
+      },
       updateEntry: (entry) => {
         const index = indexOf(entry.id);
         const old = this.entries[index];
@@ -139,6 +190,7 @@ class FakeStore implements CatalogStore {
     } catch (error) {
       this.categories = snapshot.categories;
       this.entries = snapshot.entries;
+      this.links = snapshot.links;
       this.revisions = snapshot.revisions;
       throw error;
     }
@@ -923,5 +975,313 @@ describe('applyBatch with op update', () => {
     expect(store.entryById(uuid(1))).toEqual(before);
     expect(store.revisions.get(uuid(1))).toBeUndefined();
     expect(store.entries).toHaveLength(2);
+  });
+});
+
+describe('applyBatch links', () => {
+  const uuid = (n: number) =>
+    `00000000-0000-4000-8000-${String(n).padStart(12, '0')}`;
+  const MISSING = '6f1c2a4e-8b3d-4c5e-9f70-1a2b3c4d5e6f';
+
+  function concept(ref: string, overrides: Record<string, unknown> = {}) {
+    return {
+      ref,
+      op: 'add',
+      kind: 'concept',
+      name: `Concept ${ref}`,
+      categories: ['Backend & API-uri'],
+      whatItDoes: 'Explică ceva.',
+      situations: ['Când aleg'],
+      content: `# ${ref}`,
+      ...overrides,
+    };
+  }
+
+  /** Ids uuid(skip + 1).. in order. */
+  function ctx(skip: number) {
+    let n = skip;
+    return {
+      clock: { now: () => NOW },
+      ids: { newId: () => uuid(++n) },
+      workspace: 'D:\\ws',
+    };
+  }
+
+  function seed(items: unknown[]) {
+    const store = new FakeStore(SEED);
+    const batch = parseBatch(batchText(items));
+    applyBatch(store, batch, verdictsFor(batch), ctx(0));
+    return store;
+  }
+
+  function apply(
+    store: FakeStore,
+    items: unknown[],
+    skip: number,
+    overrides: Record<string, ItemVerdict> = {},
+  ) {
+    const batch = parseBatch(batchText(items));
+    return applyBatch(store, batch, verdictsFor(batch, overrides), ctx(skip));
+  }
+
+  const rejected = (status: string): ItemVerdict => ({
+    outcome: 'rejected',
+    reasons: [{ code: 'http_error', params: { status } }],
+    sources: [],
+  });
+
+  it('links an umbrella listed before its children', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(
+      store,
+      [concept('u', { children: ['a', 'b'] }), concept('a'), concept('b')],
+      0,
+    );
+    expect(report.ignoredLinks).toEqual([]);
+    expect(store.entryById(uuid(1))?.childIds).toEqual([uuid(2), uuid(3)]);
+    expect(store.entryById(uuid(2))?.parentIds).toEqual([uuid(1)]);
+  });
+
+  it('links by existing id, and a mutual pair once', () => {
+    const store = seed([tool('x')]);
+    const report = apply(
+      store,
+      [
+        tool('a', { related: [uuid(1).toUpperCase(), 'b'] }),
+        tool('b', { related: ['a'] }),
+      ],
+      1,
+    );
+    expect(report.ignoredLinks).toEqual([]);
+    expect(store.links).toEqual([
+      { type: 'related', fromId: uuid(1), toId: uuid(2) },
+      { type: 'related', fromId: uuid(2), toId: uuid(3) },
+    ]);
+  });
+
+  it('skips a rejected or duplicate target, keeping the item', () => {
+    const store = seed([tool('x', { url: 'https://dup.dev' })]);
+    const report = apply(
+      store,
+      [
+        tool('a', { related: ['r', 'd'] }),
+        tool('r'),
+        tool('d', { url: 'https://dup.dev' }),
+      ],
+      1,
+      { r: rejected('404') },
+    );
+    expect(report.items.map((i) => i.outcome)).toEqual([
+      'added',
+      'rejected',
+      'duplicate',
+    ]);
+    expect(report.ignoredLinks).toEqual([
+      {
+        fromRef: 'a',
+        to: 'r',
+        reason: { code: 'link_target_not_written', params: { ref: 'r' } },
+      },
+      {
+        fromRef: 'a',
+        to: 'd',
+        reason: { code: 'link_target_not_written', params: { ref: 'd' } },
+      },
+    ]);
+    expect(store.links).toEqual([]);
+  });
+
+  it('writes no link of an item that was not written, and reports none', () => {
+    const store = seed([tool('x')]);
+    const report = apply(
+      store,
+      [tool('a', { related: [uuid(1)] }), tool('b', { related: ['a'] })],
+      1,
+      { a: rejected('404') },
+    );
+    expect(report.ignoredLinks).toEqual([
+      {
+        fromRef: 'b',
+        to: 'a',
+        reason: { code: 'link_target_not_written', params: { ref: 'a' } },
+      },
+    ]);
+    expect(store.links).toEqual([]);
+  });
+
+  it('skips an unknown id and a child that is not a concept', () => {
+    const store = seed([tool('x')]);
+    const report = apply(
+      store,
+      [concept('u', { related: [MISSING], children: [uuid(1), MISSING] })],
+      1,
+    );
+    expect(report.ignoredLinks).toEqual([
+      {
+        fromRef: 'u',
+        to: MISSING,
+        reason: { code: 'unknown_id', params: { id: MISSING } },
+      },
+      {
+        fromRef: 'u',
+        to: uuid(1),
+        reason: { code: 'parent_requires_concept', params: { id: uuid(1) } },
+      },
+      {
+        fromRef: 'u',
+        to: MISSING,
+        reason: { code: 'unknown_id', params: { id: MISSING } },
+      },
+    ]);
+    expect(store.links).toEqual([]);
+  });
+
+  it('reports an unknown id lowercased in the reason, as written in "to"', () => {
+    const store = new FakeStore(SEED);
+    const upper = MISSING.toUpperCase();
+    const report = apply(store, [tool('a', { related: [upper] })], 0);
+    expect(report.ignoredLinks).toEqual([
+      {
+        fromRef: 'a',
+        to: upper,
+        reason: { code: 'unknown_id', params: { id: MISSING } },
+      },
+    ]);
+  });
+
+  it('never closes a cycle, however far up the catalog goes', () => {
+    // X → Y → Z in the catalog; the batch makes Z the umbrella of X.
+    const store = seed([
+      concept('x', { children: ['y'] }),
+      concept('y', { children: ['z'] }),
+      concept('z'),
+    ]);
+    const report = apply(
+      store,
+      [concept('z2', { op: 'update', id: uuid(3), children: [uuid(1)] })],
+      3,
+    );
+    expect(report.ignoredLinks).toEqual([
+      {
+        fromRef: 'z2',
+        to: uuid(1),
+        reason: { code: 'parent_cycle', params: { id: uuid(1) } },
+      },
+    ]);
+    expect(store.entryById(uuid(3))?.childIds).toEqual([]);
+    expect(store.entryById(uuid(1))?.childIds).toEqual([uuid(2)]);
+  });
+
+  it('refuses the second half of a cycle made inside the batch', () => {
+    const store = new FakeStore(SEED);
+    const report = apply(
+      store,
+      [concept('a', { children: ['b'] }), concept('b', { children: ['a'] })],
+      0,
+    );
+    expect(report.ignoredLinks.map((l) => [l.fromRef, l.reason.code])).toEqual([
+      ['b', 'parent_cycle'],
+    ]);
+    expect(store.links).toEqual([
+      { type: 'parent', fromId: uuid(1), toId: uuid(2) },
+    ]);
+  });
+
+  describe('of an update', () => {
+    it('replaces every related link of its entry', () => {
+      const store = seed([
+        tool('a', { related: ['b', 'c'] }),
+        tool('b'),
+        tool('c'),
+        tool('d'),
+      ]);
+      expect(store.entryById(uuid(1))?.relatedIds).toEqual([uuid(2), uuid(3)]);
+      apply(
+        store,
+        [tool('a', { op: 'update', id: uuid(1), related: [uuid(4)] })],
+        4,
+      );
+      expect(store.entryById(uuid(1))?.relatedIds).toEqual([uuid(4)]);
+      expect(store.entryById(uuid(2))?.relatedIds).toEqual([]);
+    });
+
+    it('keeps a link written earlier in the pass when a later update clears the other end', () => {
+      const store = seed([tool('a'), tool('b')]);
+      apply(
+        store,
+        [
+          tool('b', { op: 'update', id: uuid(2), related: [uuid(1)] }),
+          tool('a', { op: 'update', id: uuid(1) }),
+        ],
+        2,
+      );
+      expect(store.entryById(uuid(1))?.relatedIds).toEqual([uuid(2)]);
+    });
+
+    it('keeps the child links when children is absent, clears them when empty', () => {
+      const store = seed([concept('u', { children: ['c'] }), concept('c')]);
+      apply(store, [concept('u', { op: 'update', id: uuid(1) })], 2);
+      expect(store.entryById(uuid(1))?.childIds).toEqual([uuid(2)]);
+      apply(
+        store,
+        [concept('u', { op: 'update', id: uuid(1), children: [] })],
+        2,
+      );
+      expect(store.entryById(uuid(1))?.childIds).toEqual([]);
+    });
+
+    it('removes the parent links of a concept turned into a tool and reports them', () => {
+      const store = seed([
+        concept('u', { children: ['c'] }),
+        concept('c', { children: ['k'] }),
+        concept('k'),
+      ]);
+      const report = apply(
+        store,
+        [tool('c', { op: 'update', id: uuid(2) })],
+        3,
+      );
+      expect(report.items[0].outcome).toBe('updated');
+      expect(report.ignoredLinks).toEqual([
+        {
+          fromRef: 'c',
+          to: uuid(1),
+          reason: { code: 'parent_requires_concept', params: { id: uuid(2) } },
+        },
+        {
+          fromRef: 'c',
+          to: uuid(3),
+          reason: { code: 'parent_requires_concept', params: { id: uuid(2) } },
+        },
+      ]);
+      expect(store.links).toEqual([]);
+    });
+
+    it('leaves the links of a rejected update alone', () => {
+      const store = seed([tool('a', { related: ['b'] }), tool('b')]);
+      apply(store, [tool('a', { op: 'update', id: uuid(1) })], 2, {
+        a: rejected('404'),
+      });
+      expect(store.entryById(uuid(1))?.relatedIds).toEqual([uuid(2)]);
+    });
+  });
+
+  it('rolls the links back with the rest when the transaction fails', () => {
+    const store = seed([tool('a'), tool('b')]);
+    const batch = parseBatch(
+      batchText([
+        tool('a', { op: 'update', id: uuid(1), related: [uuid(2)] }),
+        tool('c'),
+      ]),
+    );
+    const ids = {
+      newId: (): string => {
+        throw new Error('boom');
+      },
+    };
+    expect(() =>
+      applyBatch(store, batch, verdictsFor(batch), { ...ctx(2), ids }),
+    ).toThrow('boom');
+    expect(store.links).toEqual([]);
   });
 });

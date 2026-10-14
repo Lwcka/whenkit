@@ -39,7 +39,11 @@ describe('batchSchema', () => {
     const parsed = batchSchema.parse(batch([tool, concept]));
     expect(parsed.newCategories).toEqual([]);
     expect(parsed.proposedBlockedDomains).toEqual([]);
-    expect(parsed.items[0]).toMatchObject({ kind: 'tool', keywords: [] });
+    expect(parsed.items[0]).toMatchObject({
+      kind: 'tool',
+      keywords: [],
+      related: [],
+    });
     expect(parsed.items[1]).toMatchObject({
       kind: 'concept',
       keywords: [],
@@ -97,7 +101,7 @@ describe('batchSchema', () => {
       [{ ...concept, content: undefined }],
       'items.0.content',
     ],
-    ['a related link (ticket 7)', [{ ...tool, related: ['x'] }], 'items.0'],
+    ['children on a tool', [{ ...tool, children: [] }], 'items.0'],
   ])('refuses %s', (label, items, path) => {
     const input =
       label === 'an unknown top-level field'
@@ -195,6 +199,65 @@ describe('batchSchema op update', () => {
     expect(
       batchSchema.safeParse(
         batch([update, { ...update, ref: 'u2', id: OTHER_ID }]),
+      ).success,
+    ).toBe(true);
+  });
+});
+
+describe('batchSchema links', () => {
+  const ID = '6f1c2a4e-8b3d-4c5e-9f70-1a2b3c4d5e6f';
+  const umbrella = { ...concept, ref: 'u' };
+  const child = { ...concept, ref: 'k', name: 'Child' };
+
+  it('accepts refs and ids as targets', () => {
+    const parsed = batchSchema.parse(
+      batch([
+        { ...umbrella, children: ['k', ID.toUpperCase()], related: ['t1'] },
+        child,
+        tool,
+      ]),
+    );
+    expect(parsed.items[0]).toMatchObject({
+      children: ['k', ID.toUpperCase()],
+      related: ['t1'],
+    });
+  });
+
+  it('keeps absent children apart from an empty list', () => {
+    const parsed = batchSchema.parse(
+      batch([umbrella, { ...child, children: [] }]),
+    );
+    expect(parsed.items[0]).not.toHaveProperty('children');
+    expect(parsed.items[1]).toMatchObject({ children: [] });
+  });
+
+  it('accepts mutual related links and a ref that looks like an id', () => {
+    expect(
+      batchSchema.safeParse(
+        batch([
+          { ...tool, ref: 'a', related: ['b'] },
+          { ...tool, ref: 'b', url: 'https://b.dev', related: ['a'] },
+        ]),
+      ).success,
+    ).toBe(true);
+  });
+
+  it.each([
+    ['a target that is neither a ref nor an id', { related: ['nope'] }],
+    ['the item as its own related target', { related: ['u'] }],
+    ['its own id as a target', { op: 'update', id: ID, related: [ID] }],
+    ['the item as its own child', { children: ['u'] }],
+    ['a child ref naming a tool', { children: ['t1'] }],
+  ])('refuses %s', (_label, overrides) => {
+    const issues = paths(batch([{ ...umbrella, ...overrides }, tool]));
+    expect(issues.length).toBeGreaterThan(0);
+    expect(issues[0]).toMatch(/^items.0.(related|children).0$/);
+  });
+
+  it('lets a related ref name a tool or a concept', () => {
+    expect(
+      batchSchema.safeParse(
+        batch([{ ...umbrella, related: ['t1', 'k'] }, tool, child]),
       ).success,
     ).toBe(true);
   });

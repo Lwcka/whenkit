@@ -82,3 +82,28 @@ describe('whenkit CLI', () => {
     expect(result.stderr).not.toMatch(/\bat\s.+:\d+:\d+/);
   });
 });
+
+describe('whenkit schema', () => {
+  it('prints the batch JSON Schema without touching any port', async () => {
+    const result = await runCli(['schema']);
+    expect(result.exitCode).toBe(0);
+    expect(result.stderr).toBe('');
+    const schema = JSON.parse(result.stdout) as Record<string, unknown>;
+    expect(schema.$schema).toBe('https://json-schema.org/draft/2020-12/schema');
+    expect(schema.type).toBe('object');
+    expect(result.stdout).toBe(`${JSON.stringify(schema, null, 2)}\n`);
+  });
+
+  it.each([[['schema', '--json']], [['schema', 'x']]])(
+    'rejects %j with exit 1',
+    async (args) => {
+      const result = await runCli(args);
+      expect(result.exitCode).toBe(1);
+      expect(result.stdout).toBe('');
+    },
+  );
+
+  it('is listed in the usage', async () => {
+    expect((await runCli(['--help'])).stdout).toContain('schema');
+  });
+});

@@ -13,6 +13,7 @@ import {
 import { runImport } from './commands/import';
 import { runInit } from './commands/init';
 import { runList } from './commands/list';
+import { runSchema } from './commands/schema';
 import { runShow } from './commands/show';
 import {
   EXIT_INTERNAL,
@@ -38,6 +39,7 @@ const COMMANDS: Record<string, Command> = {
   import: { run: runImport, json: true },
   list: { run: runList, json: true },
   show: { run: runShow, json: true },
+  schema: { run: runSchema, json: false },
 };
 
 /** Prints an error: one JSON document on stdout with `--json`, else stderr text. */

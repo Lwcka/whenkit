@@ -17,6 +17,7 @@ export const cliStrings = {
     '  import <lot> [--json] importă în catalog fișele dintr-un lot JSON',
     '  list [--json]         afișează toate fișele (fără conținutul conceptelor)',
     '  show <id> [--json]    afișează o fișă completă',
+    '  schema                afișează JSON Schema a lotului de import',
     '',
     'Opțiuni:',
     '  --json                scrie pe stdout un singur document JSON (și la eroare)',
@@ -122,6 +123,12 @@ export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
     `sursa ${p.url ?? ''} nu funcționează și a fost scoasă din Surse`,
   source_blocked_domain: (p) =>
     `sursa ${p.url ?? ''} e pe un domeniu interzis (regula „${p.domain ?? ''}”)`,
+  link_target_not_written: (p) =>
+    `elementul „${p.ref ?? ''}” nu a fost scris în catalog (respins sau duplicat), deci legătura nu s-a creat`,
+  parent_requires_concept: (p) =>
+    `legătura părinte–copil cere concepte, iar fișa ${p.id ?? ''} nu e concept; legătura nu s-a creat sau a fost ștearsă`,
+  parent_cycle: (p) =>
+    `legătura ar crea un ciclu: fișa ${p.id ?? ''} e deja părinte (direct sau indirect) al umbrelei`,
 };
 
 export const importStrings = {
@@ -137,6 +144,9 @@ export const importStrings = {
   entryId: (id: string) => `(id ${id})`,
   duplicateOf: (id: string) => `(fișa existentă ${id})`,
   reason: (text: string) => `    - ${text}`,
+  ignoredLinksHeader: 'Legături ignorate:',
+  ignoredLink: (fromRef: string, to: string, text: string) =>
+    `  ${fromRef} → ${to}: ${text}`,
   newCategoriesHeader: 'Categorii declarate:',
   newCategory: (name: string, zone: string, created: boolean) =>
     `  ${name} (${zone}): ${created ? 'creată' : 'exista deja'}`,
@@ -165,5 +175,8 @@ export const entryStrings = {
   verifiedAt: 'Verificată la',
   notVerified: 'încă neverificată',
   verificationNotes: 'Note de verificare',
+  relatedIds: 'Resurse înrudite (id)',
+  parentIds: 'Umbrele (id)',
+  childIds: 'Copii (id)',
   id: 'Id',
 } as const;

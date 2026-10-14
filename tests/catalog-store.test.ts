@@ -583,3 +583,135 @@ describe('SqliteCatalogStore reads and writes', () => {
     store.close();
   });
 });
+
+describe('SqliteCatalogStore links', () => {
+  /** A catalog holding concepts and tools `e1`..`e4`, no links yet. */
+  function withEntries() {
+    const dbPath = newDbPath();
+    const store = open(dbPath);
+    store.writeTransaction((tx) => {
+      for (const n of [1, 2, 3, 4]) {
+        tx.insertEntry(
+          entryRow({
+            id: `e${n}`,
+            kind: n === 4 ? 'tool' : 'concept',
+            dedupKey: `title:e${n}`,
+          }),
+        );
+      }
+    });
+    return { dbPath, store };
+  }
+
+  it('stores related canonically and ignores an existing link', () => {
+    const { dbPath, store } = withEntries();
+    store.writeTransaction((tx) => {
+      tx.insertLink('related', 'e2', 'e1');
+      tx.insertLink('related', 'e1', 'e2');
+      tx.insertLink('related', 'e2', 'e1');
+    });
+    expect(
+      withRawDb(dbPath, (db) =>
+        db.prepare('SELECT type, from_id, to_id FROM links').all(),
+      ),
+    ).toEqual([{ type: 'related', from_id: 'e1', to_id: 'e2' }]);
+    expect(store.entryById('e1')?.relatedIds).toEqual(['e2']);
+    expect(store.entryById('e2')?.relatedIds).toEqual(['e1']);
+    store.close();
+  });
+
+  it('lists related, parent and child ids on entries and summaries', () => {
+    const { store } = withEntries();
+    store.writeTransaction((tx) => {
+      tx.insertLink('parent', 'e1', 'e3');
+      tx.insertLink('parent', 'e2', 'e3');
+      tx.insertLink('parent', 'e3', 'e4');
+      tx.insertLink('related', 'e3', 'e1');
+    });
+    expect(store.entryById('e3')).toMatchObject({
+      parentIds: ['e1', 'e2'],
+      childIds: ['e4'],
+      relatedIds: ['e1'],
+    });
+    const summaries = store.entrySummaries();
+    expect(summaries.find((e) => e.id === 'e1')).toMatchObject({
+      parentIds: [],
+      childIds: ['e3'],
+      relatedIds: ['e3'],
+    });
+    expect(summaries.find((e) => e.id === 'e4')).toMatchObject({
+      parentIds: ['e3'],
+    });
+    expect(store.parentIdsOf('e3')).toEqual(['e1', 'e2']);
+    expect(store.parentIdsOf('e1')).toEqual([]);
+    store.close();
+  });
+
+  it('refuses a self-link: the CHECK is not ignored', () => {
+    const { store } = withEntries();
+    try {
+      expect(() =>
+        store.writeTransaction((tx) => tx.insertLink('parent', 'e1', 'e1')),
+      ).toThrow(/CHECK/);
+      expect(store.entryById('e1')?.parentIds).toEqual([]);
+    } finally {
+      store.close();
+    }
+  });
+
+  it('deletes related links in both directions, and child links of an umbrella', () => {
+    const { store } = withEntries();
+    store.writeTransaction((tx) => {
+      tx.insertLink('related', 'e1', 'e2');
+      tx.insertLink('related', 'e2', 'e3');
+      tx.insertLink('related', 'e3', 'e4');
+      tx.insertLink('parent', 'e2', 'e1');
+      tx.insertLink('parent', 'e2', 'e3');
+      tx.insertLink('parent', 'e1', 'e4');
+    });
+    store.writeTransaction((tx) => {
+      tx.deleteRelatedLinks('e2');
+      tx.deleteChildLinks('e2');
+    });
+    expect(store.entryById('e2')).toMatchObject({
+      relatedIds: [],
+      childIds: [],
+    });
+    expect(store.entryById('e3')?.relatedIds).toEqual(['e4']);
+    // The parent link e1 → e4 and the unrelated related link survive.
+    expect(store.entryById('e1')?.childIds).toEqual(['e4']);
+    store.close();
+  });
+
+  it('deletes the parent links of an entry as umbrella and as child', () => {
+    const { store } = withEntries();
+    store.writeTransaction((tx) => {
+      tx.insertLink('parent', 'e1', 'e2');
+      tx.insertLink('parent', 'e2', 'e3');
+      tx.insertLink('parent', 'e1', 'e3');
+      tx.insertLink('related', 'e2', 'e3');
+    });
+    const others = store.writeTransaction((tx) => tx.deleteParentLinks('e2'));
+    expect(others).toEqual(['e1', 'e3']);
+    expect(store.entryById('e2')).toMatchObject({
+      parentIds: [],
+      childIds: [],
+      relatedIds: ['e3'],
+    });
+    expect(store.entryById('e3')?.parentIds).toEqual(['e1']);
+    store.close();
+  });
+
+  it('removes the links of a deleted entry (cascade)', () => {
+    const { dbPath, store } = withEntries();
+    store.writeTransaction((tx) => tx.insertLink('related', 'e1', 'e2'));
+    store.close();
+    withRawDb(dbPath, (db) => {
+      db.exec('PRAGMA foreign_keys = ON');
+      db.exec("DELETE FROM entries WHERE id = 'e1'");
+      expect(db.prepare('SELECT count(*) AS n FROM links').get()).toEqual({
+        n: 0,
+      });
+    });
+  });
+});

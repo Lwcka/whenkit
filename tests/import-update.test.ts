@@ -211,6 +211,7 @@ function failingOnWrite(writes: number): CatalogStoreOpener {
       entryById: (id) => store.entryById(id),
       entrySummaries: () => store.entrySummaries(),
       entryIdByDedupKey: (key) => store.entryIdByDedupKey(key),
+      parentIdsOf: (id) => store.parentIdsOf(id),
       writeTransaction: (fn) =>
         store.writeTransaction((writer) => fn(failing(writer))),
       close: () => store.close(),

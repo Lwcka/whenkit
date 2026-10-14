@@ -4,8 +4,8 @@ import type { StoredCategory, StoredEntry, StoredEntrySummary } from './ports';
 import { verdictReasonSchema } from './verification/reason-codes';
 
 // The one set of DTOs (AD-18) that `--json`, IPC and the export share: plain
-// objects, dates as ISO strings. LinkDto and RejectionDto arrive with links
-// and the rejections journal.
+// objects, dates as ISO strings. Links appear as id lists on the entry;
+// LinkDto (the export) and RejectionDto arrive with their tickets.
 
 export const categoryDtoSchema = z.strictObject({
   id: z.string(),
@@ -30,6 +30,9 @@ export const entryDtoSchema = z.strictObject({
   url: z.string().nullable(),
   resourceType: z.enum(RESOURCE_TYPES).nullable(),
   categories: z.array(entryCategoryDtoSchema),
+  relatedIds: z.array(z.string()),
+  parentIds: z.array(z.string()),
+  childIds: z.array(z.string()),
   whatItDoes: z.string(),
   situations: z.array(z.string()),
   keywords: z.array(z.string()),
@@ -67,6 +70,9 @@ export function toEntrySummaryDto(entry: StoredEntrySummary): EntrySummaryDto {
     url: entry.url,
     resourceType: entry.resourceType,
     categories: entry.categories.map(({ id, name }) => ({ id, name })),
+    relatedIds: [...entry.relatedIds],
+    parentIds: [...entry.parentIds],
+    childIds: [...entry.childIds],
     whatItDoes: entry.whatItDoes,
     situations: [...entry.situations],
     keywords: [...entry.keywords],

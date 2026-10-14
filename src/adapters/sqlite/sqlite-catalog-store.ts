@@ -10,6 +10,7 @@ import type {
   Clock,
   EntryUpdateRow,
   IdGenerator,
+  LinkType,
   NewCategoryRow,
   NewEntryRow,
   OpenStoreOptions,
@@ -111,6 +112,12 @@ const SUMMARY_COLUMNS = `id, owner_id, kind, name, url, resource_type,
   github_pushed_at, github_archived, verification_notes, forced, dedup_key,
   revision, added_at, verified_at`;
 
+const NO_LINKS = (): LinkIds => ({
+  relatedIds: [],
+  parentIds: [],
+  childIds: [],
+});
+
 function toCategory(row: CategoryRow): StoredCategory {
   return {
     id: row.id,
@@ -120,9 +127,16 @@ function toCategory(row: CategoryRow): StoredCategory {
   };
 }
 
+interface LinkIds {
+  relatedIds: string[];
+  parentIds: string[];
+  childIds: string[];
+}
+
 function toSummary(
   row: EntryRow,
   categories: StoredCategory[],
+  links: LinkIds,
 ): StoredEntrySummary {
   return {
     id: row.id,
@@ -132,6 +146,7 @@ function toSummary(
     url: row.url,
     resourceType: row.resource_type,
     categories,
+    ...links,
     whatItDoes: row.what_it_does,
     situations: JSON.parse(row.situations) as string[],
     keywords: JSON.parse(row.keywords) as string[],
@@ -204,6 +219,41 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     return byEntry;
   }
 
+  /** Link ids of the given entry (of all the owner's entries when omitted). */
+  private linksByEntry(entryId?: string): Map<string, LinkIds> {
+    const rows = this.all<{ type: LinkType; from_id: string; to_id: string }>(
+      `SELECT l.type, l.from_id, l.to_id FROM links l
+       JOIN entries e ON e.id = l.from_id
+       WHERE e.owner_id = ?1 AND (?2 IS NULL OR l.from_id = ?2 OR l.to_id = ?2)`,
+      this.owner,
+      entryId ?? null,
+    );
+    const byEntry = new Map<string, LinkIds>();
+    const of = (id: string): LinkIds => {
+      let links = byEntry.get(id);
+      if (links === undefined) {
+        links = { relatedIds: [], parentIds: [], childIds: [] };
+        byEntry.set(id, links);
+      }
+      return links;
+    };
+    for (const row of rows) {
+      if (row.type === 'related') {
+        of(row.from_id).relatedIds.push(row.to_id);
+        of(row.to_id).relatedIds.push(row.from_id);
+      } else {
+        of(row.from_id).childIds.push(row.to_id);
+        of(row.to_id).parentIds.push(row.from_id);
+      }
+    }
+    for (const links of byEntry.values()) {
+      links.relatedIds.sort();
+      links.parentIds.sort();
+      links.childIds.sort();
+    }
+    return byEntry;
+  }
+
   entryById(id: string): StoredEntry | undefined {
     const row = this.get<EntryRow>(
       `SELECT ${SUMMARY_COLUMNS}, content FROM entries
@@ -213,7 +263,11 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     );
     if (row === undefined) return undefined;
     const categories = this.categoriesByEntry(id).get(id) ?? [];
-    return { ...toSummary(row, categories), content: row.content ?? null };
+    const links = this.linksByEntry(id).get(id) ?? NO_LINKS();
+    return {
+      ...toSummary(row, categories, links),
+      content: row.content ?? null,
+    };
   }
 
   entrySummaries(): StoredEntrySummary[] {
@@ -223,7 +277,14 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
       this.owner,
     );
     const categories = this.categoriesByEntry();
-    return rows.map((row) => toSummary(row, categories.get(row.id) ?? []));
+    const links = this.linksByEntry();
+    return rows.map((row) =>
+      toSummary(
+        row,
+        categories.get(row.id) ?? [],
+        links.get(row.id) ?? NO_LINKS(),
+      ),
+    );
   }
 
   entryIdByDedupKey(dedupKey: string): string | undefined {
@@ -232,6 +293,17 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
       this.owner,
       dedupKey,
     )?.id;
+  }
+
+  parentIdsOf(id: string): string[] {
+    return this.all<{ from_id: string }>(
+      `SELECT l.from_id FROM links l
+       JOIN entries e ON e.id = l.to_id
+       WHERE e.owner_id = ? AND l.type = 'parent' AND l.to_id = ?
+       ORDER BY l.from_id`,
+      this.owner,
+      id,
+    ).map((row) => row.from_id);
   }
 
   insertCategory(category: NewCategoryRow): void {
@@ -327,6 +399,45 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     for (const categoryId of categoryIds) {
       this.addEntryCategory(entryId, categoryId);
     }
+  }
+
+  insertLink(type: LinkType, fromId: string, toId: string): void {
+    const [from, to] =
+      type === 'related' && fromId > toId ? [toId, fromId] : [fromId, toId];
+    this.db
+      .prepare(
+        'INSERT INTO links (type, from_id, to_id) VALUES (?, ?, ?) ON CONFLICT (type, from_id, to_id) DO NOTHING',
+      )
+      .run(type, from, to);
+  }
+
+  deleteRelatedLinks(id: string): void {
+    this.db
+      .prepare(
+        "DELETE FROM links WHERE type = 'related' AND (from_id = ? OR to_id = ?)",
+      )
+      .run(id, id);
+  }
+
+  deleteChildLinks(parentId: string): void {
+    this.db
+      .prepare("DELETE FROM links WHERE type = 'parent' AND from_id = ?")
+      .run(parentId);
+  }
+
+  deleteParentLinks(id: string): string[] {
+    const others = this.all<{ other: string }>(
+      `SELECT CASE WHEN from_id = ?1 THEN to_id ELSE from_id END AS other
+       FROM links WHERE type = 'parent' AND (from_id = ?1 OR to_id = ?1)
+       ORDER BY other`,
+      id,
+    ).map((row) => row.other);
+    this.db
+      .prepare(
+        "DELETE FROM links WHERE type = 'parent' AND (from_id = ? OR to_id = ?)",
+      )
+      .run(id, id);
+    return [...new Set(others)];
   }
 
   writeTransaction<T>(fn: (writer: CatalogWriter) => T): T {

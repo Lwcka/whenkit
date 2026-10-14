@@ -74,7 +74,10 @@ export interface StoredCategory {
   nameKey: string;
 }
 
-/** An entry row with its categories, in camelCase (AD-5). */
+/** The two kinds of link between entries (AD-5). */
+export type LinkType = 'related' | 'parent';
+
+/** An entry row with its categories and link ids, in camelCase (AD-5). */
 export interface StoredEntry {
   id: string;
   ownerId: string;
@@ -84,6 +87,12 @@ export interface StoredEntry {
   resourceType: ResourceType | null;
   /** Ordered by name_key. */
   categories: StoredCategory[];
+  /** Entries linked as `related`, either direction; sorted by id. */
+  relatedIds: string[];
+  /** Umbrella concepts this entry hangs under; sorted by id. */
+  parentIds: string[];
+  /** Concepts hanging under this umbrella; sorted by id. */
+  childIds: string[];
   whatItDoes: string;
   situations: string[];
   keywords: string[];
@@ -140,6 +149,8 @@ export interface CatalogReader {
   /** Every entry without `content`, oldest first. */
   entrySummaries(): StoredEntrySummary[];
   entryIdByDedupKey(dedupKey: string): string | undefined;
+  /** The umbrellas of an entry (`parent` links ending at it); sorted by id. */
+  parentIdsOf(id: string): string[];
 }
 
 /** Reads and writes inside one write transaction. */
@@ -154,6 +165,21 @@ export interface CatalogWriter extends CatalogReader {
   updateEntry(entry: EntryUpdateRow): void;
   /** Replaces every category of an entry with `categoryIds`. */
   replaceEntryCategories(entryId: string, categoryIds: readonly string[]): void;
+  /**
+   * Inserts a link; a `related` link is stored canonically (smaller id
+   * first). Inserting a link that exists is a no-op. The caller guarantees the
+   * rules the database cannot see: parent links join concepts, with no cycles.
+   */
+  insertLink(type: LinkType, fromId: string, toId: string): void;
+  /** Removes every `related` link touching the entry. */
+  deleteRelatedLinks(id: string): void;
+  /** Removes the `parent` links from the umbrella to its children. */
+  deleteChildLinks(parentId: string): void;
+  /**
+   * Removes every `parent` link touching the entry, as umbrella or as child,
+   * and returns the ids of the entries on their other end (sorted, unique).
+   */
+  deleteParentLinks(id: string): string[];
 }
 
 /** The catalog database. Grows with the use cases that need it. */

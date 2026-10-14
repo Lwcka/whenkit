@@ -63,6 +63,18 @@ export function renderImportReport(report: ImportReport): string[] {
       lines.push(importStrings.reason(reasonText(reason)));
     }
   }
+  if (report.ignoredLinks.length > 0) {
+    lines.push(importStrings.ignoredLinksHeader);
+    for (const link of report.ignoredLinks) {
+      lines.push(
+        importStrings.ignoredLink(
+          link.fromRef,
+          link.to,
+          reasonText(link.reason),
+        ),
+      );
+    }
+  }
   if (report.newCategories.length > 0) {
     lines.push(importStrings.newCategoriesHeader);
     for (const category of report.newCategories) {
@@ -125,6 +137,9 @@ export function renderEntry(entry: EntryDto): string[] {
     field(entryStrings.keywords, entry.keywords.join(', '));
   }
   list(entryStrings.sources, entry.sources);
+  list(entryStrings.parentIds, entry.parentIds);
+  list(entryStrings.childIds, entry.childIds);
+  list(entryStrings.relatedIds, entry.relatedIds);
   if (entry.content !== null) {
     lines.push(`${entryStrings.content}:`, entry.content);
   }

@@ -1,6 +1,11 @@
 import type { Zone } from './category-seed';
-import { batchSchema, type Batch, type BatchItem } from './batch-schema';
-import { zoneOf } from './entry';
+import {
+  batchSchema,
+  isEntryId,
+  type Batch,
+  type BatchItem,
+} from './batch-schema';
+import { zoneOf, type EntryKind } from './entry';
 import { WhenkitError, type ErrorIssue } from './errors';
 import {
   importReportSchema,
@@ -217,6 +222,131 @@ function updateId(item: BatchItem): string {
   return item.id;
 }
 
+type IgnoredLink = ImportReport['ignoredLinks'][number];
+
+/** An item the batch wrote, with the id of its entry. */
+interface WrittenItem {
+  item: BatchItem;
+  id: string;
+}
+
+/** The entry a link target names, or the reason the link is skipped. */
+type ResolvedTarget =
+  | { id: string; kind: EntryKind }
+  | { ignored: VerdictReason };
+
+/**
+ * A link target is the ref of another item or an entry id; a ref wins when
+ * both could match. Looked up after every item is written, so a ref names the
+ * entry its item got and an id sees the updates of this batch.
+ */
+function resolveTarget(
+  target: string,
+  batchRefs: ReadonlySet<string>,
+  writtenIds: ReadonlyMap<string, string>,
+  writer: CatalogWriter,
+): ResolvedTarget {
+  let id: string;
+  if (batchRefs.has(target)) {
+    const writtenId = writtenIds.get(target);
+    if (writtenId === undefined) {
+      return {
+        ignored: { code: 'link_target_not_written', params: { ref: target } },
+      };
+    }
+    id = writtenId;
+  } else {
+    id = target.toLowerCase();
+  }
+  const entry = isEntryId(id) ? writer.entryById(id) : undefined;
+  if (entry === undefined) {
+    return { ignored: { code: 'unknown_id', params: { id } } };
+  }
+  return { id, kind: entry.kind };
+}
+
+/** True when `childId` is `parentId` or one of its ancestors. */
+function closesCycle(
+  writer: CatalogWriter,
+  parentId: string,
+  childId: string,
+): boolean {
+  const seen = new Set<string>();
+  const pending = [parentId];
+  for (let id = pending.pop(); id !== undefined; id = pending.pop()) {
+    if (id === childId) return true;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    pending.push(...writer.parentIdsOf(id));
+  }
+  return false;
+}
+
+/**
+ * The link pass (AD-5, AD-6), after every item has its outcome: first the
+ * removals of all updates, then the insertions, so a link written by an
+ * earlier item survives a later update clearing the same entry's links.
+ * Returns the links the catalog could not satisfy, in batch order.
+ */
+function writeLinks(
+  writer: CatalogWriter,
+  batch: Batch,
+  written: readonly WrittenItem[],
+  writtenIds: ReadonlyMap<string, string>,
+): IgnoredLink[] {
+  const batchRefs = new Set(batch.items.map((item) => item.ref));
+  /** Parent links an update removed because its entry is no longer a concept. */
+  const kindChanges = new Map<string, IgnoredLink[]>();
+
+  for (const { item, id } of written) {
+    if (item.op !== 'update') continue;
+    writer.deleteRelatedLinks(id);
+    if (item.kind !== 'concept') {
+      kindChanges.set(
+        item.ref,
+        writer.deleteParentLinks(id).map((other) => ({
+          fromRef: item.ref,
+          to: other,
+          reason: { code: 'parent_requires_concept', params: { id } },
+        })),
+      );
+    } else if (item.children !== undefined) {
+      writer.deleteChildLinks(id);
+    }
+  }
+
+  const ignored: IgnoredLink[] = [];
+  for (const { item, id } of written) {
+    ignored.push(...(kindChanges.get(item.ref) ?? []));
+    const skip = (to: string, reason: VerdictReason) =>
+      ignored.push({ fromRef: item.ref, to, reason });
+
+    for (const target of item.related) {
+      const resolved = resolveTarget(target, batchRefs, writtenIds, writer);
+      if ('ignored' in resolved) skip(target, resolved.ignored);
+      else writer.insertLink('related', id, resolved.id);
+    }
+
+    if (item.kind !== 'concept') continue;
+    for (const target of item.children ?? []) {
+      const resolved = resolveTarget(target, batchRefs, writtenIds, writer);
+      if ('ignored' in resolved) {
+        skip(target, resolved.ignored);
+      } else if (resolved.kind !== 'concept') {
+        skip(target, {
+          code: 'parent_requires_concept',
+          params: { id: resolved.id },
+        });
+      } else if (closesCycle(writer, id, resolved.id)) {
+        skip(target, { code: 'parent_cycle', params: { id: resolved.id } });
+      } else {
+        writer.insertLink('parent', id, resolved.id);
+      }
+    }
+  }
+  return ignored;
+}
+
 /**
  * Phase 3: writes a validated batch in one write transaction and returns the
  * report. `verdicts` holds phase 2's verdict for every item, by ref. Per
@@ -231,7 +361,8 @@ function updateId(item: BatchItem): string {
  * Claude's fields and the categories of its entry, increments its revision
  * and keeps the author's fields (updated, or warned). A rejected or
  * duplicate update leaves its entry untouched. Every item appears exactly
- * once in the report.
+ * once in the report. The links come last (writeLinks): a link the catalog
+ * cannot satisfy is skipped and reported in `ignoredLinks`, the item stays.
  */
 export function applyBatch(
   store: CatalogStore,
@@ -245,6 +376,9 @@ export function applyBatch(
     /** Dedup keys written by this batch (added or updated), to their ref. */
     const writtenKeys = new Map<string, string>();
     const items: ReportItem[] = [];
+    const written: WrittenItem[] = [];
+    /** Batch ref → id of the entry the item wrote. */
+    const writtenIds = new Map<string, string>();
 
     for (const item of batch.items) {
       const base = { ref: item.ref, op: item.op };
@@ -315,14 +449,18 @@ export function applyBatch(
         }
       }
       writtenKeys.set(key, item.ref);
-      const written = item.op === 'update' ? 'updated' : 'added';
+      written.push({ item, id });
+      writtenIds.set(item.ref, id);
+      const done = item.op === 'update' ? 'updated' : 'added';
       items.push({
         ...base,
-        outcome: verdict.outcome === 'warned' ? 'warned' : written,
+        outcome: verdict.outcome === 'warned' ? 'warned' : done,
         id,
         reasons: verdict.reasons,
       });
     }
+
+    const ignoredLinks = writeLinks(writer, batch, written, writtenIds);
 
     // Validated before the commit: a report that breaks its own schema is a
     // bug, and it rolls the import back instead of exiting 4 after writing.
@@ -331,7 +469,7 @@ export function applyBatch(
       workspace,
       items,
       newCategories: [...categories.used.values()],
-      ignoredLinks: [],
+      ignoredLinks,
       proposedBlockedDomains: batch.proposedBlockedDomains,
     });
   });

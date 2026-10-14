@@ -44,7 +44,10 @@ export const importReportSchema = z.strictObject({
   workspace: z.string(),
   items: z.array(reportItemSchema),
   newCategories: z.array(reportCategorySchema),
-  /** Links to rejected items; always empty until links exist (ticket 7). */
+  /**
+   * Links the catalog could not satisfy, in batch order. `to` is the target as
+   * the batch wrote it (a ref or an id); for a kind change, the other entry's id.
+   */
   ignoredLinks: z.array(
     z.strictObject({
       fromRef: z.string(),

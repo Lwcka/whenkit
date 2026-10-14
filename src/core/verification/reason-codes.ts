@@ -33,6 +33,12 @@ export const REASON_CODES = [
   'source_link_removed',
   /** `{ url, domain }`: a source matches a blocked rule; rejects the concept. */
   'source_blocked_domain',
+  /** `{ ref }`: a link target is a batch item that was not written. */
+  'link_target_not_written',
+  /** `{ id }`: a parent link needs a concept, and this entry is not one. */
+  'parent_requires_concept',
+  /** `{ id }`: the child already is an ancestor of the parent. */
+  'parent_cycle',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];
