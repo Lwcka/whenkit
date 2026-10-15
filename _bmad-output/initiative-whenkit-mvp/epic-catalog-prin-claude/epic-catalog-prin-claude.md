@@ -6,6 +6,7 @@ covers: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-12]
 after: []
 assignee: ""
 risk: medium
+status: done
 ---
 
 # Catalogul se umple prin Claude
@@ -50,3 +51,4 @@ Nucleul (`src/core`), adaptoarele (`src/adapters`), CLI-ul (`src/cli`), șablonu
 - Decision: planul a trecut două validări independente (subagenți), la cererea autorului (2026-10-13).
 - Assumption: intrarea 5 încape într-o sesiune; dacă nu, se împarte în modulul pur de verificare și legarea în faza 2 cu verificarea prin CLI.
 - Resolved: template-ul Forge vite-typescript nu mai există în Forge 8; se folosește create-electron-app@8.0.1 --template vite --typescript (review-versions.md).
+- Decision: epicul e închis pe 2026-10-15, după verificarea de închidere (toate cele 17 tichete done, Done when 1–5 îndeplinite, 645 de teste) și confirmarea autorului; CAP-5 e îndeplinit în cod, iar datele vechi („The Art of Command Line”, ray.so) se rescriu în workspace cu un update.
