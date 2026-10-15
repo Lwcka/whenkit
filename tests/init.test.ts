@@ -10,20 +10,14 @@ import {
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { COMMAND_NAMES, main } from '../src/cli/main';
+import { COMMAND_NAMES } from '../src/cli/main';
+import {
+  isBlocked,
+  parseBlockedDomains,
+} from '../src/core/verification/blocked-domains';
 import { BATCH_SCHEMA_VERSION, TEMPLATE_VERSION } from '../src/core/versions';
 import { errorMessages } from '../src/shared/strings.ro';
-import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-  notFoundGithub,
-  unusedHttp,
-} from './helpers';
+import { fakeAppRoot, runWhenkit, tempDir } from './helpers';
 
 // `whenkit init` end to end on temp dirs: real file system and SQLite, with
 // APPDATA, WHENKIT_WORKSPACE and the app root injected (AD-8).
@@ -50,31 +44,8 @@ function setup(vars: { workspaceEnv?: string } = {}): Setup {
   };
 }
 
-async function runCli(s: Setup, args: string[], cwd = s.root) {
-  let stdout = '';
-  let stderr = '';
-  const exitCode = await main(
-    args,
-    {
-      stdout: (text) => {
-        stdout += text;
-      },
-      stderr: (text) => {
-        stderr += text;
-      },
-    },
-    {
-      env: fakeEnvironment(s.vars, s.appRoot),
-      fs: nodeFileSystem,
-      clock: fixedClock(),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: unusedHttp,
-      github: notFoundGithub,
-      cwd,
-    },
-  );
-  return { exitCode, stdout, stderr };
+function runCli(s: Setup, args: string[], cwd = s.root) {
+  return runWhenkit(args, { vars: s.vars, appRoot: s.appRoot, cwd });
 }
 
 function query<T>(dbPath: string, sql: string): T {
@@ -187,6 +158,38 @@ describe('whenkit init', () => {
     writeFileSync(list, 'exemplu.com\n');
     expect((await runCli(s, ['init'])).exitCode).toBe(0);
     expect(readFileSync(list, 'utf8')).toBe('exemplu.com\n');
+  });
+
+  it('ships an initial blocked-domains list with exactly the rules of the spec', () => {
+    const rules = parseBlockedDomains(
+      readFileSync(
+        path.join(
+          __dirname,
+          '..',
+          'workspace-template',
+          'data',
+          'blocked-domains.txt',
+        ),
+        'utf8',
+      ),
+    );
+    expect(rules).toEqual([
+      'libgen.*',
+      'sci-hub.*',
+      'z-lib.*',
+      'pdfdrive.com',
+      '12ft.io',
+    ]);
+    for (const url of [
+      'https://libgen.is/book',
+      'https://sci-hub.se/x',
+      'https://z-lib.org/',
+      'https://www.pdfdrive.com/a',
+      'https://12ft.io/proxy',
+    ]) {
+      expect(isBlocked(url, rules)).toBeDefined();
+    }
+    expect(isBlocked('https://example.com/', rules)).toBeUndefined();
   });
 
   it('installs the whole template, the batch schema and the marker, without .gitkeep', async () => {

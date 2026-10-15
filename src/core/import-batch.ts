@@ -1,11 +1,10 @@
-import type { Zone } from './category-seed';
 import {
   batchSchema,
   isEntryId,
   type Batch,
   type BatchItem,
 } from './batch-schema';
-import { zoneOf, type EntryKind } from './entry';
+import { zoneOf, type EntryKind, type Zone } from './entry';
 import { WhenkitError, type ErrorIssue } from './errors';
 import {
   importReportSchema,

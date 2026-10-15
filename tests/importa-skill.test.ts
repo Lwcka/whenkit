@@ -1,51 +1,22 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { COMMAND_NAMES, main, type CliDeps } from '../src/cli/main';
+import { COMMAND_NAMES } from '../src/cli/main';
 import { batchSchema } from '../src/core/batch-schema';
 import { showOutputSchema } from '../src/core/cli-schemas';
 import { importReportSchema } from '../src/core/import-report-schema';
 import { BATCH_SCHEMA_VERSION } from '../src/core/versions';
-import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  notFoundGithub,
-  okHttp,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+import { runCli, setup } from './cli-harness';
+import { fixedClock } from './helpers';
+import { EXAMPLE, TEMPLATE, frontmatter, read } from './skill-files';
 
 // The files `/importa` ships in workspace-template/ hold to the CLI contract
 // (ticket 11). What Claude does with them is judged live (hitl); here the
 // reference batch is imported for real and SKILL.md is checked for the rules
 // each edge case of the ticket depends on.
 
-const TEMPLATE = path.join(__dirname, '..', 'workspace-template');
 const SKILL = path.join(TEMPLATE, '.claude', 'skills', 'importa', 'SKILL.md');
-const EXAMPLE = path.join(
-  TEMPLATE,
-  '.claude',
-  'skills',
-  'importa',
-  'exemplu-lot.json',
-);
 const RULES = path.join(TEMPLATE, '.claude', 'skills', 'reguli-fise.md');
-
-const read = (file: string) => readFileSync(file, 'utf8');
-
-function frontmatter(text: string): Record<string, string> {
-  const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
-  if (!match) throw new Error('no frontmatter');
-  return Object.fromEntries(
-    match[1].split('\n').map((line) => {
-      const at = line.indexOf(':');
-      return [line.slice(0, at), line.slice(at + 1).trim()];
-    }),
-  );
-}
 
 describe('exemplu-lot.json', () => {
   const example: unknown = JSON.parse(read(EXAMPLE));
@@ -64,36 +35,11 @@ describe('exemplu-lot.json', () => {
   });
 
   it('imports into a fresh workspace: all added but the flagged item, umbrella linked', async () => {
-    const root = tempDir();
-    const appRoot = fakeAppRoot(path.join(root, 'repo'));
-    const appData = path.join(root, 'AppData');
-    mkdirSync(appData);
-    const workspace = path.join(root, 'ws');
-    const deps: CliDeps = {
-      env: fakeEnvironment(
-        { APPDATA: appData, WHENKIT_WORKSPACE: workspace },
-        appRoot,
-      ),
-      fs: nodeFileSystem,
-      clock: fixedClock(),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: okHttp,
-      github: notFoundGithub,
-      cwd: root,
-    };
-    const run = async (args: string[]) => {
-      let stdout = '';
-      const exitCode = await main(
-        args,
-        { stdout: (text) => (stdout += text), stderr: () => undefined },
-        deps,
-      );
-      return { exitCode, stdout };
-    };
+    const s = setup({ clock: fixedClock() });
+    const run = (args: string[]) => runCli(s, args);
 
     expect((await run(['init'])).exitCode).toBe(0);
-    writeFileSync(path.join(root, 'lot.json'), read(EXAMPLE));
+    writeFileSync(path.join(s.root, 'lot.json'), read(EXAMPLE));
     const imported = await run(['import', 'lot.json', '--json']);
     expect(imported.exitCode).toBe(0);
     const report = importReportSchema.parse(JSON.parse(imported.stdout));

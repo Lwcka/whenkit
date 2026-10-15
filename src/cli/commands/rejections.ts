@@ -1,7 +1,6 @@
 import { rejectionsOutputSchema } from '../../core/cli-schemas';
 import { toRejectionDto } from '../../core/dto';
 import { CLI_OUTPUT_VERSION } from '../../core/versions';
-import { catalogPath } from '../../core/workspace';
 import { EXIT_OK } from '../exit-codes';
 import {
   parseArgs,
@@ -9,6 +8,7 @@ import {
   printLines,
   type CommandContext,
   resolveCommandWorkspace,
+  withReadStore,
 } from '../command';
 import { renderRejections } from '../render';
 
@@ -18,18 +18,11 @@ export function runRejections(
   ctx: CommandContext,
 ): number {
   parseArgs('rejections', args, { required: [], json: true });
-  const { deps } = ctx;
   const workspace = resolveCommandWorkspace(ctx);
 
-  const store = deps.openStore(catalogPath(deps.fs, workspace), {
-    readOnly: true,
-  });
-  let rejections;
-  try {
-    rejections = store.rejections().map(toRejectionDto);
-  } finally {
-    store.close();
-  }
+  const rejections = withReadStore(ctx, workspace, (store) =>
+    store.rejections().map(toRejectionDto),
+  );
 
   if (ctx.json) {
     printJson(ctx.io, rejectionsOutputSchema, {

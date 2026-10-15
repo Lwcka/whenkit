@@ -2,13 +2,13 @@ import { categoriesOutputSchema } from '../../core/cli-schemas';
 import { toCategoryDto } from '../../core/dto';
 import { ZONES } from '../../core/entry';
 import { CLI_OUTPUT_VERSION } from '../../core/versions';
-import { catalogPath } from '../../core/workspace';
 import { EXIT_OK } from '../exit-codes';
 import {
   parseArgs,
   printJson,
   printLines,
   resolveCommandWorkspace,
+  withReadStore,
   type CommandContext,
 } from '../command';
 import { renderCategories } from '../render';
@@ -22,20 +22,11 @@ export function runCategories(
   ctx: CommandContext,
 ): number {
   parseArgs('categories', args, { required: [], json: true });
-  const { deps } = ctx;
   const workspace = resolveCommandWorkspace(ctx);
 
-  const store = deps.openStore(catalogPath(deps.fs, workspace), {
-    readOnly: true,
-  });
-  let categories;
-  try {
-    categories = ZONES.flatMap((zone) =>
-      store.categoriesInZone(zone).map(toCategoryDto),
-    );
-  } finally {
-    store.close();
-  }
+  const categories = withReadStore(ctx, workspace, (store) =>
+    ZONES.flatMap((zone) => store.categoriesInZone(zone).map(toCategoryDto)),
+  );
 
   if (ctx.json) {
     printJson(ctx.io, categoriesOutputSchema, {

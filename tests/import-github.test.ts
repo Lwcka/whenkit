@@ -1,23 +1,19 @@
-import { mkdirSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { main, type CliDeps } from '../src/cli/main';
-import { showOutputSchema } from '../src/core/cli-schemas';
-import type { EntryDto } from '../src/core/dto';
 import {
   importReportSchema,
   type ImportReport,
 } from '../src/core/import-report-schema';
 import type { GitHubClient, GitHubResult, HttpClient } from '../src/core/ports';
 import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+  batch,
+  importReport,
+  runCli,
+  setup as baseSetup,
+  show,
+  writeBatch,
+  type CliSetup,
+} from './cli-harness';
+import { fixedClock } from './helpers';
 
 // GitHub metadata (CAP-5, AD-6, AD-7) end to end through main(): a fake
 // HttpClient for the link checks and a fake GitHubClient, so nothing reaches
@@ -57,62 +53,24 @@ class FakeGithub implements GitHubClient {
   }
 }
 
-interface Setup {
-  root: string;
-  deps: CliDeps;
+interface Setup extends CliSetup {
   github: FakeGithub;
 }
 
 async function setup(script: Record<string, GitHubResult>): Promise<Setup> {
-  const root = tempDir();
-  const appRoot = fakeAppRoot(path.join(root, 'repo'));
-  const appData = path.join(root, 'AppData');
-  mkdirSync(appData);
   const github = new FakeGithub(script);
   const s: Setup = {
-    root,
-    github,
-    deps: {
-      env: fakeEnvironment(
-        {
-          APPDATA: appData,
-          WHENKIT_WORKSPACE: path.join(root, 'ws'),
-        },
-        appRoot,
-      ),
-      fs: nodeFileSystem,
+    ...baseSetup({
       clock: fixedClock(new Date('2026-10-14T09:00:00.000Z')),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
       http: fakeHttp,
       github,
       retryDelayMs: 0,
-      cwd: root,
-    },
+    }),
+    github,
   };
   expect((await runCli(s, ['init'])).exitCode).toBe(0);
   return s;
 }
-
-async function runCli(s: Setup, args: string[]) {
-  let stdout = '';
-  let stderr = '';
-  const exitCode = await main(
-    args,
-    {
-      stdout: (text) => {
-        stdout += text;
-      },
-      stderr: (text) => {
-        stderr += text;
-      },
-    },
-    s.deps,
-  );
-  return { exitCode, stdout, stderr };
-}
-
-let batchCount = 0;
 
 function tool(ref: string, url: string, overrides = {}) {
   return {
@@ -130,21 +88,8 @@ function tool(ref: string, url: string, overrides = {}) {
   };
 }
 
-async function importItems(s: Setup, items: unknown[]): Promise<ImportReport> {
-  const file = `batch-${++batchCount}.json`;
-  writeFileSync(
-    path.join(s.root, file),
-    JSON.stringify({ schemaVersion: 1, items }),
-  );
-  const result = await runCli(s, ['import', file, '--json']);
-  expect(result.exitCode).toBe(0);
-  return importReportSchema.parse(JSON.parse(result.stdout));
-}
-
-async function show(s: Setup, id: string | undefined): Promise<EntryDto> {
-  const result = await runCli(s, ['show', String(id), '--json']);
-  expect(result.exitCode).toBe(0);
-  return showOutputSchema.parse(JSON.parse(result.stdout)).entry;
+function importItems(s: Setup, items: unknown[]): Promise<ImportReport> {
+  return importReport(s, batch(items));
 }
 
 const NO_GITHUB = {
@@ -289,15 +234,11 @@ describe('import with GitHub metadata', () => {
 
   it('writes the fields of a forced item, whose link works', async () => {
     const s = await setup({ 'o/r': active });
-    const file = `batch-${++batchCount}.json`;
-    writeFileSync(
-      path.join(s.root, file),
-      JSON.stringify({
-        schemaVersion: 1,
-        items: [
-          tool('r', 'https://github.com/o/r', { flaggedByClaude: 'dubios' }),
-        ],
-      }),
+    const file = writeBatch(
+      s,
+      batch([
+        tool('r', 'https://github.com/o/r', { flaggedByClaude: 'dubios' }),
+      ]),
     );
     const result = await runCli(s, ['import', file, '--json', '--force', 'r']);
     expect(result.exitCode).toBe(0);

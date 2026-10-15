@@ -3,9 +3,9 @@ import { RESOURCE_TYPES, ZONES } from './entry';
 import { nameKey } from './name-key';
 import { BATCH_SCHEMA_VERSION } from './versions';
 
-// The import batch contract (AD-6), defined once: validation and, from
-// ticket 7, the JSON Schema both derive from it. Every object is strict, so
-// an unknown field (a typo, or an application field such as myNotes) makes
+// The import batch contract (AD-6), defined once: validation and the JSON
+// Schema (batch-json-schema.ts) both derive from it. Every object is strict,
+// so an unknown field (a typo, or an application field such as myNotes) makes
 // the batch invalid instead of being dropped. Field names follow
 // spec-whenkit/entry-model.md. A link target is the `ref` of another item of
 // the batch or the id of an existing entry (UUID); the rules that need the

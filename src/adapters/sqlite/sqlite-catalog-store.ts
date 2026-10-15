@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs';
 import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
-import { CATEGORY_SEED, type Zone } from '../../core/category-seed';
-import type { EntryKind, ResourceType } from '../../core/entry';
+import { CATEGORY_SEED } from '../../core/category-seed';
+import type { EntryKind, ResourceType, Zone } from '../../core/entry';
 import { WhenkitError, isWhenkitError } from '../../core/errors';
 import { nameKey } from '../../core/name-key';
 import type {

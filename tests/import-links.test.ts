@@ -1,26 +1,20 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { Ajv2020 } from 'ajv/dist/2020';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { main, type CliDeps } from '../src/cli/main';
-import { errorOutputSchema, showOutputSchema } from '../src/core/cli-schemas';
-import type { EntryDto } from '../src/core/dto';
-import {
-  importReportSchema,
-  type ImportReport,
-} from '../src/core/import-report-schema';
+import { errorOutputSchema } from '../src/core/cli-schemas';
+import type { ImportReport } from '../src/core/import-report-schema';
 import type { HttpClient } from '../src/core/ports';
 import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  notFoundGithub,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+  batch,
+  count,
+  importReport,
+  initialized as baseInitialized,
+  runCli,
+  setup as baseSetup,
+  show,
+  writeBatch,
+} from './cli-harness';
+import { fakeEnvironment, fixedClock } from './helpers';
 
 // Links between entries (AD-5, AD-6) end to end through main(), on a temp
 // development workspace: every row of the ticket's matrix. dead.dev answers
@@ -37,63 +31,14 @@ const fakeHttp: HttpClient = {
     ),
 };
 
-interface Setup {
-  root: string;
-  dbPath: string;
-  deps: CliDeps;
-}
+const setupOptions = {
+  clock: fixedClock(new Date('2026-10-14T08:30:00.000Z')),
+  http: fakeHttp,
+  retryDelayMs: 0,
+};
 
-function setup(): Setup {
-  const root = tempDir();
-  const appRoot = fakeAppRoot(path.join(root, 'repo'));
-  const appData = path.join(root, 'AppData');
-  mkdirSync(appData);
-  const workspace = path.join(root, 'ws');
-  return {
-    root,
-    dbPath: path.join(workspace, 'data', 'catalog.sqlite'),
-    deps: {
-      env: fakeEnvironment(
-        { APPDATA: appData, WHENKIT_WORKSPACE: workspace },
-        appRoot,
-      ),
-      fs: nodeFileSystem,
-      clock: fixedClock(new Date('2026-10-14T08:30:00.000Z')),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: fakeHttp,
-      github: notFoundGithub,
-      retryDelayMs: 0,
-      cwd: root,
-    },
-  };
-}
-
-async function runCli(s: Setup, args: string[]) {
-  let stdout = '';
-  let stderr = '';
-  const exitCode = await main(
-    args,
-    {
-      stdout: (text) => {
-        stdout += text;
-      },
-      stderr: (text) => {
-        stderr += text;
-      },
-    },
-    s.deps,
-  );
-  return { exitCode, stdout, stderr };
-}
-
-let batchCount = 0;
-
-function writeBatch(s: Setup, content: unknown): string {
-  const file = `batch-${++batchCount}.json`;
-  writeFileSync(path.join(s.root, file), JSON.stringify(content));
-  return file;
-}
+const setup = () => baseSetup(setupOptions);
+const initialized = () => baseInitialized(setupOptions);
 
 function tool(ref: string, overrides: Record<string, unknown> = {}) {
   return {
@@ -124,44 +69,11 @@ function concept(ref: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-function batch(items: unknown[]) {
-  return { schemaVersion: 1, items };
-}
-
-async function importReport(s: Setup, content: unknown): Promise<ImportReport> {
-  const result = await runCli(s, ['import', writeBatch(s, content), '--json']);
-  expect(result.exitCode).toBe(0);
-  return importReportSchema.parse(JSON.parse(result.stdout));
-}
-
 /** The ids of the items of a report, by ref. */
 function idsOf(report: ImportReport): Record<string, string> {
   return Object.fromEntries(
     report.items.map((item) => [item.ref, String(item.id)]),
   );
-}
-
-async function show(s: Setup, id: string): Promise<EntryDto> {
-  const result = await runCli(s, ['show', id, '--json']);
-  expect(result.exitCode).toBe(0);
-  return showOutputSchema.parse(JSON.parse(result.stdout)).entry;
-}
-
-function count(dbPath: string, table: string): number {
-  const db = new DatabaseSync(dbPath, { readOnly: true });
-  try {
-    return (
-      db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }
-    ).n;
-  } finally {
-    db.close();
-  }
-}
-
-async function initialized(): Promise<Setup> {
-  const s = setup();
-  expect((await runCli(s, ['init'])).exitCode).toBe(0);
-  return s;
 }
 
 describe('whenkit import with links', () => {

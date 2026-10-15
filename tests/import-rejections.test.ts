@@ -1,29 +1,24 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { main, type CliDeps } from '../src/cli/main';
 import { batchSchema } from '../src/core/batch-schema';
 import {
   errorOutputSchema,
   rejectionsOutputSchema,
-  showOutputSchema,
 } from '../src/core/cli-schemas';
-import type { EntryDto, RejectionDto } from '../src/core/dto';
-import {
-  importReportSchema,
-  type ImportReport,
-} from '../src/core/import-report-schema';
+import type { RejectionDto } from '../src/core/dto';
 import type { HttpClient } from '../src/core/ports';
 import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  notFoundGithub,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+  batch,
+  importJson,
+  importReport,
+  initialized as baseInitialized,
+  runCli,
+  show,
+  tool,
+  writeBatch,
+  type CliSetup,
+} from './cli-harness';
+import { fixedClock } from './helpers';
 
 // The rejection journal and `--force` (AD-5, AD-7, AD-11) end to end through
 // main(), on a temp development workspace. Links are checked by a fake
@@ -42,120 +37,18 @@ const fakeHttp: HttpClient = {
   },
 };
 
-interface Setup {
-  root: string;
-  dbPath: string;
-  deps: CliDeps;
-}
+const setupOptions = {
+  clock: fixedClock(new Date(NOW)),
+  http: fakeHttp,
+  retryDelayMs: 0,
+};
 
-function setup(): Setup {
-  const root = tempDir();
-  const appRoot = fakeAppRoot(path.join(root, 'repo'));
-  const appData = path.join(root, 'AppData');
-  mkdirSync(appData);
-  const workspace = path.join(root, 'ws');
-  return {
-    root,
-    dbPath: path.join(workspace, 'data', 'catalog.sqlite'),
-    deps: {
-      env: fakeEnvironment(
-        { APPDATA: appData, WHENKIT_WORKSPACE: workspace },
-        appRoot,
-      ),
-      fs: nodeFileSystem,
-      clock: fixedClock(new Date(NOW)),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: fakeHttp,
-      github: notFoundGithub,
-      retryDelayMs: 0,
-      cwd: root,
-    },
-  };
-}
+const initialized = () => baseInitialized(setupOptions);
 
-async function runCli(s: Setup, args: string[]) {
-  let stdout = '';
-  let stderr = '';
-  const exitCode = await main(
-    args,
-    {
-      stdout: (text) => {
-        stdout += text;
-      },
-      stderr: (text) => {
-        stderr += text;
-      },
-    },
-    s.deps,
-  );
-  return { exitCode, stdout, stderr };
-}
-
-async function initialized(): Promise<Setup> {
-  const s = setup();
-  expect((await runCli(s, ['init'])).exitCode).toBe(0);
-  return s;
-}
-
-let batchCount = 0;
-
-function writeBatch(s: Setup, content: unknown): string {
-  const file = `batch-${++batchCount}.json`;
-  writeFileSync(path.join(s.root, file), JSON.stringify(content));
-  return file;
-}
-
-function tool(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'tool',
-    name: `Tool ${ref}`,
-    url: `https://${ref}.dev`,
-    resourceType: 'site',
-    categories: ['Imagini & video'],
-    whatItDoes: 'Face ceva util.',
-    situations: ['Când am nevoie de el'],
-    keywords: ['util'],
-    ...overrides,
-  };
-}
-
-function batch(items: unknown[]) {
-  return { schemaVersion: 1, items };
-}
-
-async function importJson(s: Setup, content: unknown, flags: string[] = []) {
-  const result = await runCli(s, [
-    'import',
-    writeBatch(s, content),
-    '--json',
-    ...flags,
-  ]);
-  return { ...result, json: JSON.parse(result.stdout) as unknown };
-}
-
-async function importReport(
-  s: Setup,
-  content: unknown,
-  flags: string[] = [],
-): Promise<ImportReport> {
-  const result = await importJson(s, content, flags);
-  expect(result.exitCode).toBe(0);
-  return importReportSchema.parse(result.json);
-}
-
-async function journal(s: Setup): Promise<RejectionDto[]> {
+async function journal(s: CliSetup): Promise<RejectionDto[]> {
   const result = await runCli(s, ['rejections', '--json']);
   expect(result.exitCode).toBe(0);
   return rejectionsOutputSchema.parse(JSON.parse(result.stdout)).rejections;
-}
-
-async function show(s: Setup, id: string): Promise<EntryDto> {
-  const result = await runCli(s, ['show', id, '--json']);
-  expect(result.exitCode).toBe(0);
-  return showOutputSchema.parse(JSON.parse(result.stdout)).entry;
 }
 
 describe('the rejection journal', () => {
@@ -417,6 +310,22 @@ describe('whenkit import --force', () => {
     expect(readFileSync(s.dbPath).equals(before)).toBe(true);
   });
 
+  it('does not bypass the schema: a forced ref in an invalid batch writes and journals nothing', async () => {
+    const s = await initialized();
+    const before = readFileSync(s.dbPath);
+    const result = await importJson(
+      s,
+      batch([tool('a', { whatItDoes: undefined }), tool('b')]),
+      ['--force', 'a'],
+    );
+    expect(result.exitCode).toBe(1);
+    expect(errorOutputSchema.parse(result.json).error.code).toBe(
+      'BATCH_INVALID',
+    );
+    expect(readFileSync(s.dbPath).equals(before)).toBe(true);
+    expect(await journal(s)).toEqual([]);
+  });
+
   it.each([
     [['--force']],
     [['--force', '--json']],
@@ -447,7 +356,7 @@ describe('whenkit import --force', () => {
 });
 
 describe('a forced entry stays forced', () => {
-  async function forcedEntry(s: Setup) {
+  async function forcedEntry(s: CliSetup) {
     const report = await importReport(
       s,
       batch([tool('book', { url: BLOCKED_URL })]),

@@ -1,17 +1,9 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import path from 'node:path';
+import { readFileSync } from 'node:fs';
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
 import { bundledMigrations } from '../src/adapters/sqlite/migrate';
 import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
-import { main, type CliDeps } from '../src/cli/main';
-import { errorOutputSchema, showOutputSchema } from '../src/core/cli-schemas';
-import type { EntryDto } from '../src/core/dto';
-import {
-  importReportSchema,
-  type ImportReport,
-} from '../src/core/import-report-schema';
+import { errorOutputSchema } from '../src/core/cli-schemas';
 import type {
   CatalogStore,
   CatalogStoreOpener,
@@ -20,14 +12,17 @@ import type {
 } from '../src/core/ports';
 import { errorMessages } from '../src/shared/strings.ro';
 import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  notFoundGithub,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+  batch,
+  count,
+  importJson,
+  importReport,
+  runCli,
+  setup as baseSetup,
+  show,
+  tool,
+  writeBatch,
+} from './cli-harness';
+import { fixedClock, sequentialIds, testStoreOpener } from './helpers';
 
 // `op: update` and the integrity of a batch (AD-6, AD-11, AD-14, AD-16) end
 // to end through main(), on a temp development workspace. Links are checked
@@ -49,116 +44,16 @@ const fakeHttp: HttpClient = {
   },
 };
 
-interface Setup {
-  root: string;
-  workspace: string;
-  dbPath: string;
-  deps: CliDeps;
-}
-
-function setup(): Setup {
-  const root = tempDir();
-  const appRoot = fakeAppRoot(path.join(root, 'repo'));
-  const appData = path.join(root, 'AppData');
-  mkdirSync(appData);
-  const workspace = path.join(root, 'ws');
-  return {
-    root,
-    workspace,
-    dbPath: path.join(workspace, 'data', 'catalog.sqlite'),
-    deps: {
-      env: fakeEnvironment(
-        { APPDATA: appData, WHENKIT_WORKSPACE: workspace },
-        appRoot,
-      ),
-      fs: nodeFileSystem,
-      clock: fixedClock(new Date(ADDED_AT)),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: fakeHttp,
-      github: notFoundGithub,
-      retryDelayMs: 0,
-      cwd: root,
-    },
-  };
-}
-
-async function runCli(s: Setup, args: string[]) {
-  let stdout = '';
-  let stderr = '';
-  const exitCode = await main(
-    args,
-    {
-      stdout: (text) => {
-        stdout += text;
-      },
-      stderr: (text) => {
-        stderr += text;
-      },
-    },
-    s.deps,
-  );
-  return { exitCode, stdout, stderr };
-}
-
-let batchCount = 0;
-
-function writeBatch(s: Setup, content: unknown): string {
-  const file = `batch-${++batchCount}.json`;
-  writeFileSync(path.join(s.root, file), JSON.stringify(content));
-  return file;
-}
-
-function tool(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'tool',
-    name: `Tool ${ref}`,
-    url: `https://${ref}.dev`,
-    resourceType: 'site',
-    categories: ['Imagini & video'],
-    whatItDoes: 'Face ceva util.',
-    situations: ['Când am nevoie de el'],
-    keywords: ['util'],
-    ...overrides,
-  };
+function setup() {
+  return baseSetup({
+    clock: fixedClock(new Date(ADDED_AT)),
+    http: fakeHttp,
+    retryDelayMs: 0,
+  });
 }
 
 function update(ref: string, id: string, overrides = {}) {
   return tool(ref, { op: 'update', id, ...overrides });
-}
-
-function batch(items: unknown[], extra: Record<string, unknown> = {}) {
-  return { schemaVersion: 1, items, ...extra };
-}
-
-async function importJson(s: Setup, content: unknown) {
-  const result = await runCli(s, ['import', writeBatch(s, content), '--json']);
-  return { ...result, json: JSON.parse(result.stdout) as unknown };
-}
-
-async function importReport(s: Setup, content: unknown): Promise<ImportReport> {
-  const result = await importJson(s, content);
-  expect(result.exitCode).toBe(0);
-  return importReportSchema.parse(result.json);
-}
-
-async function show(s: Setup, id: string): Promise<EntryDto> {
-  const result = await runCli(s, ['show', id, '--json']);
-  expect(result.exitCode).toBe(0);
-  return showOutputSchema.parse(JSON.parse(result.stdout)).entry;
-}
-
-function count(dbPath: string, table: string): number {
-  const db = new DatabaseSync(dbPath, { readOnly: true });
-  try {
-    return (
-      db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }
-    ).n;
-  } finally {
-    db.close();
-  }
 }
 
 /**
@@ -171,7 +66,8 @@ async function catalogWithTwoTools() {
   expect((await runCli(s, ['init'])).exitCode).toBe(0);
   const added = await importReport(s, batch([tool('a'), tool('b')]));
   const [a, b] = added.items.map((item) => String(item.id));
-  // What the window (entries:setNotes) and `--force` (ticket 8) will write.
+  // What the window (entries:setNotes) will write; `forced` is also set by
+  // `import --force`.
   const db = new DatabaseSync(s.dbPath);
   try {
     db.prepare(

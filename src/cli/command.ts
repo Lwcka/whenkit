@@ -1,5 +1,6 @@
 import type { z } from 'zod';
 import type {
+  CatalogStore,
   CatalogStoreOpener,
   Clock,
   Environment,
@@ -8,7 +9,11 @@ import type {
   HttpClient,
   IdGenerator,
 } from '../core/ports';
-import { resolveWorkspace, templateOutdated } from '../core/workspace';
+import {
+  catalogPath,
+  resolveWorkspace,
+  templateOutdated,
+} from '../core/workspace';
 import { cliStrings } from '../shared/strings.ro';
 
 // What every command handler shares: the injected ports, the output streams
@@ -146,4 +151,24 @@ export function resolveCommandWorkspace(ctx: CommandContext): string {
     ctx.io.stderr(`${cliStrings.templateOutdated}\n`);
   }
   return workspace;
+}
+
+/**
+ * Opens the catalog read-only, runs `read` and always closes the store, so
+ * the caller prints only after the database is released.
+ */
+export function withReadStore<T>(
+  ctx: CommandContext,
+  workspace: string,
+  read: (store: CatalogStore) => T,
+): T {
+  const { deps } = ctx;
+  const store = deps.openStore(catalogPath(deps.fs, workspace), {
+    readOnly: true,
+  });
+  try {
+    return read(store);
+  } finally {
+    store.close();
+  }
 }

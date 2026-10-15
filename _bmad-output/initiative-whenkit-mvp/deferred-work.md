@@ -33,3 +33,9 @@
 - source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-skill-ul-importa-plan.md`
   summary: A journal row whose retry changed the link's dedup key (e.g. a domain typo fixed) is never removed, and no CLI command can remove a journal row; consider a `whenkit rejections --remove <id>` or clearing by journal id on retry.
   evidence: ticket 11 review, finding 6: `deleteRejections(key)` uses the written item's dedup key (import-batch.ts:621).
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-curatenie-finala-refactor-sweep-plan.md`
+  summary: New ticket: the duplicate message does not name the existing entry. `verification-rules.md` asks for "există deja: <nume>", but the import report only carries the `duplicate` outcome; add the existing entry's name to the report item and to its text rendering.
+  evidence: ticket 13 sweep: no code resolves a duplicate's entry name (`entryIdByDedupKey` returns the id only).
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-curatenie-finala-refactor-sweep-plan.md`
+  summary: New ticket: the "abandonat" repo note has no definition or code. `verification-rules.md` says an archived or abandoned GitHub repo enters with a note, but only `archived` is implemented (`github_archived`); the spec must first decide what counts as abandoned (e.g. no push for N months) before any code.
+  evidence: ticket 13 sweep: `pushedAt` is stored (ticket 9) but nothing compares it to a threshold.

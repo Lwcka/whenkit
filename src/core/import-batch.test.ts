@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Batch } from './batch-schema';
-import type { Zone } from './category-seed';
+import type { Zone } from './entry';
 import { WhenkitError } from './errors';
 import { applyBatch, parseBatch, readBatch } from './import-batch';
 import { nameKey } from './name-key';

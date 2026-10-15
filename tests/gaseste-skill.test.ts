@@ -1,48 +1,19 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
-import { COMMAND_NAMES, main, type CliDeps } from '../src/cli/main';
+import { COMMAND_NAMES } from '../src/cli/main';
 import { importReportSchema } from '../src/core/import-report-schema';
 import { listOutputSchema, showOutputSchema } from '../src/core/cli-schemas';
-import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  notFoundGithub,
-  okHttp,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+import { runCli, setup } from './cli-harness';
+import { fixedClock } from './helpers';
+import { EXAMPLE, TEMPLATE, frontmatter, read } from './skill-files';
 
 // The `/gaseste` skill shipped in workspace-template/ holds to the CLI
 // contract (ticket 12). What Claude does with it is judged live (hitl); here
 // SKILL.md is checked for the rule behind each case of the ticket, and the two
 // commands it may run are shown not to write.
 
-const TEMPLATE = path.join(__dirname, '..', 'workspace-template');
 const SKILL = path.join(TEMPLATE, '.claude', 'skills', 'gaseste', 'SKILL.md');
-const EXAMPLE = path.join(
-  TEMPLATE,
-  '.claude',
-  'skills',
-  'importa',
-  'exemplu-lot.json',
-);
-
-const read = (file: string) => readFileSync(file, 'utf8');
-
-function frontmatter(text: string): Record<string, string> {
-  const match = /^---\n([\s\S]*?)\n---\n/.exec(text);
-  if (!match) throw new Error('no frontmatter');
-  return Object.fromEntries(
-    match[1].split('\n').map((line) => {
-      const at = line.indexOf(':');
-      return [line.slice(0, at), line.slice(at + 1).trim()];
-    }),
-  );
-}
 
 describe('SKILL.md', () => {
   const skill = read(SKILL);
@@ -140,36 +111,11 @@ describe('SKILL.md', () => {
 
 describe('the commands /gaseste runs', () => {
   it('only read: list is byte-identical before and after list and show', async () => {
-    const root = tempDir();
-    const appRoot = fakeAppRoot(path.join(root, 'repo'));
-    const appData = path.join(root, 'AppData');
-    mkdirSync(appData);
-    const workspace = path.join(root, 'ws');
-    const deps: CliDeps = {
-      env: fakeEnvironment(
-        { APPDATA: appData, WHENKIT_WORKSPACE: workspace },
-        appRoot,
-      ),
-      fs: nodeFileSystem,
-      clock: fixedClock(),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: okHttp,
-      github: notFoundGithub,
-      cwd: root,
-    };
-    const run = async (args: string[]) => {
-      let stdout = '';
-      const exitCode = await main(
-        args,
-        { stdout: (text) => (stdout += text), stderr: () => undefined },
-        deps,
-      );
-      return { exitCode, stdout };
-    };
+    const s = setup({ clock: fixedClock() });
+    const run = (args: string[]) => runCli(s, args);
 
     expect((await run(['init'])).exitCode).toBe(0);
-    writeFileSync(path.join(root, 'lot.json'), read(EXAMPLE));
+    writeFileSync(path.join(s.root, 'lot.json'), read(EXAMPLE));
     const imported = await run(['import', 'lot.json', '--json']);
     expect(imported.exitCode).toBe(0);
     const report = importReportSchema.parse(JSON.parse(imported.stdout));

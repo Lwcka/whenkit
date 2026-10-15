@@ -1,8 +1,7 @@
 // All Romanian user-facing text lives here (AD-13). Code elsewhere refers to
 // these entries and never embeds Romanian strings directly.
 
-import type { Zone } from '../core/category-seed';
-import type { EntryKind, ResourceType } from '../core/entry';
+import type { EntryKind, ResourceType, Zone } from '../core/entry';
 import type { ErrorCode } from '../core/errors';
 import type { ImportOutcome } from '../core/import-report-schema';
 import type { ReasonCode } from '../core/verification/reason-codes';

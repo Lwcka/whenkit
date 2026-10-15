@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import type { AddressInfo, LookupFunction } from 'node:net';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createHttpClient } from '../src/adapters/http/node-http-client';
 import { BROWSER_USER_AGENT } from '../src/adapters/http/user-agent';
 
@@ -280,6 +280,35 @@ describe('createHttpClient', () => {
       lastUrl: `${server.origin}/slow`,
     });
     expect(Date.now() - started).toBeLessThan(1_500);
+  });
+
+  it('gives up after 10 s when no timeout is given', async () => {
+    const server = await startServer(() => {
+      // Accepts the request and never answers.
+    });
+    // Only the deadline's timer is faked; the sockets stay real.
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    try {
+      let settled = false;
+      const pending = createHttpClient()
+        .check(`${server.origin}/slow`)
+        .finally(() => {
+          settled = true;
+        });
+      while (server.requests.length === 0) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+
+      await vi.advanceTimersByTimeAsync(9_999);
+      expect(settled).toBe(false);
+      await vi.advanceTimersByTimeAsync(1);
+      expect(await pending).toEqual({
+        kind: 'timeout',
+        lastUrl: `${server.origin}/slow`,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('reports connectionError when nothing listens on the port', async () => {

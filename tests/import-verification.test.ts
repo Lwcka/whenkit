@@ -1,19 +1,10 @@
-import {
-  existsSync,
-  mkdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from 'node:fs';
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import type { AddressInfo, LookupFunction } from 'node:net';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { afterEach, describe, expect, it } from 'vitest';
-import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
 import { createHttpClient } from '../src/adapters/http/node-http-client';
-import { main, type CliDeps } from '../src/cli/main';
 import {
   errorOutputSchema,
   listOutputSchema,
@@ -27,15 +18,12 @@ import {
   reasonTexts,
 } from '../src/shared/strings.ro';
 import {
-  fakeAppRoot,
-  fakeEnvironment,
-  fixedClock,
-  notFoundGithub,
-  okHttp,
-  sequentialIds,
-  tempDir,
-  testStoreOpener,
-} from './helpers';
+  count,
+  initialized as baseInitialized,
+  runCli,
+  type CliSetup,
+} from './cli-harness';
+import { fixedClock, okHttp } from './helpers';
 
 // `whenkit import` with phase 2 (AD-6, AD-7) end to end: the real HTTP
 // adapter against a local server on 127.0.0.1. Host names resolve through a
@@ -166,61 +154,19 @@ const localLookup: LookupFunction = (hostname, options, callback) => {
   });
 };
 
-interface Setup {
-  root: string;
-  workspace: string;
-  dbPath: string;
-  deps: CliDeps;
+/**
+ * An initialized workspace checking links with `httpClient`. Retries happen at
+ * once; the 1 s default is covered in core.
+ */
+function initialized(httpClient: HttpClient): Promise<CliSetup> {
+  return baseInitialized({
+    clock: fixedClock(new Date('2026-10-14T09:00:00.000Z')),
+    http: httpClient,
+    retryDelayMs: 0,
+  });
 }
 
-async function initialized(httpClient: HttpClient): Promise<Setup> {
-  const root = tempDir();
-  const appData = path.join(root, 'AppData');
-  mkdirSync(appData);
-  const workspace = path.join(root, 'ws');
-  const s: Setup = {
-    root,
-    workspace,
-    dbPath: path.join(workspace, 'data', 'catalog.sqlite'),
-    deps: {
-      env: fakeEnvironment(
-        { APPDATA: appData, WHENKIT_WORKSPACE: workspace },
-        fakeAppRoot(path.join(root, 'repo')),
-      ),
-      fs: nodeFileSystem,
-      clock: fixedClock(new Date('2026-10-14T09:00:00.000Z')),
-      ids: sequentialIds(),
-      openStore: testStoreOpener(),
-      http: httpClient,
-      github: notFoundGithub,
-      // Retries happen at once; the 1 s default is covered in core.
-      retryDelayMs: 0,
-      cwd: root,
-    },
-  };
-  expect((await runCli(s, ['init'])).exitCode).toBe(0);
-  return s;
-}
-
-async function runCli(s: Setup, args: string[]) {
-  let stdout = '';
-  let stderr = '';
-  const exitCode = await main(
-    args,
-    {
-      stdout: (text) => {
-        stdout += text;
-      },
-      stderr: (text) => {
-        stderr += text;
-      },
-    },
-    s.deps,
-  );
-  return { exitCode, stdout, stderr };
-}
-
-async function importJson(s: Setup, items: unknown[]) {
+async function importJson(s: CliSetup, items: unknown[]) {
   writeFileSync(
     path.join(s.root, 'batch.json'),
     JSON.stringify({ schemaVersion: 1, items }),
@@ -256,17 +202,6 @@ function concept(ref: string, sources: string[]) {
     content: '# Concept',
     sources,
   };
-}
-
-function count(dbPath: string, table: string): number {
-  const db = new DatabaseSync(dbPath, { readOnly: true });
-  try {
-    return (
-      db.prepare(`SELECT count(*) AS n FROM ${table}`).get() as { n: number }
-    ).n;
-  } finally {
-    db.close();
-  }
 }
 
 describe('whenkit import verification', () => {

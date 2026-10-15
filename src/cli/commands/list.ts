@@ -1,6 +1,5 @@
 import { listOutputSchema } from '../../core/cli-schemas';
 import { toEntrySummaryDto } from '../../core/dto';
-import { catalogPath } from '../../core/workspace';
 import { CLI_OUTPUT_VERSION } from '../../core/versions';
 import { EXIT_OK } from '../exit-codes';
 import {
@@ -9,24 +8,18 @@ import {
   printLines,
   type CommandContext,
   resolveCommandWorkspace,
+  withReadStore,
 } from '../command';
 import { renderEntryList } from '../render';
 
 /** `whenkit list [--json]`: every entry, without `content`. Never writes. */
 export function runList(args: readonly string[], ctx: CommandContext): number {
   parseArgs('list', args, { required: [], json: true });
-  const { deps } = ctx;
   const workspace = resolveCommandWorkspace(ctx);
 
-  const store = deps.openStore(catalogPath(deps.fs, workspace), {
-    readOnly: true,
-  });
-  let entries;
-  try {
-    entries = store.entrySummaries().map(toEntrySummaryDto);
-  } finally {
-    store.close();
-  }
+  const entries = withReadStore(ctx, workspace, (store) =>
+    store.entrySummaries().map(toEntrySummaryDto),
+  );
 
   if (ctx.json) {
     printJson(ctx.io, listOutputSchema, {

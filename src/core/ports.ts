@@ -1,8 +1,7 @@
 // Ports: every effect core needs from the outside world (AD-2). Adapters in
 // src/adapters implement them and the drivers (cli, desktop/main) inject them.
 
-import type { Zone } from './category-seed';
-import type { EntryKind, ResourceType } from './entry';
+import type { EntryKind, ResourceType, Zone } from './entry';
 import type { VerdictReason } from './verification/reason-codes';
 
 /** Source of the current moment; timestamps are stored as `toISOString()`. */

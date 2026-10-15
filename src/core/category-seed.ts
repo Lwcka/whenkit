@@ -3,7 +3,7 @@
 // catalog data, not interface text, so they stay here rather than in
 // src/shared/strings.ro.ts.
 
-export type Zone = 'toolbox' | 'learn';
+import type { Zone } from './entry';
 
 export interface SeedCategory {
   zone: Zone;
