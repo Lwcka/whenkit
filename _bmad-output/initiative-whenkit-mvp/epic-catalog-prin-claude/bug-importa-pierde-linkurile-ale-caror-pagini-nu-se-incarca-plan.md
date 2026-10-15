@@ -3,7 +3,7 @@ title: '/importa pierde linkurile ale căror pagini nu se încarcă'
 type: 'bugfix'
 ticket: '15'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '62a77eea384713076aec3dd717fd4003f2b170e7'
 route: 'oneshot'
 route_source: 'auto'

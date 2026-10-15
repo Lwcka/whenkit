@@ -3,7 +3,7 @@ title: 'Nota de repo GitHub abandonat'
 type: 'feature'
 ticket: '17'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'a104b1615b7dd25b0848a74f5e8fb07706feed2b'
 route: 'oneshot'
 route_source: 'auto'

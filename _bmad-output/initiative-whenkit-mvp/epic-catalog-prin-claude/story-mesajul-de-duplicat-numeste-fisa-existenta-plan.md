@@ -3,7 +3,7 @@ title: 'Mesajul de duplicat numește fișa existentă'
 type: 'feature'
 ticket: '16'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'd9f8e4395a510752b25c05a4ff7ea7743b67c8a4'
 route: 'oneshot'
 route_source: 'auto'
