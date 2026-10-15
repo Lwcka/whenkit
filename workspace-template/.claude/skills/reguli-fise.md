@@ -5,7 +5,8 @@ Fișierul acesta e gestionat de aplicație (se rescrie la fiecare `whenkit init`
 ## Generale
 
 - Totul în **română**, chiar dacă sursa e în engleză. Numele resursei (`name`) rămâne cel original.
-- Vizitezi fiecare link înainte să scrii fișa. Nu documentezi din memorie un site care nu se încarcă: îl raportezi utilizatorului.
+- Vizitezi fiecare link înainte să scrii fișa. Nu documentezi din memorie un site care nu se încarcă.
+- Un site care nu se încarcă intră totuși în lot, ca verificarea să decidă (respins cu motiv în jurnal sau intrat, cu nota ei dacă are una). Primește **fișa minimă**, doar din ce spune inputul (nume, descriere): `whatItDoes` începe exact cu „Nedocumentată: pagina nu s-a încărcat la import.”, urmat de ce reiese din input; o singură situație, cea pe care inputul o susține; o categorie, cea mai apropiată din listă; fără cuvinte-cheie inventate. Regulile de mai jos despre numărul de propoziții, situații și cuvinte-cheie nu se aplică fișei minime. `/importa` o semnalează în raport ca nedocumentată, de rescris ulterior cu un `update`.
 - Nu repari tacit un URL greșit. Îl trimiți în `url` exact cum apare (și `httpss://` rămâne `httpss://`); verificarea îl respinge, iar jurnalul îl păstrează pentru reluare.
 
 ## Clasificare
@@ -22,7 +23,7 @@ Fișierul acesta e gestionat de aplicație (se rescrie la fiecare `whenkit init`
 
 ## Când o folosesc / Când îl aleg (`situations`)
 
-- 3–6 situații, la persoana I, formulate ca **problemă**: „vreau să scot fundalul dintr-o poză”.
+- 3–6 situații, la persoana I, formulate ca **problemă**: „vreau să scot fundalul dintr-o poză” (fișa minimă are una singură).
 - Acoperă toate funcționalitățile principale ale resursei: o resursă multifuncțională primește câte o situație pentru fiecare funcție.
 - Sunt interzise formulările generice („când lucrezi cu imagini”): o situație trebuie să-l facă pe utilizator să spună „asta e problema mea”.
 - La concepte, situația duce la alegere: „am un API public consumat de browsere → REST”.

@@ -165,12 +165,35 @@ describe('SKILL.md', () => {
     ],
     ['malformed URL is sent as written', ['nu-l repari', 'httpss://…']],
     [
+      'a page that does not load still goes into the batch, undocumented',
+      [
+        '**îl pui totuși în lot**',
+        'niciun link din input nu se pierde',
+        'doar ce spune inputul',
+        '**nedocumentată**',
+        '`update`',
+        '„Nedocumentată: pagina nu s-a încărcat la import.”',
+        'doar fișa minimă de la pasul 2, nimic în plus',
+        'fără cuvinte-cheie inventate',
+      ],
+    ],
+    [
+      'an undocumented item is visited again on retry',
+      ['Un element nedocumentat', 'îl vizitezi din nou cu `WebFetch`'],
+    ],
+    [
       'leftover batches: the user chooses',
       ['Loturi rămase', 'le reimporți', 'le ștergi'],
     ],
   ])('states the rule for %s', (_label, needles) => {
     for (const needle of needles) {
       expect(skill).toContain(needle);
+    }
+  });
+
+  it('no longer leaves a link that does not load out of the batch', () => {
+    for (const stale of ['nu-l pui în lot', 'linkuri sărite', 'link sărit']) {
+      expect(skill).not.toContain(stale);
     }
   });
 });
@@ -189,5 +212,18 @@ describe('reguli-fise.md', () => {
     ]) {
       expect(rules).toMatch(new RegExp(`^## ${section}`, 'm'));
     }
+  });
+
+  it('sends a link that does not load to the verification, never only to the user', () => {
+    const rules = read(RULES);
+    expect(rules).toContain('intră totuși în lot');
+    expect(rules).toContain('nedocumentată');
+    expect(rules).toContain(
+      '„Nedocumentată: pagina nu s-a încărcat la import.”',
+    );
+    expect(rules).toContain('o singură situație');
+    expect(rules).toContain('fără cuvinte-cheie inventate');
+    expect(rules).toContain('nu se aplică fișei minime');
+    expect(rules).not.toContain('îl raportezi utilizatorului');
   });
 });
