@@ -3,7 +3,7 @@ title: 'Datele GitHub'
 type: 'feature'
 ticket: '9'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: 'a1465951e2991787b0cb89e7cf5f29744e83d4fe'
 route: 'full'
 route_source: 'auto'

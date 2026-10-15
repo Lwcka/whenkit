@@ -3,7 +3,7 @@ title: 'Legături, umbrele și JSON Schema'
 type: 'feature'
 ticket: '7'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: 'dcb48d565df2334f2a7032065be7996803720804'
 route: 'full'
 route_source: 'auto'

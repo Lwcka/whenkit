@@ -166,3 +166,37 @@ covers = ["CAP-6", "CAP-7", "CAP-12"]
 after = [13]
 hitl = true
 risk = "medium"
+
+[[entry]]
+id = 15
+type = "bug"
+title = "/importa pierde linkurile ale căror pagini nu se încarcă"
+description = "Un link a cărui pagină nu se încarcă la /importa intră totuși în lot, doar din ce spune inputul, ca verificarea să-l respingă cu motiv sau să-l primească cu notă; azi apare doar în chat și se pierde."
+verify = "Un input cu un link nefuncțional ajunge în catalog sau în jurnalul de respinse; niciun link din input nu dispare."
+covers = ["CAP-6", "CAP-4"]
+after = [11]
+hitl = true
+risk = "medium"
+refine = true
+
+[[entry]]
+id = 16
+type = "story"
+title = "Mesajul de duplicat numește fișa existentă"
+description = "Ieșirea text a importului spune „există deja: <nume>” pentru un duplicat, cu numele fișei existente, nu doar id-ul (verification-rules.md)."
+verify = "Un lot cu un link deja în catalog afișează în raportul text numele fișei existente; raportul JSON rămâne neschimbat."
+covers = ["CAP-3"]
+after = [5]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 17
+type = "story"
+title = "Nota de repo GitHub abandonat"
+description = "Un repo GitHub al cărui ultim push e mai vechi de 24 de luni la import intră cu notă de repo abandonat în fișă și în raport, ca un repo arhivat (verification-rules.md)."
+verify = "Teste offline: push de acum 25 de luni dă nota, push de acum 23 de luni nu; repo-ul intră în ambele cazuri."
+covers = ["CAP-5"]
+after = [9]
+hitl = false
+risk = "low"

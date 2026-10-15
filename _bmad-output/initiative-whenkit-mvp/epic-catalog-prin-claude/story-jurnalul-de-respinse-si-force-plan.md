@@ -3,7 +3,7 @@ title: 'Jurnalul de respinse și --force'
 type: 'feature'
 ticket: '8'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: '6642f722722346995d3f1b102b6165cd5120d647'
 route: 'full'
 route_source: 'auto'

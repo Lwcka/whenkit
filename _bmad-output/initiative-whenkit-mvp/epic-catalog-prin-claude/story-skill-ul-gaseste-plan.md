@@ -3,7 +3,7 @@ title: 'Skill-ul /gaseste'
 type: 'feature'
 ticket: '12'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: '412c9144e7e67488d53af0622bb4774d08a616f7'
 route: 'full'
 route_source: 'auto'

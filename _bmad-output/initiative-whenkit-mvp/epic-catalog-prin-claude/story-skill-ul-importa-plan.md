@@ -3,7 +3,7 @@ title: 'Skill-ul /importa'
 type: 'feature'
 ticket: '11'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'f63db36ab35e953d7b73bac92dbbca975378affc'
 route: 'full'
 route_source: 'auto'

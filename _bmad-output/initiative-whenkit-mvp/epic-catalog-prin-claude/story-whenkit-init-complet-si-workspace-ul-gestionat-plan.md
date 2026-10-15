@@ -3,7 +3,7 @@ title: 'whenkit init complet și workspace-ul gestionat'
 type: 'feature'
 ticket: '10'
 created: '2026-10-14'
-status: 'built'
+status: done
 baseline_revision: '077585492c8eb07c04cda34d5a5ab602bc7a3939'
 route: 'full'
 route_source: 'auto'
