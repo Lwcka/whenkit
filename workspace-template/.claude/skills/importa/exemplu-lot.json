@@ -1,0 +1,158 @@
+{
+  "schemaVersion": 1,
+  "items": [
+    {
+      "ref": "public-apis",
+      "op": "add",
+      "kind": "tool",
+      "name": "public-apis",
+      "url": "https://github.com/public-apis/public-apis",
+      "resourceType": "repo",
+      "categories": ["Date & API-uri"],
+      "whatItDoes": "Listă organizată pe categorii cu API-uri publice și gratuite, fiecare cu descriere, tipul de autentificare și dacă suportă HTTPS sau CORS. Se poate căuta după categorie, de la vreme și finanțe la jocuri.",
+      "situations": [
+        "vreau să găsesc un API gratuit pentru date meteo",
+        "am nevoie de un API public fără cheie ca să-mi testez aplicația",
+        "caut un API care să funcționeze direct din browser, cu CORS activat",
+        "vreau să văd ce API-uri există pentru un domeniu ca să-mi aleg o sursă de date"
+      ],
+      "keywords": [
+        "api",
+        "api public",
+        "public api",
+        "gratuit",
+        "free",
+        "date",
+        "data source",
+        "listă",
+        "directory"
+      ],
+      "related": ["rest"]
+    },
+    {
+      "ref": "developer-roadmap",
+      "op": "add",
+      "kind": "material",
+      "name": "developer-roadmap",
+      "url": "https://github.com/kamranahmedse/developer-roadmap",
+      "resourceType": "repo",
+      "categories": ["Roadmaps & cariere"],
+      "whatItDoes": "Hărți interactive care arată ce ai de învățat, în ce ordine, pentru fiecare rol de developer: frontend, backend, DevOps și altele. Fiecare pas trimite spre resurse de studiu.",
+      "situations": [
+        "nu știu de unde să încep să învăț programare",
+        "vreau să văd ce trebuie să știu ca să devin developer backend",
+        "vreau un plan de învățare pas cu pas pentru un rol anume",
+        "mă întreb ce tehnologii să adaug în următorul an ca să-mi extind competențele"
+      ],
+      "keywords": [
+        "roadmap",
+        "hartă de învățare",
+        "learning path",
+        "carieră",
+        "career",
+        "început",
+        "beginner"
+      ],
+      "related": []
+    },
+    {
+      "ref": "tipuri-de-api",
+      "op": "add",
+      "kind": "concept",
+      "name": "Tipuri de API",
+      "categories": ["Backend & API-uri"],
+      "whatItDoes": "Prezentare comparativă a stilurilor de API folosite între aplicații: REST și GraphQL, cu criterii de alegere.",
+      "situations": [
+        "trebuie să aleg ce fel de API expun și nu știu ce stiluri există",
+        "vreau să compar REST cu GraphQL înainte să încep un proiect nou",
+        "caut o regulă simplă după care să decid tipul de API"
+      ],
+      "keywords": [
+        "api",
+        "tipuri de api",
+        "api types",
+        "rest",
+        "graphql",
+        "comparație",
+        "comparison"
+      ],
+      "related": [],
+      "content": "## Tipuri de API\n\nUn API definește cum vorbesc două programe între ele. Stilurile de mai jos rezolvă aceeași problemă în moduri diferite.\n\n| Criteriu | REST | GraphQL |\n|---|---|---|\n| Cum ceri datele | un URL pentru fiecare resursă | o singură interogare pe un singur endpoint |\n| Ce primești | structura fixă a resursei | exact câmpurile cerute |\n| Cache | simplu, prin HTTP | mai greu, cere unelte dedicate |\n| Potrivit pentru | API-uri publice, CRUD simplu | clienți diferiți cu nevoi diferite de date |\n\n## Când alegi care\n\n- Ai un API public consumat de browsere și de terți, cu operații clare pe resurse: **REST**.\n- Ai un frontend cu multe ecrane care cer combinații diferite de date și vrei să eviți mai multe cereri: **GraphQL**.",
+      "sources": [
+        "https://developer.mozilla.org/en-US/docs/Glossary/API",
+        "https://graphql.org/learn/"
+      ],
+      "children": ["rest", "graphql"]
+    },
+    {
+      "ref": "rest",
+      "op": "add",
+      "kind": "concept",
+      "name": "REST",
+      "categories": ["Backend & API-uri"],
+      "whatItDoes": "Stil de API în care fiecare resursă are propriul URL, iar operațiile se fac cu metodele HTTP (GET, POST, PUT, DELETE).",
+      "situations": [
+        "am un API public consumat de browsere și vreau ceva simplu de înțeles de oricine",
+        "vreau să exploatez cache-ul HTTP pentru răspunsurile care nu se schimbă des",
+        "construiesc operații clasice de creat, citit, modificat și șters pe resurse"
+      ],
+      "keywords": [
+        "rest",
+        "restful",
+        "http",
+        "endpoint",
+        "resursă",
+        "resource",
+        "crud"
+      ],
+      "related": ["public-apis"],
+      "content": "## REST\n\nREST organizează API-ul în jurul **resurselor**: fiecare are un URL (`/utilizatori/42`), iar metoda HTTP spune ce faci cu ea.\n\n| Metodă | Ce face |\n|---|---|\n| GET | citește o resursă |\n| POST | creează o resursă |\n| PUT | înlocuiește o resursă |\n| DELETE | șterge o resursă |\n\nExemplu: `GET /utilizatori/42` întoarce utilizatorul 42 în JSON.\n\n## Când îl alegi\n\nCând ai un API public, operații clare pe resurse și vrei să folosești cache-ul HTTP.",
+      "sources": ["https://developer.mozilla.org/en-US/docs/Glossary/REST"]
+    },
+    {
+      "ref": "graphql",
+      "op": "add",
+      "kind": "concept",
+      "name": "GraphQL",
+      "categories": ["Backend & API-uri"],
+      "whatItDoes": "Limbaj de interogare pentru API-uri în care clientul cere exact câmpurile de care are nevoie, printr-un singur endpoint.",
+      "situations": [
+        "frontend-ul meu face prea multe cereri ca să adune datele unui ecran",
+        "clienți diferiți (web, mobil) au nevoie de câmpuri diferite din aceleași date",
+        "vreau ca clientul să nu primească câmpuri pe care nu le folosește"
+      ],
+      "keywords": [
+        "graphql",
+        "query",
+        "interogare",
+        "schemă",
+        "schema",
+        "over-fetching",
+        "endpoint"
+      ],
+      "related": [],
+      "content": "## GraphQL\n\nClientul trimite o interogare care descrie forma răspunsului, iar serverul întoarce exact acea formă.\n\n```graphql\n{\n  utilizator(id: 42) {\n    nume\n    comenzi { total }\n  }\n}\n```\n\n## Când îl alegi\n\nCând mai mulți clienți cer combinații diferite de date și vrei să eviți atât cererile multiple, cât și câmpurile nefolosite.",
+      "sources": ["https://graphql.org/learn/"]
+    },
+    {
+      "ref": "filme-gratis",
+      "op": "add",
+      "kind": "tool",
+      "name": "Filme Gratis",
+      "url": "https://filme-gratis.example",
+      "resourceType": "site",
+      "categories": ["Descoperire & arhive"],
+      "whatItDoes": "Site care oferă filme cu copyright la descărcare gratuită, fără acordul deținătorilor drepturilor.",
+      "situations": [
+        "vreau să descarc un film recent fără să-l plătesc",
+        "caut un site unde să văd gratis un film de la cinema",
+        "vreau o arhivă cu seriale pe care să le descarc fără abonament"
+      ],
+      "keywords": ["filme", "movies", "download"],
+      "related": [],
+      "flaggedByClaude": "distribuție ilegală de conținut cu copyright"
+    }
+  ],
+  "newCategories": [],
+  "proposedBlockedDomains": ["filme-gratis.example"]
+}

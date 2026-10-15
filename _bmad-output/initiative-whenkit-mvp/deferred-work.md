@@ -27,3 +27,9 @@
 - source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-whenkit-init-complet-si-workspace-ul-gestionat-plan.md`
   summary: Clarify in `workspace-and-import-flow.md` (through bmad-spec) that the workspace's shared card rules file is `.claude/skills/reguli-fise.md`, built from the companion `card-writing-rules.md`; ticket 11 must create it under that name, since the runtime CLAUDE.md already points there.
   evidence: ticket 10 review, finding 5: the spec's structure tree says "fișier de reguli comun = card-writing-rules.md", which can be read as the file name.
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-skill-ul-importa-plan.md`
+  summary: Decide in the spec (through bmad-spec) whether a link whose page does not load during /importa should be journaled or kept in `input/`, instead of only being reported; today the skill lists it in its summary and the input file is still deleted on exit 0.
+  evidence: ticket 11 review, finding 4: `card-writing-rules.md` says only "îl raportează", so the link survives only in the chat.
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-skill-ul-importa-plan.md`
+  summary: A journal row whose retry changed the link's dedup key (e.g. a domain typo fixed) is never removed, and no CLI command can remove a journal row; consider a `whenkit rejections --remove <id>` or clearing by journal id on retry.
+  evidence: ticket 11 review, finding 6: `deleteRejections(key)` uses the written item's dedup key (import-batch.ts:621).

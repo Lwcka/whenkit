@@ -276,6 +276,19 @@ describe('whenkit init', () => {
     expect(existsSync(s.configFile)).toBe(false);
   });
 
+  it('installs the /importa skill, its example batch and the shared card rules', async () => {
+    const s = setup();
+    const workspace = path.join(s.root, 'ws');
+    expect((await runCli(s, ['init', workspace])).exitCode).toBe(0);
+    for (const file of [
+      ['.claude', 'skills', 'importa', 'SKILL.md'],
+      ['.claude', 'skills', 'importa', 'exemplu-lot.json'],
+      ['.claude', 'skills', 'reguli-fise.md'],
+    ]) {
+      expect(existsSync(path.join(workspace, ...file))).toBe(true);
+    }
+  });
+
   it('the template CLAUDE.md names every CLI command and the contract files', () => {
     const claude = readFileSync(
       path.join(__dirname, '..', 'workspace-template', 'CLAUDE.md'),
