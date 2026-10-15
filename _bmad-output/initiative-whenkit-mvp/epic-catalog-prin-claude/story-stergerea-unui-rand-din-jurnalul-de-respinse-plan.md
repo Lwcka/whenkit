@@ -3,7 +3,7 @@ title: 'Ștergerea unui rând din jurnalul de respinse'
 type: 'feature'
 ticket: '18'
 created: '2026-10-15'
-status: 'built'
+status: done
 baseline_revision: 'f46ff0b9ac9a406b72c02dc02a56dfcbbb9fa908'
 route: 'full'
 route_source: 'auto'

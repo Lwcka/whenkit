@@ -6,7 +6,7 @@ covers: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-12]
 after: []
 assignee: ""
 risk: medium
-status: in-progress
+status: done
 ---
 
 # Catalogul se umple prin Claude
@@ -53,3 +53,4 @@ Nucleul (`src/core`), adaptoarele (`src/adapters`), CLI-ul (`src/cli`), șablonu
 - Resolved: template-ul Forge vite-typescript nu mai există în Forge 8; se folosește create-electron-app@8.0.1 --template vite --typescript (review-versions.md).
 - Decision: epicul e închis pe 2026-10-15, după verificarea de închidere (toate cele 17 tichete done, Done when 1–5 îndeplinite, 645 de teste) și confirmarea autorului; CAP-5 e îndeplinit în cod, iar datele vechi („The Art of Command Line”, ray.so) se rescriu în workspace cu un update.
 - Decision: epicul redeschis pe 2026-10-15 pentru intrarea 18 (`whenkit rejections --remove`), ca să nu rămână nimic amânat din el; se închide din nou după ea.
+- Decision: epicul închis din nou pe 2026-10-16, complet: intrarea 18 done; arhitectura la zi (AD-7, AD-11, diagrama); deferred-work.md gol; în workspace-ul real, ray.so are 3 situații, „The Art of Command Line” are nota github_abandoned, iar șablonul e la versiunea 7.
