@@ -202,7 +202,7 @@ describe('whenkit import with op update', () => {
         op: 'update',
         outcome: 'duplicate',
         duplicateOfId: b,
-        reasons: [{ code: 'duplicate' }],
+        reasons: [{ code: 'duplicate', params: { name: 'Tool b' } }],
       },
     ]);
     expect(await show(s, a)).toEqual(before);
@@ -346,7 +346,9 @@ describe('whenkit import with op update', () => {
         ref: 'dup',
         op: 'add',
         outcome: 'duplicate',
-        reasons: [{ code: 'duplicate', params: { ref: 'new' } }],
+        reasons: [
+          { code: 'duplicate', params: { ref: 'new', name: 'Tool new' } },
+        ],
       },
     ]);
     expect(report.proposedBlockedDomains).toEqual(['libgen.is', 'z-lib.org']);

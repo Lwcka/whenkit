@@ -11,7 +11,7 @@ export const REASON_CODES = [
   'unknown_category',
   /** `{ text }`: Claude's content verdict, kept as written. */
   'flagged_by_claude',
-  /** `{ ref }` for a repeat within the batch; none for a catalog duplicate. */
+  /** `{ name }` of the existing entry for a catalog duplicate; `{ ref, name }` of the earlier item for a repeat within the batch. */
   'duplicate',
   /** The link is not an http(s) URL. */
   'invalid_url',

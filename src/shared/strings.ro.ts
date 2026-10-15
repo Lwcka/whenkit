@@ -108,8 +108,8 @@ export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
   flagged_by_claude: (p) => `semnalată de Claude: ${p.text ?? ''}`,
   duplicate: (p) =>
     p.ref === undefined
-      ? 'există deja în catalog'
-      : `repetă elementul „${p.ref}” din același lot`,
+      ? `există deja: ${p.name ?? ''}`
+      : `există deja: ${p.name ?? ''} (elementul „${p.ref}” din același lot)`,
   invalid_url: () =>
     'linkul nu e un URL http(s) valid (de exemplu, o greșeală de scriere)',
   http_error: (p) =>

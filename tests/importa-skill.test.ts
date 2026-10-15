@@ -104,6 +104,7 @@ describe('SKILL.md', () => {
       'proposedBlockedDomains',
       'flaggedByClaude',
       'batchSchemaVersion',
+      'params.name',
       'Notițele mele',
     ]) {
       expect(skill).toContain(needle);

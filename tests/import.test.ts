@@ -213,6 +213,28 @@ describe('whenkit import, list and show', () => {
     expect(count(s.dbPath, 'categories')).toBe(17);
   });
 
+  it('names the existing entry of a duplicate in the text report', async () => {
+    const s = await initialized();
+    expect((await importJson(s, batch([tool('a')]))).exitCode).toBe(0);
+    const text = await runCli(s, [
+      'import',
+      writeBatch(
+        s,
+        batch([
+          tool('again', { url: 'http://www.a.dev/' }),
+          tool('b'),
+          tool('b2', { url: 'https://b.dev/#top' }),
+        ]),
+      ),
+    ]);
+    expect(text.exitCode).toBe(0);
+    // The whole reason line, so "Tool again" (the incoming item) cannot pass.
+    expect(text.stdout).toContain('    - există deja: Tool a\n');
+    expect(text.stdout).toContain(
+      'există deja: Tool b (elementul „b” din același lot)',
+    );
+  });
+
   it('marks duplicates of the catalog and of the same batch', async () => {
     const s = await initialized();
     const first = importReportSchema.parse(
@@ -237,7 +259,7 @@ describe('whenkit import, list and show', () => {
       ref: 'b2',
       op: 'add',
       outcome: 'duplicate',
-      reasons: [{ code: 'duplicate', params: { ref: 'b' } }],
+      reasons: [{ code: 'duplicate', params: { ref: 'b', name: 'Tool b' } }],
     });
     expect(count(s.dbPath, 'entries')).toBe(2);
   });
@@ -287,7 +309,7 @@ describe('whenkit import, list and show', () => {
         op: 'add',
         outcome: 'duplicate',
         duplicateOfId: id,
-        reasons: [{ code: 'duplicate' }],
+        reasons: [{ code: 'duplicate', params: { name: 'Arhitectură REST' } }],
       },
     ]);
     expect(count(s.dbPath, 'entries')).toBe(1);

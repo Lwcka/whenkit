@@ -508,6 +508,10 @@ export function applyBatch(
     const categories = new CategoryResolver(writer, ids, batch.newCategories);
     /** Dedup keys written by this batch (added or updated), to their ref. */
     const writtenKeys = new Map<string, string>();
+    /** A same-batch duplicate names the item it repeats. */
+    const namesByRef = new Map(
+      batch.items.map((item) => [item.ref, item.name]),
+    );
     const items: ReportItem[] = [];
     const written: WrittenItem[] = [];
     /** Rejected items, journaled once the whole batch is written. */
@@ -548,7 +552,15 @@ export function applyBatch(
         items.push({
           ...base,
           outcome: 'duplicate',
-          reasons: [{ code: 'duplicate', params: { ref: earlierRef } }],
+          reasons: [
+            {
+              code: 'duplicate',
+              params: {
+                ref: earlierRef,
+                name: namesByRef.get(earlierRef) ?? '',
+              },
+            },
+          ],
         });
         continue;
       }
@@ -558,7 +570,12 @@ export function applyBatch(
           ...base,
           outcome: 'duplicate',
           duplicateOfId: existingId,
-          reasons: [{ code: 'duplicate' }],
+          reasons: [
+            {
+              code: 'duplicate',
+              params: { name: writer.entryById(existingId)?.name ?? '' },
+            },
+          ],
         });
         continue;
       }

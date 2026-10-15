@@ -524,7 +524,7 @@ describe('applyBatch (phase 3)', () => {
       op: 'add',
       outcome: 'duplicate',
       duplicateOfId: 'id-1',
-      reasons: [{ code: 'duplicate' }],
+      reasons: [{ code: 'duplicate', params: { name: 'Tool a' } }],
     });
     expect(store.entries).toHaveLength(1);
   });
@@ -539,7 +539,7 @@ describe('applyBatch (phase 3)', () => {
       ref: 'b',
       op: 'add',
       outcome: 'duplicate',
-      reasons: [{ code: 'duplicate', params: { ref: 'a' } }],
+      reasons: [{ code: 'duplicate', params: { ref: 'a', name: 'Tool a' } }],
     });
     expect(store.entries).toHaveLength(1);
   });
@@ -814,7 +814,7 @@ describe('applyBatch with op update', () => {
       op: 'update',
       outcome: 'duplicate',
       duplicateOfId: uuid(2),
-      reasons: [{ code: 'duplicate' }],
+      reasons: [{ code: 'duplicate', params: { name: 'Tool b' } }],
     });
     expect(store.entryById(uuid(1))).toEqual(before);
   });
@@ -934,7 +934,7 @@ describe('applyBatch with op update', () => {
         ref: 'u1',
         op: 'update',
         outcome: 'duplicate',
-        reasons: [{ code: 'duplicate', params: { ref: 'c' } }],
+        reasons: [{ code: 'duplicate', params: { ref: 'c', name: 'Tool c' } }],
       },
       {
         ref: 'u2',
@@ -947,14 +947,16 @@ describe('applyBatch with op update', () => {
         ref: 'd',
         op: 'add',
         outcome: 'duplicate',
-        reasons: [{ code: 'duplicate', params: { ref: 'u2' } }],
+        reasons: [
+          { code: 'duplicate', params: { ref: 'u2', name: 'Tool u2' } },
+        ],
       },
       {
         ref: 'e',
         op: 'add',
         outcome: 'duplicate',
         duplicateOfId: uuid(1),
-        reasons: [{ code: 'duplicate' }],
+        reasons: [{ code: 'duplicate', params: { name: 'Tool a' } }],
       },
     ]);
   });
