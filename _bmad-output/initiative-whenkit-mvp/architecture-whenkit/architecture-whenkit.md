@@ -7,7 +7,7 @@ paradigm: 'hexagonal (ports & adapters), ușor'
 scope: 'whenkit MVP: aplicația desktop Electron, CLI-ul whenkit și șablonul workspace-ului'
 status: final
 created: '2026-10-13'
-updated: '2026-10-14'
+updated: '2026-10-15'
 binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12, CAP-13]
 sources:
   - ../spec-whenkit/spec-whenkit.md
@@ -41,7 +41,7 @@ flowchart LR
   preload -.-> shared
   main -.-> shared
   cli -.->|texte| shared
-  shared -.->|doar tipuri din core/dto| core
+  shared -.->|doar tipuri din core| core
 ```
 
 Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui (în afară de Zod). Granițele sunt impuse de oxlint (`no-restricted-imports`) pe `src/core/**` și `src/desktop/renderer/**`.
@@ -113,7 +113,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | `dedup_key` existent sau repetat în lot | duplicate |
 | `offline` | importul se oprește: cod 3, nimic scris |
 
-`HEAD` întâi, `GET` dacă `HEAD` nu e acceptat; User-Agent de browser. Normalizarea URL-ului (host lowercase, fără `www.`, fără schemă, fragment, slash final și `utm_*`) există doar în `core`; se stochează URL-ul trimis. Repo-urile GitHub se recunosc printr-o singură funcție din `core` (`owner/repo`); arhivat ⇒ accepted + `github_archived`; limită de rată ⇒ fără metadate, fără respingere; data ultimului commit = `pushed_at`. Linkurile din `sources` ale unui concept se verifică după același tabel: un link-sursă *rejected* se scoate din `sources`, iar conceptul intră ca warned (`source_link_removed`, cu URL-ul în `params`); un link-sursă dintr-un domeniu interzis respinge conceptul (`source_blocked_domain`). `--force <ref>` (repetabil) ocolește **doar** respingerile de verificare și adaugă `forced_by_user`; nu ocolește niciodată schema, categoria necunoscută, `unknown_id` sau duplicatul.
+`HEAD` întâi, `GET` dacă `HEAD` nu e acceptat; User-Agent de browser. Normalizarea URL-ului (host lowercase, fără `www.`, fără schemă, fragment, slash final și `utm_*`) există doar în `core`; se stochează URL-ul trimis. Repo-urile GitHub se recunosc printr-o singură funcție din `core` (`owner/repo`); arhivat ⇒ accepted + `github_archived`; altfel, ultimul push mai vechi de 24 de luni calendaristice față de momentul importului ⇒ accepted + `github_abandoned` (`params.pushedAt` = `YYYY-MM-DD`); momentul importului (`now`) vine prin contextul verificării, care nu citește ceasul; limită de rată ⇒ fără metadate, fără respingere; data ultimului commit = `pushed_at`. Linkurile din `sources` ale unui concept se verifică după același tabel: un link-sursă *rejected* se scoate din `sources`, iar conceptul intră ca warned (`source_link_removed`, cu URL-ul în `params`); un link-sursă dintr-un domeniu interzis respinge conceptul (`source_blocked_domain`). `--force <ref>` (repetabil) ocolește **doar** respingerile de verificare și adaugă `forced_by_user`; nu ocolește niciodată schema, categoria necunoscută, `unknown_id` sau duplicatul.
 
 ### AD-8 — Rezolvarea workspace-ului: o singură funcție
 
@@ -137,7 +137,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** CAP-1, CAP-2, CAP-4, CAP-6, CAP-12
 - **Prevents:** skill-uri care parsează text de om; coduri de ieșire care mint despre ce s-a scris.
-- **Rule:** Comenzi v1: `whenkit init [cale]`, `whenkit import <lot> [--json] [--force <ref>]…`, `whenkit list --json` (fără `content`), `whenkit show <id> --json`, `whenkit categories --json`, `whenkit rejections --json`, `whenkit schema`. Cu `--json`, stdout conține mereu exact un document JSON validat de schema lui din `core` (AD-14), inclusiv la eroare (`{ schemaVersion, workspace, error: { code, message } }`); logurile și avertismentele (inclusiv `ExperimentalWarning` de la `node:sqlite`) merg pe stderr. Coduri de ieșire: `0` = scris (chiar cu respingeri), `1` = lot invalid, `2` = configurare lipsă, `3` = mediu indisponibil (offline, bază blocată, migrare refuzată), `4` = eroare internă; la 1–4 nu s-a scris nimic. Maparea `ErrorCode → cod de ieșire` stă într-un singur tabel în `cli`. Comenzile de citire nu scriu niciodată.
+- **Rule:** Comenzi v1: `whenkit init [cale]`, `whenkit import <lot> [--json] [--force <ref>]…`, `whenkit list --json` (fără `content`), `whenkit show <id> --json`, `whenkit categories --json`, `whenkit rejections --json`, `whenkit rejections --remove <id> [--json]` (șterge un rând din jurnal după id; id necunoscut = cod 1), `whenkit schema`. Cu `--json`, stdout conține mereu exact un document JSON validat de schema lui din `core` (AD-14), inclusiv la eroare (`{ schemaVersion, workspace, error: { code, message } }`); logurile și avertismentele (inclusiv `ExperimentalWarning` de la `node:sqlite`) merg pe stderr. Coduri de ieșire: `0` = scris (chiar cu respingeri), `1` = lot invalid, `2` = configurare lipsă, `3` = mediu indisponibil (offline, bază blocată, migrare refuzată), `4` = eroare internă; la 1–4 nu s-a scris nimic. Maparea `ErrorCode → cod de ieșire` stă într-un singur tabel în `cli`. Comenzile de citire nu scriu niciodată.
 
 ### AD-12 — Exportul: JSON complet + Markdown
 
