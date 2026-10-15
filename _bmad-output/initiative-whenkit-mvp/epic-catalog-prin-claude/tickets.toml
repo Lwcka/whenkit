@@ -200,3 +200,14 @@ covers = ["CAP-5"]
 after = [9]
 hitl = false
 risk = "low"
+
+[[entry]]
+id = 18
+type = "story"
+title = "Ștergerea unui rând din jurnalul de respinse"
+description = "Comanda whenkit rejections --remove <id> [--json] șterge un rând din jurnal după id (AD-11); /importa o rulează după un retry scris al cărui rând nu a dispărut singur, pentru că corecția i-a schimbat cheia de deduplicare."
+verify = "Un rând existent dispare din whenkit rejections --json după --remove; un id necunoscut iese cu cod 1 și nu șterge nimic; skill-ul /importa descrie pasul după retry."
+covers = ["CAP-4"]
+after = [8, 11]
+hitl = false
+risk = "low"
