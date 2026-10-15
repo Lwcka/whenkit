@@ -43,6 +43,8 @@ export const REASON_CODES = [
   'forced_by_user',
   /** A note: the GitHub API reports the repository as archived. */
   'github_archived',
+  /** A note, `{ pushedAt }` (YYYY-MM-DD): no push for more than 24 months. */
+  'github_abandoned',
 ] as const;
 
 export type ReasonCode = (typeof REASON_CODES)[number];

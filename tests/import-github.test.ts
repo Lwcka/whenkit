@@ -126,6 +126,42 @@ describe('import with GitHub metadata', () => {
     });
   });
 
+  it('notes a repo with no push for more than 24 months as abandoned, and still adds it', async () => {
+    // The clock is 2026-10-14: 2024-09-01 is 25 months back, 2024-11-20 is 23.
+    const s = await setup({
+      'o/stale': { ...active, pushedAt: '2024-09-01T10:00:00Z' },
+      'o/quiet': { ...active, pushedAt: '2024-11-20T10:00:00Z' },
+      'o/both': { ...archived, pushedAt: '2024-09-01T10:00:00Z' },
+    });
+    const report = await importItems(s, [
+      tool('stale', 'https://github.com/o/stale'),
+      tool('quiet', 'https://github.com/o/quiet'),
+      tool('both', 'https://github.com/o/both'),
+    ]);
+
+    expect(report.items.map((i) => i.outcome)).toEqual([
+      'added',
+      'added',
+      'added',
+    ]);
+    const abandoned = {
+      code: 'github_abandoned',
+      params: { pushedAt: '2024-09-01' },
+    };
+    expect(report.items[0].reasons).toEqual([abandoned]);
+    expect(report.items[1].reasons).toEqual([]);
+    // Archived says more: no second note.
+    expect(report.items[2].reasons).toEqual([{ code: 'github_archived' }]);
+    expect(await show(s, report.items[0].id)).toMatchObject({
+      verificationNotes: [abandoned],
+    });
+
+    const text = await runCli(s, ['show', String(report.items[0].id)]);
+    expect(text.stdout).toContain(
+      'repo abandonat pe GitHub: ultimul push pe 2024-09-01',
+    );
+  });
+
   it.each<[string, GitHubResult]>([
     ['the rate limit', { kind: 'rateLimited' }],
     ['a failure (5xx, timeout, malformed body)', { kind: 'failed' }],

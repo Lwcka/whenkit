@@ -16,6 +16,8 @@ const BLOCKS_AUTOMATION_STATUSES = new Set([401, 403, 429]);
 /** Checks of one link: the first one plus two retries on 5xx or timeout. */
 const MAX_ATTEMPTS = 3;
 const RETRY_DELAY_MS = 1_000;
+/** A repo with no push for longer than this is noted as abandoned. */
+const ABANDONED_AFTER_MONTHS = 24;
 /** Link checks running at the same time, across the whole batch. */
 const MAX_CONCURRENT_CHECKS = 4;
 
@@ -29,6 +31,8 @@ export interface VerificationContext {
   wait?: (ms: number) => Promise<void>;
   /** Pause before each retry; 1 s by default. */
   retryDelayMs?: number;
+  /** The import's current time, for the abandoned-repo rule. */
+  now: Date;
 }
 
 /** What one link's check concluded. */
@@ -285,13 +289,24 @@ async function verify(
   }
 
   // GitHub data (AD-7) only for a link that works; it never changes the
-  // outcome, an archived repo only gains a note.
+  // outcome, an archived or abandoned repo only gains a note. Archived says
+  // more, so an archived repo is not also noted as abandoned.
   const github =
     item.url !== undefined &&
     (own?.kind === 'accepted' || own?.kind === 'warned')
       ? await fetchGithub(item.url, ctx)
       : undefined;
   if (github?.archived === true) notes.push({ code: 'github_archived' });
+  else if (
+    github !== undefined &&
+    github.pushedAt !== null &&
+    isAbandoned(github.pushedAt, ctx.now)
+  ) {
+    notes.push({
+      code: 'github_abandoned',
+      params: { pushedAt: github.pushedAt.slice(0, 10) },
+    });
+  }
 
   sources.forEach((url, index) => {
     const verdict = sourceVerdicts[index] as LinkVerdict;
@@ -384,4 +399,23 @@ export async function verifyBatch(
   return new Map(
     batch.items.map((item, index) => [item.ref, results[index] as ItemVerdict]),
   );
+}
+
+/** True when `pushedAt` is more than ABANDONED_AFTER_MONTHS before `now`. */
+export function isAbandoned(pushedAt: string, now: Date): boolean {
+  // The same day of the month, 24 months back; a day the target month lacks
+  // (29 Feb two years back) becomes its last day instead of spilling over.
+  const year = now.getUTCFullYear();
+  const month = now.getUTCMonth() - ABANDONED_AFTER_MONTHS;
+  const lastDay = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  const limit = Date.UTC(
+    year,
+    month,
+    Math.min(now.getUTCDate(), lastDay),
+    now.getUTCHours(),
+    now.getUTCMinutes(),
+    now.getUTCSeconds(),
+    now.getUTCMilliseconds(),
+  );
+  return new Date(pushedAt).getTime() < limit;
 }

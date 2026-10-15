@@ -39,3 +39,6 @@
 - source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-curatenie-finala-refactor-sweep-plan.md`
   summary: New ticket: the "abandonat" repo note has no definition or code. `verification-rules.md` says an archived or abandoned GitHub repo enters with a note, but only `archived` is implemented (`github_archived`); the spec must first decide what counts as abandoned (e.g. no push for N months) before any code.
   evidence: ticket 13 sweep: `pushedAt` is stored (ticket 9) but nothing compares it to a threshold.
+- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/story-nota-de-repo-github-abandonat-plan.md`
+  summary: Add to AD-7 (through bmad-architecture) the abandoned-repo outcome — accepted with `github_abandoned` when the last push is more than 24 calendar months before the import — and that the verification receives the import's current time.
+  evidence: ticket 17 review; AD-7 lists only the archived and rate-limit GitHub outcomes.

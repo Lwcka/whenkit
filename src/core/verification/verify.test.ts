@@ -9,6 +9,7 @@ import type {
 } from '../ports';
 import {
   checkLink,
+  isAbandoned,
   verifyBatch,
   verifyItem,
   type VerificationContext,
@@ -84,6 +85,7 @@ function context(
     http,
     github,
     blockedDomains: RULES,
+    now: new Date('2026-10-14T09:00:00.000Z'),
     wait: (ms) => {
       waits.push(ms);
       return Promise.resolve();
@@ -592,5 +594,22 @@ describe('verifyBatch', () => {
     expect((error as WhenkitError).code).toBe('OFFLINE');
     // The first four were already running; the rest never reached the port.
     expect(http.calls.length).toBeLessThanOrEqual(4);
+  });
+});
+
+describe('isAbandoned', () => {
+  const now = new Date('2026-10-14T09:00:00.000Z');
+
+  it('is true only past 24 calendar months without a push', () => {
+    expect(isAbandoned('2024-09-01T10:00:00Z', now)).toBe(true);
+    expect(isAbandoned('2024-10-14T08:59:59Z', now)).toBe(true);
+    expect(isAbandoned('2024-10-14T09:00:00Z', now)).toBe(false);
+    expect(isAbandoned('2024-11-20T10:00:00Z', now)).toBe(false);
+  });
+
+  it('counts back from 29 February to the last day of February', () => {
+    const leap = new Date('2028-02-29T09:00:00.000Z');
+    expect(isAbandoned('2026-02-28T08:59:59Z', leap)).toBe(true);
+    expect(isAbandoned('2026-02-28T12:00:00Z', leap)).toBe(false);
   });
 });

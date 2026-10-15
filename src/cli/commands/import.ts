@@ -49,6 +49,7 @@ export async function runImport(
       github: deps.github,
       blockedDomains: readBlockedDomains(workspace, deps),
       retryDelayMs: deps.retryDelayMs,
+      now: deps.clock.now(),
     },
     force,
   );

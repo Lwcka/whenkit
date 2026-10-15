@@ -138,6 +138,8 @@ export const reasonTexts: Record<ReasonCode, (params: Params) => string> = {
     `legătura ar crea un ciclu: fișa ${p.id ?? ''} e deja părinte (direct sau indirect) al umbrelei`,
   forced_by_user: () => 'verificare ocolită de utilizator',
   github_archived: () => 'repo arhivat pe GitHub',
+  github_abandoned: (p) =>
+    `repo abandonat pe GitHub: ultimul push pe ${p.pushedAt ?? ''}, acum mai mult de 24 de luni`,
 };
 
 export const importStrings = {
