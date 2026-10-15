@@ -128,6 +128,11 @@ class FakeStore implements CatalogStore {
           (r) => r.dedupKey !== dedupKey,
         );
       },
+      deleteRejectionById: (id) => {
+        const before = this.rejectionRows.length;
+        this.rejectionRows = this.rejectionRows.filter((r) => r.id !== id);
+        return this.rejectionRows.length < before;
+      },
       deleteUpdateRejections: (entryId) => {
         this.rejectionRows = this.rejectionRows.filter(
           (r) => !(r.op === 'update' && r.element.id === entryId),

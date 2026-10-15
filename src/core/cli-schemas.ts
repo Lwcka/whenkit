@@ -38,6 +38,15 @@ export const rejectionsOutputSchema = z.strictObject({
 
 export type RejectionsOutput = z.infer<typeof rejectionsOutputSchema>;
 
+export const rejectionRemoveOutputSchema = z.strictObject({
+  schemaVersion: outputVersion,
+  workspace: z.string(),
+  /** The journal row that was deleted. */
+  removed: rejectionDtoSchema,
+});
+
+export type RejectionRemoveOutput = z.infer<typeof rejectionRemoveOutputSchema>;
+
 export const categoriesOutputSchema = z.strictObject({
   schemaVersion: outputVersion,
   workspace: z.string(),

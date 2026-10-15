@@ -123,6 +123,40 @@ export function extractForce(
   return { force, rest };
 }
 
+/**
+ * Pulls a single `<option> <value>` pair out of `args`; the rest goes to
+ * parseArgs. The option without a value (nothing after it, or another
+ * option) is a UsageError, and so is a repeated option.
+ */
+export function extractValueOption(
+  command: string,
+  args: readonly string[],
+  option: string,
+  valueName: string,
+): { value: string | undefined; rest: string[] } {
+  let value: string | undefined;
+  const rest: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+    if (arg !== option) {
+      rest.push(arg);
+      continue;
+    }
+    const next = args[i + 1];
+    if (next === undefined || next.startsWith('--')) {
+      throw new UsageError(
+        cliStrings.missingOptionValue(command, arg, valueName),
+      );
+    }
+    if (value !== undefined) {
+      throw new UsageError(cliStrings.tooManyArguments(command));
+    }
+    value = next;
+    i += 1;
+  }
+  return { value, rest };
+}
+
 /** Validates `document` with its schema, then prints it as the one stdout JSON. */
 export function printJson<T>(
   io: CliIo,

@@ -118,18 +118,27 @@ export function renderEntryList(entries: readonly EntrySummaryDto[]): string[] {
   );
 }
 
+/** The element's name, or the dedup key when the element has none. */
+function rejectionName(rejection: RejectionDto): string {
+  const name = rejection.element.name;
+  return typeof name === 'string' ? name : rejection.dedupKey;
+}
+
 export function renderRejections(
   rejections: readonly RejectionDto[],
 ): string[] {
   if (rejections.length === 0) return [rejectionStrings.emptyJournal];
-  return rejections.map((rejection) => {
-    const name = rejection.element.name;
-    return rejectionStrings.line(
-      typeof name === 'string' ? name : rejection.dedupKey,
+  return rejections.map((rejection) =>
+    rejectionStrings.line(
+      rejectionName(rejection),
       rejection.reasons.map(reasonText).join('; '),
       rejection.rejectedAt,
-    );
-  });
+    ),
+  );
+}
+
+export function renderRejectionRemoved(rejection: RejectionDto): string[] {
+  return [rejectionStrings.removed(rejectionName(rejection))];
 }
 
 /** Categories grouped by zone, in the order given (Toolbox first). */

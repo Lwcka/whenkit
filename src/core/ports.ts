@@ -242,6 +242,11 @@ export interface CatalogWriter extends CatalogReader {
    * a newer write of the entry makes retrying them harmful.
    */
   deleteUpdateRejections(entryId: string): void;
+  /**
+   * Removes the journal row with this id; false when the journal of the
+   * owner has no such row.
+   */
+  deleteRejectionById(id: string): boolean;
 }
 
 /** The catalog database. Grows with the use cases that need it. */

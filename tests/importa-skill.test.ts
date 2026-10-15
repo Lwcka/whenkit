@@ -140,6 +140,20 @@ describe('SKILL.md', () => {
       ],
     ],
     [
+      'retry: removes the old row of a written or duplicate item, never one rejected again',
+      [
+        'whenkit rejections --remove <id-rând> --json',
+        'Curăță jurnalul',
+        'reluare-<id-rând>',
+        '`items[].ref`',
+        '`added`, `updated`, `warned` sau `duplicate`',
+        '**Niciodată** nu ștergi un rând al cărui element a ieșit din nou `rejected`',
+        '`removed.element`',
+        'REJECTION_NOT_FOUND',
+        'te oprești',
+      ],
+    ],
+    [
       'invalid batch: fixed from the issues, at most two retries',
       ['`error.issues`', 'cel mult de două ori', 'păstrezi lotul'],
     ],

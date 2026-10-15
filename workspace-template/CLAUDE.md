@@ -25,6 +25,7 @@ Singura cale de a citi și de a scrie în catalog e CLI-ul `whenkit`. Cu `--json
 | `whenkit show <id> [--json]` | o fișă completă |
 | `whenkit categories [--json]` | categoriile fiecărei zone; folosește-le pe acestea, nu inventa altele |
 | `whenkit rejections [--json]` | jurnalul respinselor: elementele respinse, cu motive |
+| `whenkit rejections --remove <id> [--json]` | șterge din jurnal un rând, după `id`-ul lui din `rejections --json`; un id care nu e în jurnal iese cu cod 1. Îl folosește `/importa respinse`, nu îl rulezi din inițiativă |
 | `whenkit schema` | schema JSON a lotului |
 | `whenkit init [cale]` | actualizează fișierele acestui workspace (CLAUDE.md, skill-uri, reguli, schema lotului); în `data/` și `input/` nu suprascrie și nu șterge nimic, doar creează ce lipsește. Rulează-l fără `[cale]`: o cale diferită mută workspace-ul configurat |
 

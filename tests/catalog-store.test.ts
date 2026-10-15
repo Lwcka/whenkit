@@ -856,6 +856,18 @@ describe('SqliteCatalogStore forced flag and rejection journal', () => {
     store.close();
   });
 
+  it('deletes one row by id and reports whether it existed', () => {
+    const store = open(newDbPath());
+    const results = store.writeTransaction((tx) => {
+      tx.insertRejection(rejectionRow());
+      tx.insertRejection(rejectionRow({ id: 'r2', dedupKey: 'url:b' }));
+      return [tx.deleteRejectionById('r1'), tx.deleteRejectionById('r1')];
+    });
+    expect(results).toEqual([true, false]);
+    expect(store.rejections().map((r) => r.id)).toEqual(['r2']);
+    store.close();
+  });
+
   it('deletes the journaled updates of an entry and leaves the rest', () => {
     const store = open(newDbPath());
     store.writeTransaction((tx) => {

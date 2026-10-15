@@ -19,6 +19,8 @@ export const cliStrings = {
     '  list [--json]                   afișează toate fișele (fără conținutul conceptelor)',
     '  show <id> [--json]              afișează o fișă completă',
     '  rejections [--json]             afișează jurnalul respinselor (elementele din lot, cu motive)',
+    '  rejections --remove <id> [--json]',
+    '                                  șterge din jurnal rândul cu acel id (id-ul din „rejections --json”)',
     '  categories [--json]             afișează categoriile, pe zone (Toolbox, apoi Learn)',
     '  schema                          afișează JSON Schema a lotului de import',
     '',
@@ -61,6 +63,8 @@ export const errorMessages: Record<ErrorCode, string> = {
   BATCH_SCHEMA_OUTDATED:
     'Lotul folosește o versiune a schemei diferită de cea a aplicației. Nu s-a scris nimic. Rulează „whenkit init” ca să actualizezi workspace-ul, apoi refă lotul.',
   ENTRY_NOT_FOUND: 'Nu există nicio fișă cu acest id.',
+  REJECTION_NOT_FOUND:
+    'Nu există niciun rând în jurnalul de respinse cu acest id. Nu s-a șters nimic.',
   MIGRATION_MISMATCH:
     'O migrare aplicată bazei de date diferă de cea din cod. Catalogul nu a fost deschis și nu s-a scris nimic.',
   DATABASE_TOO_NEW:
@@ -169,6 +173,7 @@ export const importStrings = {
 
 export const rejectionStrings = {
   emptyJournal: 'Jurnalul de respinse e gol.',
+  removed: (name: string) => `Am șters din jurnalul de respinse: ${name}`,
   line: (name: string, reasons: string, date: string) =>
     `${name} — ${reasons} (${date})`,
 } as const;

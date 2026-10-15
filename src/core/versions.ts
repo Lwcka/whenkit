@@ -17,4 +17,4 @@ export const CLI_OUTPUT_VERSION = 1;
  * Bump it whenever `workspace-template/` changes; a workspace marked with a
  * lower number is reported as outdated.
  */
-export const TEMPLATE_VERSION = 6;
+export const TEMPLATE_VERSION = 7;
