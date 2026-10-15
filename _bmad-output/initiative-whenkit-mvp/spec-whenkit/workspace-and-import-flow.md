@@ -19,7 +19,7 @@ whenkit/
 ├── .claude/skills/
 │   ├── importa/         ← /importa
 │   ├── gaseste/         ← /gaseste
-│   └── (fișier de reguli comun = card-writing-rules.md)
+│   └── reguli-fise.md   ← fișierul de reguli comun, construit din card-writing-rules.md
 ├── input/               ← materialele de importat (consumabile)
 ├── batches/             ← loturile JSON scrise de /importa, șterse după import reușit
 └── data/
@@ -39,6 +39,7 @@ input/fișier  ─┐
 /importa <link|text> ─┼─► /importa (Claude Code)
 jurnal respinse ─┘        │ 1. extrage candidații (vision pe screenshot, linkuri din .txt)
                           │ 2. vizitează fiecare link, documentează
+                          │    (site care nu se încarcă: fișă doar din input, tot în lot)
                           │ 3. clasifică: zonă → fel → 1–2 categorii din listă
                           │ 4. scrie fișa în română (card-writing-rules.md)
                           │ 5. verdict pe conținut dubios + notă de verificare
@@ -54,7 +55,7 @@ jurnal respinse ─┘        │ 1. extrage candidații (vision pe screenshot, 
 
 Reguli:
 - **Un lot per fișier de input.** O întrerupere nu pierde loturile deja importate și ține contextul lui Claude mic.
-- Ștergerea fișierului din `input/` se face **doar după import reușit**.
+- Ștergerea fișierului din `input/` se face **doar după import reușit**. Niciun link din input nu se pierde: fiecare ajunge în catalog sau în jurnalul de respinse.
 - Nu se păstrează referință la fișierul sursă (catalogul e singura sursă de adevăr).
 - Reluarea din jurnal: cu link corectat (trece prin verificare) sau cu `--force` (marcat în fișă).
 - Lotul poate și **actualiza** fișe existente (ex. „rescrie fișa X după regulile noi”): elementul referă fișa prin id, trece prin verificare și nu atinge „Notițele mele”, proprietarul sau data adăugării.
