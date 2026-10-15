@@ -15,7 +15,7 @@ Regula de bază: **în caz de dubiu, resursa nu se adaugă, iar utilizatorul pri
 | Conținut dubios (pirateria, ocolirea paywall-urilor, conținut cu copyright distribuit ilegal) | Claude (`/importa`) | ❌ respinsă, cu motivul scris de Claude |
 | Link din „Surse” mort sau invalid | cod | ⚠️ sursa se scoate, conceptul intră cu avertizare |
 | Link din „Surse” dintr-un domeniu interzis | cod | ❌ conceptul e respins |
-| Repo GitHub arhivat / abandonat | cod (API GitHub) | ✅ intră, cu notă în fișă |
+| Repo GitHub arhivat / abandonat (ultimul push mai vechi de 24 de luni la import) | cod (API GitHub) | ✅ intră, cu notă în fișă |
 | Lot invalid față de schemă | cod | ❌ tot lotul respins, nimic scris |
 | Categorie necunoscută nedeclarată în lot | cod | ❌ respinsă |
 
