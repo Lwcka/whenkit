@@ -7,10 +7,11 @@ paradigm: 'hexagonal (ports & adapters), ușor'
 scope: 'whenkit MVP: aplicația desktop Electron, CLI-ul whenkit și șablonul workspace-ului'
 status: final
 created: '2026-10-13'
-updated: '2026-10-15'
+updated: '2026-10-17'
 binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12, CAP-13]
 sources:
   - ../spec-whenkit/spec-whenkit.md
+  - ../ux-whenkit/EXPERIENCE.md
 companions: []
 ---
 
@@ -81,7 +82,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
   - **Categorii:** unice pe `(owner_id, zone, name_key)`; `name_key` = normalizarea comună (lowercase, fără diacritice, spații comprimate), dintr-o singură funcție din `core`. O fișă are 1–2 categorii, toate din zona felului ei. Unificarea și mutarea sunt permise doar în aceeași zonă. Ștergerea unei categorii care e singura pe o fișă cere o categorie-țintă (devine unificare). Lista de start e o constantă din `core`, generată din `categories-seed.md` și semănată **o singură dată**, de migrarea care creează tabelul.
   - **Legături:** un singur tabel `links` cu `type ∈ {related, parent}`; `related` se stochează canonic (`from_id < to_id`), cu `UNIQUE(type, from_id, to_id)` și `CHECK(from_id <> to_id)`; `parent` leagă doar concept → concept, fără cicluri (verificat în `core`). Ștergerea unei fișe îi șterge legăturile (cascade).
   - **Duplicate:** `core` calculează `dedup_key` (`url:<URL normalizat>` sau `title:<titlu normalizat>` pentru concepte fără link); index unic pe `(owner_id, dedup_key)`.
-  - **Concurență:** `entries.revision` crește la fiecare scriere (AD-16).
+  - **Concurență:** `entries.revision` crește doar când se schimbă conținutul editabil al fișei: câmpurile scrise de Claude și categoriile ei (`update` din import, `entries:patch`, unificarea sau ștergerea unei categorii, pe fișele afectate). `setNotes` și redenumirea unei categorii nu o schimbă (AD-16).
   - **Motive:** `verification_notes` e JSON, listă de `VerdictReason` (AD-15).
   - **Căutare:** `entries_fts` e FTS5 external-content cu sursa în view-ul `entries_fts_source` (`content='entries_fts_source'`, `content_rowid='seq'`, `tokenize='unicode61 remove_diacritics 2'`), care expune coloanele text derivate din `entries` (listele JSON unite cu spațiu), așa că indexul și sursa lui sunt mereu identice; se sincronizează **doar** prin triggerele din migrare, pe `entries`. Interogarea se construiește într-o singură funcție din adaptor: fiecare token al utilizatorului devine `"tok"*`, uniți cu AND; utilizatorul nu scrie niciodată sintaxă FTS.
   - **Jurnal:** `rejections` păstrează elementul din lot exact cum a trecut de schemă (`element` JSON), motivele, `dedup_key`, `op` și `batch_schema_version`; o respingere se elimină când `dedup_key`-ul ei e acceptat sau forțat.
@@ -130,8 +131,12 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 ### AD-10 — Fereastra vede scrierile CLI-ului
 
 - **Binds:** CAP-2, CAP-8, CAP-10
-- **Prevents:** UI care afișează date vechi; editări nesalvate pierdute la o reîncărcare.
+- **Prevents:** UI care afișează date vechi; editări nesalvate pierdute la o reîncărcare; propria editare semnalată ca venită din terminal; sosiri fără toast; toast, bandă și contoare care numără diferit; ordini diferite ale fișelor.
 - **Rule:** Main-ul ține o singură conexiune, deschisă la pornire, pentru polling și scrieri. La câteva secunde citește `PRAGMA data_version`; la schimbare emite `catalog:changed`. După propriile scrieri prin IPC, main-ul emite el însuși `catalog:changed` (`data_version` nu vede scrierile aceleiași conexiuni). Un formular cu modificări nesalvate nu se reîncarcă; se marchează „modificată din terminal”. Fără watchers pe fișiere.
+  - **Un singur depozit al catalogului în renderer.** Ține un instantaneu neparametrizat, citit de `catalog:snapshot` într-o singură tranzacție: toate fișele **ambelor zone** ca `EntryDto` complet și toate categoriile. Bara de categorii, contoarele, grila, fișa, toast-urile și dialogul de categorii citesc doar din el.
+  - La `catalog:changed` depozitul reîncarcă instantaneul și îl **înlocuiește în întregime**; `id` și `revision` servesc doar la clasificare: `id` nou = **sosire** (doar importul creează fișe); `revision` mai mare decât cea cunoscută = **actualizare din terminal**. O revizie mai mică decât cea cunoscută păstrează versiunea din depozit. Linia de bază se stabilește o singură dată pe proces de renderer (prima încărcare nu produce sosiri).
+  - Fiecare scriere prin IPC întoarce `EntryDto`-urile pe care le-a schimbat; depozitul le aplică înainte de comparația următoare, deci propriile scrieri nu apar ca externe.
+  - Instantaneul vine în ordinea finală: `added_at DESC, seq ASC` (un lot are un singur `now`, deci `seq` păstrează ordinea din lot). `entries:search` întoarce doar id-urile potrivite, afișate în ordinea instantaneului, și se rulează din nou la fiecare `catalog:changed`. Renderer-ul nu reordonează.
 
 ### AD-11 — Interfața CLI e un contract pentru skill-uri
 
@@ -143,7 +148,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** CAP-13
 - **Prevents:** un export care pierde câmpuri, se contrazice sau rupe legăturile Obsidian.
-- **Rule:** Exportul scrie `whenkit-export-<YYYY-MM-DD_HHmmss>/` cu `catalog.json` (DTO-urile din AD-18, categorii, legături, notițe, `schemaVersion`) și `fise/<slug>.md` (frontmatter + conținut, legături `[[slug|Nume]]`). O singură funcție `slugify()` din `core` (ASCII, `[a-z0-9-]`, max 80, nume rezervate Windows sufixate); exportul calculează o dată harta `id → slug` în ordinea `(addedAt, id)`, cu sufix `-2`, `-3` la coliziune comparată case-insensitive. Exportul citește într-o singură tranzacție de citire. E un caz de utilizare din `core` care doar citește.
+- **Rule:** Exportul scrie `whenkit-export-<YYYY-MM-DD_HHmmss>/` cu `catalog.json` (DTO-urile din AD-18, categorii, legături, notițe, `schemaVersion`) și `fise/<slug>.md` (frontmatter + conținut, legături `[[slug|Nume]]`). O singură funcție `slugify()` din `core` (ASCII, `[a-z0-9-]`, max 80, nume rezervate Windows sufixate); exportul calculează o dată harta `id → slug` în ordinea `(addedAt, id)`, cu sufix `-2`, `-3` la coliziune comparată case-insensitive. Exportul citește tot catalogul sincron, în memorie, într-o singură tranzacție de citire, și abia apoi scrie fișierele (tranzacția nu rămâne deschisă peste `await` pe conexiunea unică a main-ului). E un caz de utilizare din `core` care doar citește.
 
 ### AD-13 — Limba [ADOPTED]
 
@@ -167,7 +172,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** CAP-2, CAP-10
 - **Prevents:** o salvare din fereastră care suprascrie tacit un `update` venit din terminal, sau invers.
-- **Rule:** Editările din UI sunt comenzi pe câmpuri (`entries:patch { id, expectedRevision, changes }`); dacă `revision` diferă, `core` întoarce `CONFLICT`, iar UI-ul arată conflictul fără să salveze. `myNotes` se scrie prin `entries:setNotes`, fără `expectedRevision`, pentru că niciun import nu le atinge. Un `update` din lot crește `revision`.
+- **Rule:** Editările din UI sunt comenzi pe câmpuri (`entries:patch { id, expectedRevision, changes }`). `expectedRevision` se ia la intrarea în editare și se reîmprospătează doar prin „Reîncarcă fișa”. Compararea se face în tranzacția de scriere, după verificarea linkului (`UPDATE … WHERE id = ? AND revision = ?`); dacă `revision` diferă, `core` întoarce `CONFLICT`, iar UI-ul arată conflictul fără să salveze. `myNotes` se scrie prin `entries:setNotes`, fără `expectedRevision` și fără să schimbe `revision`, pentru că niciun import nu le atinge. Ce crește `revision` stabilește AD-5.
 
 ### AD-17 — Workspace gestionat
 
@@ -185,13 +190,23 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** all
 - **Prevents:** CLI-ul și aplicația instalată pe versiuni diferite de schemă; dezvoltarea care strică catalogul real; erori invizibile.
-- **Rule:** CLI-ul se compilează separat în `dist/cli` (ESM) și se expune prin `npm link`; aplicația se rulează cu `npm start` sau se instalează cu `npm run make`. În v1, CLI-ul și aplicația instalată provin din același commit de pe `main`. Dezvoltarea și testele folosesc `WHENKIT_WORKSPACE` spre un workspace de dezvoltare (din `.env`, încărcat cu `--env-file`); doar codul de pe `main` atinge workspace-ul real. Erorile neprevăzute din main apar într-un dialog și în `data/whenkit.log`.
+- **Rule:** CLI-ul se compilează separat în `dist/cli` (ESM) și se expune prin `npm link`; aplicația se rulează cu `npm start` sau se instalează cu `npm run make`. `productName` e `WhenKit` (titlul ferestrei, installer, executabil); numele pachetului npm și comanda CLI rămân `whenkit`. În v1, CLI-ul și aplicația instalată provin din același commit de pe `main`. Dezvoltarea și testele folosesc `WHENKIT_WORKSPACE` spre un workspace de dezvoltare (din `.env`, încărcat cu `--env-file`); doar codul de pe `main` atinge workspace-ul real. Erorile neprevăzute din main apar într-un dialog și în `data/whenkit.log`.
+
+### AD-20 — Ciclul de viață și preferințele ferestrei au un singur proprietar: main-ul
+
+- **Binds:** epic-fereastra-whenkit (pornirea și închiderea ferestrei, tema, poziția și dimensiunea)
+- **Prevents:** tema și poziția salvate în locuri diferite de tichete diferite; scrieri ale ferestrei în `config.json`-ul lui `whenkit init`; cache-urile Chromium în folderul CLI-ului; `npm start` și `WhenKit.exe` instalat cu același profil și același lock; mecanisme diferite de temă; fereastra care clipește în tema greșită; notițe pierdute la închidere.
+- **Rule:**
+  - **Pornire.** Primul lucru din main, după ieșirea Squirrel și înainte de `requestSingleInstanceLock` și `ready`: creează (`mkdirSync`, `recursive`) și setează cu `app.setPath('userData', …)` folderul `<folderul de configurare din AD-8>\desktop\` când `app.isPackaged`, altfel `desktop-dev\`, calculat din aceeași funcție ca `config.json`. Fișierele Electron și Chromium nu stau niciodată lângă `config.json`.
+  - **Preferințe.** Stau doar în `userData/window-state.json` (`{ version, theme?: 'light' | 'dark', bounds? }`), citit de main înainte de a crea fereastra și scris doar de main. `theme` lipsă = urmează tema aplicațiilor din Windows; fișier corupt = valori implicite; `bounds` în afara oricărui ecran se ignoră. Niciodată în `config.json`, în workspace sau în `localStorage`. Vederea nu se păstrează: fereastra pornește mereu pe Toolbox → Toate.
+  - **Tema.** Main-ul o aplică și părților native (`nativeTheme.themeSource`, `backgroundColor`, `titleBarOverlay`) și o trimite prin `additionalArguments`; preload-ul o expune ca `window.whenkit.initialTheme`; renderer-ul pune `data-theme` pe `<html>` înainte de `createRoot`, iar CSS-ul citește doar `[data-theme]`. Schimbarea trece prin `window:setTheme`.
+  - **Închidere.** Main-ul interceptează `close`, cere renderer-ului să salveze notițele în așteptare, așteaptă confirmarea (cu limită de timp), apoi scrie `window-state.json` și închide.
 
 ## Consistency Conventions
 
 | Concern | Convention |
 | --- | --- |
-| Denumiri | fișiere `kebab-case`; tipuri și componente `PascalCase`; funcții `camelCase`; coloane SQL `snake_case`; canale IPC `domeniu:acțiune` (`entries:list`, `entries:patch`, `entries:setNotes`, `categories:merge`, `catalog:export`, `catalog:changed`) |
+| Denumiri | fișiere `kebab-case`; tipuri și componente `PascalCase`; funcții `camelCase`; coloane SQL `snake_case`; canale IPC `domeniu:acțiune` (`entries:patch`, `entries:setNotes`, `categories:merge`, `catalog:snapshot`, `entries:search`, `catalog:export`, `catalog:changed`, `window:setTheme`) |
 | Formate | JSON extern în `camelCase`; id UUID v4; fiecare format extern sau persistent are propria constantă de versiune în `src/core/versions.ts` |
 | Timp | toate momentele vin din portul `Clock` ca `toISOString()` (UTC, cu milisecunde); niciun `DEFAULT` temporal în SQL; numele de foldere/fișiere folosesc data locală `YYYY-MM-DD_HHmmss` |
 | Mapare | `snake_case` ↔ `camelCase` doar în `SqliteCatalogStore` |
@@ -218,13 +233,15 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | Zod | 4.6.7 |
 | Vitest | 5.0.4 |
 | SQLite driver | `node:sqlite` (inclus în Node/Electron; Release Candidate în Node 24) |
+| lucide-react | 1.58.0 (singurul set de icoane, DESIGN.md) |
+| @fontsource/cascadia-mono | 5.3.0 (fontul inclus în pachet, greutățile 400 și 500; CSP fără surse externe) |
 
 ## Structural Seed
 
 ```mermaid
 flowchart TB
   subgraph laptop["Laptop Windows 11 — totul local"]
-    subgraph app["whenkit.exe (Electron)"]
+    subgraph app["WhenKit.exe (Electron)"]
       R["renderer: React UI"] <-->|IPC| M["main: core + adapters"]
     end
     C["terminal: Claude Code"] -->|"/importa, /gaseste"| CLI["whenkit CLI (Node, dist/cli)"]
@@ -234,6 +251,7 @@ flowchart TB
     CLI -->|HTTP| NET
     CFG["%APPDATA%/whenkit/config.json"] -.-> CLI
     CFG -.-> M
+    WS["%APPDATA%/whenkit/desktop(-dev)/window-state.json"] <-.-> M
   end
 ```
 
@@ -262,7 +280,7 @@ whenkit/
     cli/               # intrarea whenkit (bin), maparea codurilor de ieșire
     shared/            # ipc.ts, strings.ro.ts
     desktop/
-      main/            # fereastra, handleri IPC, polling data_version
+      main/            # fereastra, handleri IPC, polling data_version, window-state.json
       preload/         # window.whenkit
       renderer/        # React
   workspace-template/  # CLAUDE.md runtime, .claude/skills/importa|gaseste, reguli, blocked-domains.txt inițial
@@ -283,6 +301,7 @@ whenkit/
 | CAP-6 /importa | `workspace-template/.claude/skills/importa` | AD-3, AD-6, AD-11, AD-14, AD-17 |
 | CAP-7 concepte + umbrelă | `core` (schema, links `parent`) | AD-5, AD-6 |
 | CAP-8 navigare | `desktop/renderer` → IPC → `core` | AD-3, AD-9, AD-10, AD-18 |
+| Tema și fereastra (UX) | `desktop/main` | AD-8, AD-20 |
 | CAP-9 căutare text | `adapters/sqlite` (FTS5) prin `CatalogStore` | AD-4, AD-5 |
 | CAP-10 fișa, editare, Notițele mele | `desktop/renderer` → `core` | AD-3, AD-5, AD-7, AD-16, AD-18 |
 | CAP-11 categorii | `core` + `desktop/renderer` | AD-5 |
@@ -296,5 +315,5 @@ whenkit/
 - **Restore din export:** `catalog.json` îl face posibil; nu e cerut în v1.
 - **Re-verificare, ecran Setări, câmp Status:** `post-v1-roadmap.md`; AD-7 permite deja verificarea unei fișe existente.
 - **Butoane Claude headless și terminal integrat** (xterm.js + node-pty): după v1; procesele se pornesc doar din `main`.
-- **Convențiile renderer-ului** (hook-ul de date, stilizarea, biblioteca Markdown): le fixează primul tichet din epic-fereastra-whenkit, iar tichetele următoare le refolosesc.
+- **Convențiile renderer-ului** (forma depozitului din AD-10, stilizarea după tokenii din DESIGN.md, biblioteca Markdown): le fixează primul tichet din epic-fereastra-whenkit, iar tichetele următoare le refolosesc.
 - **Numele exacte ale câmpurilor din lot:** urmează `entry-model.md`; le fixează primul tichet care scrie `batch-schema.ts`, sub AD-6.
