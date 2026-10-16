@@ -220,7 +220,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 | Name | Version |
 | --- | --- |
-| Electron | 44.7.1 |
+| Electron | 44.8.0 |
 | Node.js (CLI, dezvoltare) | ≥ 24 (local 24.19.0) |
 | create-electron-app | 8.0.1 (`--template vite --typescript`) |
 | @electron-forge/cli | 8.0.1 |
