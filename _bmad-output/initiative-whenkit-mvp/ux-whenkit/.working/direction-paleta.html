@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>whenkit · Paletă</title>
+<style>
+/*
+  DIRECȚIA 3 — PALETĂ
+  Partea jucăușă dusă cel mai departe, dar ținută în frâu de neutre curate: fiecare categorie are
+  culoarea și micro-ilustrația ei, situațiile apar ca bule de conversație („vreau să…”), forme
+  rotunjite generoase. Densitatea vine dintr-o coloană de activitate și din metadate compacte.
+
+  Fonturi (Windows 11):
+    titluri : Segoe UI Variable Display, greutăți 600–700 (cifrele mari: Segoe UI Black)
+    text    : Segoe UI Variable Text
+    taste   : Cascadia Mono -> Consolas
+  Notă: în aplicația reală un sans rotunjit cu personalitate (ex. „Nunito” sau „Plus Jakarta Sans”,
+  OFL) inclus în pachet ar întări tonul; Segoe UI Variable Display e alegerea fără download.
+
+  TEMA LUMINOASĂ                         TEMA ÎNTUNECATĂ
+  --bg        #F5F4FA  fundal              #100E1D
+  --surface   #FFFFFF  carduri             #1A1730
+  --surface-2 #F0EEF8  câmpuri, rail       #221E3D
+  --ink       #17142B  text                #F3F1FF   (17.6:1 / 15.9:1)
+  --ink-2     #4A4566  secundar            #C9C4E6   (9.2:1 / 10.0:1)
+  --muted     #686383  terțiar             #9D97C2   (5.8:1 / 6.2:1)
+  --line      #E5E2F1                      #2E2950
+  --accent    #5B3DF5  violet (alb 6.6:1)  #A08CFF   (6.9:1 pe surface)
+  --sun       #FFD84D  notița „lipită”     #E8C341
+  Culorile categoriilor (text pe ele: fundal tentat 12–18%, textul în varianta închisă/deschisă):
+    Imagini & video  #2F7BF6 / text #1D5FD0 · dark text #8DB6FF
+    AI & LLM         #8E4CF5 / text #6E2FD6 · dark #C3A2FF
+    Claude Code      #F07A1A / text #B4560A · dark #FFB37A
+    Date & API-uri   #0EA5A4 / text #0B7C7B · dark #5FE0DF
+    Design & UI      #EC4899 / text #BE2D78 · dark #FF9CCB
+    Mockup-uri       #F2552C / text #C23B16 · dark #FF9D80
+    Securitate       #E23B4A / text #B8202F · dark #FF8E98
+    Descoperire      #5BA01B / text #3F7510 · dark #A7E06B
+*/
+body{
+  --bg:#F5F4FA;--surface:#FFFFFF;--surface-2:#F0EEF8;--ink:#17142B;--ink-2:#4A4566;--muted:#686383;--line:#E5E2F1;--line-2:#D6D2E8;
+  --accent:#5B3DF5;--accent-ink:#FFFFFF;--accent-soft:#ECE8FF;--sun:#FFD84D;--sun-ink:#3A2C00;--ok:#16A34A;
+  --shadow:0 1px 2px rgba(23,20,43,.05),0 6px 18px -6px rgba(23,20,43,.12);
+  --lift:0 2px 4px rgba(23,20,43,.06),0 20px 40px -16px rgba(91,61,245,.35);
+  --win-shadow:0 40px 90px -30px rgba(40,30,90,.45),0 0 0 1px rgba(23,20,43,.08);
+  --tint:12%;
+  --img:#2F7BF6;--img-t:#1D5FD0;--ai:#8E4CF5;--ai-t:#6E2FD6;--cc:#F07A1A;--cc-t:#B4560A;--data:#0EA5A4;--data-t:#0B7C7B;
+  --design:#EC4899;--design-t:#BE2D78;--mock:#F2552C;--mock-t:#C23B16;--sec:#E23B4A;--sec-t:#B8202F;--disc:#5BA01B;--disc-t:#3F7510;
+  --f-d:"Segoe UI Variable Display","Segoe UI",system-ui,sans-serif;
+  --f-t:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --f-m:"Cascadia Mono",Consolas,ui-monospace,monospace;
+  margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 var(--f-t);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s;
+}
+body:has(#theme:checked){
+  --bg:#100E1D;--surface:#1A1730;--surface-2:#221E3D;--ink:#F3F1FF;--ink-2:#C9C4E6;--muted:#9D97C2;--line:#2E2950;--line-2:#3B3566;
+  --accent:#A08CFF;--accent-ink:#140F33;--accent-soft:#2B2456;--sun:#E8C341;--sun-ink:#2A2000;--ok:#4ADE80;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 22px -8px rgba(0,0,0,.6);
+  --lift:0 2px 4px rgba(0,0,0,.3),0 22px 44px -16px rgba(160,140,255,.35);
+  --win-shadow:0 40px 100px -30px rgba(0,0,0,.85),0 0 0 1px rgba(160,140,255,.14);
+  --tint:18%;
+  --img-t:#8DB6FF;--ai-t:#C3A2FF;--cc-t:#FFB37A;--data-t:#5FE0DF;--design-t:#FF9CCB;--mock-t:#FF9D80;--sec-t:#FF8E98;--disc-t:#A7E06B;
+}
+#theme{position:absolute;opacity:0;pointer-events:none}
+*{box-sizing:border-box}
+svg.i{width:16px;height:16px;flex:none}
+
+.page{max-width:1360px;margin:0 auto;padding:48px 40px 90px}
+.intro{display:grid;grid-template-columns:1fr auto;gap:40px;align-items:end;margin-bottom:8px}
+.intro .kicker{display:inline-flex;align-items:center;gap:8px;font:600 13px/1 var(--f-d);color:var(--accent);background:var(--accent-soft);padding:7px 12px;border-radius:999px}
+.intro h1{font:700 64px/1 var(--f-d);letter-spacing:-.03em;margin:16px 0 14px}
+.intro h1 span{background:linear-gradient(90deg,var(--img),var(--ai) 35%,var(--design) 65%,var(--cc));-webkit-background-clip:text;background-clip:text;color:transparent}
+.intro p{margin:0;max-width:780px;color:var(--ink-2);font-size:16px;line-height:1.6}
+.dots{display:grid;grid-template-columns:repeat(4,26px);gap:8px}
+.dots span{width:26px;height:26px;border-radius:9px}
+.shot-label{display:flex;align-items:center;gap:12px;margin:56px 0 18px}
+.shot-label b{width:34px;height:34px;border-radius:11px;background:var(--ink);color:var(--bg);display:grid;place-items:center;font:700 15px/1 var(--f-d)}
+.shot-label span{font:650 20px/1.2 var(--f-d);letter-spacing:-.01em}
+.shot-label em{font-style:normal;color:var(--muted);font-size:14px;margin-left:6px}
+.scroller{overflow-x:auto;padding:6px 6px 36px}
+
+.win{width:1280px;height:800px;margin:0 auto;border-radius:12px;overflow:hidden;background:var(--bg);box-shadow:var(--win-shadow);display:flex;flex-direction:column}
+.win.short{height:450px}
+/* header doubles as title bar (Windows 11 custom title bar) */
+.hdr{height:64px;flex:none;display:flex;align-items:center;gap:14px;padding:0 0 0 18px;background:var(--surface);border-bottom:1px solid var(--line)}
+.logo{display:flex;align-items:center;gap:9px;font:700 17px/1 var(--f-d);letter-spacing:-.02em}
+.logo i{width:26px;height:26px;border-radius:9px;background:conic-gradient(from 200deg,var(--img),var(--ai),var(--design),var(--cc),var(--data),var(--img));position:relative}
+.logo i::after{content:"";position:absolute;inset:6px;border-radius:5px;background:var(--surface)}
+.seg{display:flex;padding:4px;border-radius:14px;background:var(--surface-2);gap:2px;margin-left:8px}
+.seg span{display:flex;align-items:center;gap:8px;padding:8px 16px;border-radius:10px;font:600 14px/1 var(--f-d);color:var(--ink-2)}
+.seg span small{font:600 11px/1 var(--f-t);color:var(--muted);background:var(--surface);padding:3px 6px;border-radius:6px}
+.seg .on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(23,20,43,.1),0 0 0 1px var(--line)}
+.seg .on small{background:var(--accent);color:var(--accent-ink)}
+.search{flex:1;max-width:520px;margin-left:auto;display:flex;align-items:center;gap:10px;height:42px;padding:0 8px 0 16px;border-radius:999px;background:var(--surface-2);border:1.5px solid transparent;color:var(--muted)}
+.search .q{flex:1;font-size:14.5px}
+.search.focus{background:var(--surface);border-color:var(--accent);box-shadow:0 0 0 4px var(--accent-soft);color:var(--ink)}
+.search .typed{color:var(--ink);font-weight:500}
+.search .typed::after{content:"";display:inline-block;width:2px;height:17px;background:var(--accent);vertical-align:-3px;margin-left:2px;border-radius:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+kbd{font:600 11px/1 var(--f-m);padding:5px 7px;border-radius:8px;background:var(--surface);border:1px solid var(--line-2);color:var(--ink-2)}
+.hbtn{display:flex;align-items:center;gap:8px;height:38px;padding:0 14px;border-radius:12px;font:600 13.5px/1 var(--f-d);color:var(--ink-2)}
+.hbtn.solid{background:var(--ink);color:var(--surface)}
+.toggle{width:62px;height:34px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line-2);position:relative;cursor:pointer;flex:none;display:flex;align-items:center;justify-content:space-between;padding:0 9px;color:var(--muted)}
+.toggle svg{width:14px;height:14px;position:relative;z-index:1}
+.toggle::before{content:"";position:absolute;top:3px;left:3px;width:26px;height:26px;border-radius:50%;background:var(--sun);box-shadow:0 2px 6px rgba(0,0,0,.18);transition:transform .35s cubic-bezier(.4,1.6,.5,1),background .3s}
+.toggle .s{color:var(--sun-ink)}
+body:has(#theme:checked) .toggle::before{transform:translateX(28px);background:var(--accent)}
+body:has(#theme:checked) .toggle .s{color:var(--muted)}
+body:has(#theme:checked) .toggle .m{color:var(--accent-ink)}
+.caption{display:flex;height:64px;align-self:flex-start}
+.caption span{width:46px;height:36px;display:grid;place-items:center;color:var(--ink-2)}
+.caption svg{width:10px;height:10px}
+
+/* category pills */
+.cats{height:58px;flex:none;display:flex;align-items:center;gap:8px;padding:0 18px;overflow:hidden;position:relative;border-bottom:1px solid var(--line)}
+.pill{display:flex;align-items:center;gap:8px;height:36px;padding:0 14px 0 8px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font:600 13.5px/1 var(--f-d);color:var(--ink-2);white-space:nowrap}
+.pill .ic{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;background:color-mix(in srgb,var(--c) var(--tint),transparent);color:var(--ct)}
+.pill .ic svg{width:14px;height:14px}
+.pill small{font:600 11.5px/1 var(--f-t);color:var(--muted)}
+.pill.on{background:var(--c);border-color:var(--c);color:#fff;box-shadow:0 6px 16px -6px var(--c)}
+.pill.on .ic{background:rgba(255,255,255,.25);color:#fff}
+.pill.on small{color:rgba(255,255,255,.85)}
+.pill.all .ic{background:var(--surface-2);color:var(--ink)}
+.cats .fade{position:absolute;right:0;top:0;bottom:0;width:110px;background:linear-gradient(90deg,transparent,var(--bg) 60%);display:flex;align-items:center;justify-content:flex-end;padding-right:18px}
+.cats .fade span{width:32px;height:32px;border-radius:50%;background:var(--surface);border:1px solid var(--line);display:grid;place-items:center;color:var(--ink-2)}
+
+.body{flex:1;min-height:0;display:grid;grid-template-columns:1fr 296px}
+.main{padding:18px 20px 18px;overflow:hidden;display:flex;flex-direction:column;gap:14px}
+.mh{display:flex;align-items:baseline;gap:12px}
+.mh h2{margin:0;font:700 26px/1 var(--f-d);letter-spacing:-.02em}
+.mh span{color:var(--muted);font-size:13.5px}
+.mh .sort{margin-left:auto;display:flex;gap:4px;padding:3px;border-radius:10px;background:var(--surface-2)}
+.mh .sort b{font:600 12.5px/1 var(--f-d);padding:7px 10px;border-radius:8px;color:var(--ink-2)}
+.mh .sort b.on{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--line)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.card{--c:var(--img);--ct:var(--img-t);background:var(--surface);border-radius:20px;padding:16px 16px 14px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:10px;border:1px solid var(--line);position:relative}
+.card .row{display:flex;align-items:center;gap:12px}
+.tile{width:44px;height:44px;border-radius:14px;display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--c) var(--tint),transparent);color:var(--ct)}
+.tile svg{width:24px;height:24px}
+.card h3{margin:0;font:700 17px/1.15 var(--f-d);letter-spacing:-.01em}
+.card .host{font:12px/1.2 var(--f-t);color:var(--muted);margin-top:3px}
+.card .meta{margin-left:auto;align-self:flex-start;font:600 11.5px/1 var(--f-t);color:var(--muted);display:flex;gap:4px;align-items:center}
+.card p{margin:0;font-size:13px;line-height:1.45;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.bubbles{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.bubble{font:500 13px/1.35 var(--f-t);color:var(--ink);background:color-mix(in srgb,var(--c) calc(var(--tint) - 3%),var(--surface));padding:8px 12px;border-radius:16px 16px 16px 5px;max-width:100%}
+.bubble.more{background:transparent;color:var(--ct);padding:2px 12px;font-weight:600;font-size:12.5px}
+.card .catline{display:flex;align-items:center;gap:6px;font:600 12px/1 var(--f-d);color:var(--ct);margin-top:auto}
+.card .catline i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.card.sel{box-shadow:var(--lift);border-color:color-mix(in srgb,var(--accent) 50%,var(--line));transform:translateY(-2px)}
+.card.sel::after{content:"Enter";position:absolute;right:14px;bottom:12px;font:600 11px/1 var(--f-m);color:var(--accent);background:var(--accent-soft);padding:4px 7px;border-radius:7px}
+
+/* rail */
+.rail{border-left:1px solid var(--line);background:var(--surface);padding:18px 18px;display:flex;flex-direction:column;gap:18px;overflow:hidden}
+.rail h4{margin:0;font:700 13px/1 var(--f-d);letter-spacing:.02em;color:var(--ink-2);display:flex;align-items:center;gap:8px}
+.rail h4 .live{margin-left:auto;font:600 11px/1 var(--f-t);color:var(--ok);display:flex;align-items:center;gap:6px}
+.rail h4 .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 25%,transparent)}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.stat{background:var(--surface-2);border-radius:14px;padding:12px}
+.stat b{display:block;font:900 26px/1 "Segoe UI Black","Segoe UI",var(--f-d);letter-spacing:-.02em}
+.stat span{font-size:12px;color:var(--muted)}
+.feed{display:flex;flex-direction:column;gap:2px}
+.feed div{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px}
+.feed .tile{width:30px;height:30px;border-radius:10px}
+.feed .tile svg{width:16px;height:16px}
+.feed b{font:600 13px/1.2 var(--f-d);display:block}
+.feed small{font-size:11.5px;color:var(--muted)}
+.feed time{margin-left:auto;font:11px/1 var(--f-t);color:var(--muted);white-space:nowrap}
+.tip{margin-top:auto;border-radius:16px;padding:14px;background:var(--accent-soft);color:var(--ink);font-size:13px;line-height:1.45}
+.tip b{font-family:var(--f-d);color:var(--accent)}
+.tip code{font:12px/1 var(--f-m);background:var(--surface);padding:2px 6px;border-radius:6px;color:var(--ink)}
+
+/* ----- fișa ----- */
+.detail{flex:1;min-height:0;display:grid;grid-template-columns:1fr 330px;gap:18px;padding:18px 20px}
+.hero{border-radius:24px;padding:24px 28px;background:color-mix(in srgb,var(--img) var(--tint),var(--surface));position:relative;overflow:hidden}
+.hero .art{position:absolute;right:-10px;top:-14px;width:260px;height:200px;opacity:.95}
+.hero .back{display:inline-flex;align-items:center;gap:6px;font:600 13px/1 var(--f-d);color:var(--img-t);background:var(--surface);padding:7px 12px 7px 9px;border-radius:999px}
+.hero h2{margin:16px 0 6px;font:700 46px/1 var(--f-d);letter-spacing:-.035em}
+.hero .chips{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hero .chips span{font:600 12.5px/1 var(--f-d);padding:7px 11px;border-radius:999px;background:var(--surface);color:var(--ink-2)}
+.hero .chips .go{background:var(--ink);color:var(--surface);display:inline-flex;gap:6px;align-items:center}
+.hero p{margin:16px 0 0;max-width:600px;font-size:15px;line-height:1.6;color:var(--ink)}
+.dcol{display:flex;flex-direction:column;gap:16px;min-height:0}
+.box{background:var(--surface);border-radius:20px;border:1px solid var(--line);padding:16px 18px}
+.box h4{margin:0 0 12px;font:700 15px/1 var(--f-d);display:flex;align-items:center;gap:8px}
+.box h4 small{font:500 12px/1 var(--f-t);color:var(--muted);margin-left:auto}
+.convo{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}
+.convo .bubble{font-size:14px;padding:10px 14px;--c:var(--img);border-radius:18px 18px 18px 6px}
+.kws{display:flex;flex-wrap:wrap;gap:6px}
+.kws span{font:500 12.5px/1 var(--f-t);padding:7px 10px;border-radius:10px;background:var(--surface-2);color:var(--ink-2)}
+.kws span:nth-child(-n+2){background:color-mix(in srgb,var(--img) var(--tint),var(--surface));color:var(--img-t);font-weight:600}
+.actions{display:flex;gap:8px}
+.abtn{flex:1;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;gap:8px;font:600 13.5px/1 var(--f-d);background:var(--surface);border:1px solid var(--line-2);color:var(--ink)}
+.abtn.del{color:var(--sec-t);flex:0 0 auto;padding:0 14px}
+.rels{display:flex;flex-direction:column;gap:8px}
+.rels a{display:flex;align-items:center;gap:12px;text-decoration:none;color:var(--ink);padding:8px;border-radius:14px;background:var(--surface-2)}
+.rels .tile{width:36px;height:36px;border-radius:12px}
+.rels .tile svg{width:20px;height:20px}
+.rels b{font:700 14px/1.1 var(--f-d);display:block}
+.rels small{font-size:12px;color:var(--muted)}
+.rels em{margin-left:auto;font-style:normal;color:var(--muted);padding-right:6px}
+.sticky{flex:none;min-height:190px;background:var(--sun);color:var(--sun-ink);border-radius:6px 6px 20px 6px;padding:16px 18px;transform:rotate(1.2deg);box-shadow:0 12px 24px -12px rgba(120,90,0,.5);position:relative}
+.sticky::before{content:"";position:absolute;top:-9px;left:50%;width:70px;height:18px;margin-left:-35px;background:rgba(255,255,255,.55);transform:rotate(-3deg);border-radius:2px}
+body:has(#theme:checked) .sticky::before{background:rgba(255,255,255,.25)}
+.sticky h4{margin:0 0 8px;font:700 14px/1 var(--f-d);display:flex;justify-content:space-between}
+.sticky h4 small{font:500 11.5px/1 var(--f-t);opacity:.75}
+.sticky p{margin:0;font-size:14px;line-height:1.55}
+.sticky .caret{display:inline-block;width:2px;height:16px;background:var(--sun-ink);vertical-align:-3px;animation:blink 1s steps(1) infinite}
+
+/* states */
+.empty{flex:1;display:grid;place-items:center}
+.empty .in{text-align:center;max-width:560px}
+.empty h3{margin:14px 0 8px;font:700 28px/1.15 var(--f-d);letter-spacing:-.02em;text-wrap:balance}
+.empty p{margin:0;color:var(--ink-2);font-size:15px}
+.empty .sugg{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:18px}
+.empty .sugg span{display:inline-flex;gap:8px;align-items:center;height:36px;padding:0 14px;border-radius:999px;background:var(--surface);border:1px solid var(--line);font:600 13.5px/1 var(--f-d)}
+.empty .sugg i{width:8px;height:8px;border-radius:50%;background:var(--c)}
+.empty .ask{margin-top:18px;font-size:13.5px;color:var(--muted)}
+.empty .ask code{font:600 12.5px/1 var(--f-m);color:var(--accent);background:var(--accent-soft);padding:4px 8px;border-radius:8px}
+.kind{display:inline-flex;align-items:center;gap:6px;font:700 11.5px/1 var(--f-d);padding:6px 10px 6px 8px;border-radius:999px}
+.kind svg{width:13px;height:13px}
+.kind.concept{background:var(--sun);color:var(--sun-ink)}
+.kind.material{background:color-mix(in srgb,var(--data) var(--tint),var(--surface));color:var(--data-t)}
+.card.fresh{border-color:var(--accent);box-shadow:var(--lift);animation:pop .7s cubic-bezier(.3,1.6,.5,1) both}
+@keyframes pop{0%{transform:scale(.85);opacity:0}100%{transform:none;opacity:1}}
+.card .ribbon{position:absolute;top:-11px;right:16px;font:700 11.5px/1 var(--f-d);color:var(--accent-ink);background:var(--accent);padding:6px 10px;border-radius:999px;box-shadow:0 6px 14px -6px var(--accent)}
+.confetti{position:absolute;inset:-18px;pointer-events:none}
+.confetti i{position:absolute;width:7px;height:7px;border-radius:2px;animation:fall 1.6s ease-out both}
+@keyframes fall{from{transform:translate(0,0) rotate(0);opacity:0}20%{opacity:1}to{transform:translate(var(--x),var(--y)) rotate(160deg);opacity:1}}
+</style>
+</head>
+<body>
+<input type="checkbox" id="theme" aria-label="Temă întunecată">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="M10.4 10.4 14 14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="currentColor"/><path d="M8 1.3v1.6M8 13.1v1.6M1.3 8h1.6M13.1 8h1.6M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M3.3 12.7l1.1-1.1M11.6 4.4l1.1-1.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 16 16"><path d="M13.2 9.8A5.6 5.6 0 0 1 6.2 2.8a5.6 5.6 0 1 0 7 7Z" fill="currentColor"/></symbol>
+  <symbol id="i-export" viewBox="0 0 16 16"><path d="M8 2.2v8M5 5.2l3-3 3 3M2.8 9.5v3.8h10.4V9.5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-tags" viewBox="0 0 16 16"><rect x="2" y="2" width="5" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="2" width="5" height="5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="2" y="9" width="5" height="5" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.5"/><rect x="9" y="9" width="5" height="5" rx="1.5" fill="none" stroke="currentColor" stroke-width="1.5"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 16 16"><path d="M9 2.8h4.2V7M13 3 7.5 8.5M11.2 9.6v3.6H2.8V4.8h3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 16 16"><path d="M2.8 13.2h2.6l7.8-7.8-2.6-2.6-7.8 7.8v2.6Z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 16 16"><path d="M2.8 4.4h10.4M6.2 4.4V2.8h3.6v1.6M4.3 4.4l.7 8.8h6l.7-8.8" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 16 16"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="m8 1.8 1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6Z" fill="currentColor"/></symbol>
+  <symbol id="i-all" viewBox="0 0 16 16"><circle cx="4.5" cy="4.5" r="2" fill="currentColor"/><circle cx="11.5" cy="4.5" r="2" fill="currentColor"/><circle cx="4.5" cy="11.5" r="2" fill="currentColor"/><circle cx="11.5" cy="11.5" r="2" fill="currentColor"/></symbol>
+  <!-- category micro-illustrations (24) -->
+  <symbol id="g-img" viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="16" cy="9.5" r="2" fill="currentColor"/><path d="m3.5 17 5-5.5 4 4 2.5-2.5 5 4.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="g-ai" viewBox="0 0 24 24"><path d="M11 3c.6 4.6 2.4 6.4 7 7-4.6.6-6.4 2.4-7 7-.6-4.6-2.4-6.4-7-7 4.6-.6 6.4-2.4 7-7Z" fill="currentColor"/><path d="M18.5 14.5c.3 2 1 2.7 3 3-2 .3-2.7 1-3 3-.3-2-1-2.7-3-3 2-.3 2.7-1 3-3Z" fill="currentColor" opacity=".6"/></symbol>
+  <symbol id="g-cc" viewBox="0 0 24 24"><rect x="2.5" y="4.5" width="19" height="15" rx="3.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m7 10 3 2.5L7 15M12.5 15.5H17" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-data" viewBox="0 0 24 24"><rect x="4" y="11" width="4" height="9" rx="1.5" fill="currentColor"/><rect x="10" y="5" width="4" height="15" rx="1.5" fill="currentColor" opacity=".7"/><rect x="16" y="8" width="4" height="12" rx="1.5" fill="currentColor" opacity=".45"/></symbol>
+  <symbol id="g-design" viewBox="0 0 24 24"><circle cx="8" cy="8" r="4.5" fill="currentColor" opacity=".55"/><rect x="12" y="12" width="9" height="9" rx="2.5" fill="currentColor"/><path d="m16.5 3 4 6.5h-8Z" fill="currentColor" opacity=".8"/></symbol>
+  <symbol id="g-mock" viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 5.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><rect x="9" y="8" width="6" height="8" rx="1.5" fill="currentColor" opacity=".5"/></symbol>
+  <symbol id="g-sec" viewBox="0 0 24 24"><path d="M12 2.8 19.5 6v5.5c0 4.6-3.2 8.3-7.5 9.7-4.3-1.4-7.5-5.1-7.5-9.7V6Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="m8.8 12 2.2 2.2 4.4-4.6" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="g-disc" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m15.5 8.5-2 5-5 2 2-5Z" fill="currentColor"/></symbol>
+  <symbol id="g-bulb" viewBox="0 0 16 16"><path d="M8 1.8a4.4 4.4 0 0 0-2.6 8c.5.4.8.9.8 1.5V12h3.6v-.7c0-.6.3-1.1.8-1.5A4.4 4.4 0 0 0 8 1.8Z" fill="currentColor"/><path d="M6.3 14h3.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="g-book" viewBox="0 0 16 16"><path d="M2 3.2c2-.8 4-.6 6 .8v9.6c-2-1.4-4-1.6-6-.8ZM14 3.2c-2-.8-4-.6-6 .8v9.6c2-1.4 4-1.6 6-.8Z" fill="currentColor"/></symbol>
+  <symbol id="cap-min" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor"/></symbol>
+  <symbol id="cap-max" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1.5" fill="none" stroke="currentColor"/></symbol>
+  <symbol id="cap-x" viewBox="0 0 10 10"><path d="m.5.5 9 9m0-9-9 9" stroke="currentColor"/></symbol>
+</svg>
+
+<div class="page">
+  <header class="intro">
+    <div>
+      <span class="kicker">Direcția 3 din 4</span>
+      <h1><span>Paletă</span></h1>
+      <p>Jocul dus cel mai departe, ținut în frâu de neutre curate: fiecare categorie are culoarea și micro-ilustrația ei, iar situațiile apar ca bule de conversație, exact cum ți le-ai spune singur („vreau să scot fundalul…”). Aspectul premium vine din forme rotunjite precise, umbre fine și tipografie Display mare. Densitatea stă într-o coloană de activitate din dreapta, cu cifre, ultimele sosiri și un sfat, pe care o poți ignora complet.</p>
+    </div>
+    <div class="dots"><span style="background:#2F7BF6"></span><span style="background:#8E4CF5"></span><span style="background:#EC4899"></span><span style="background:#F07A1A"></span><span style="background:#0EA5A4"></span><span style="background:#5BA01B"></span><span style="background:#E23B4A"></span><span style="background:#FFD84D"></span></div>
+  </header>
+
+  <!-- ===== 1 ===== -->
+  <div class="shot-label"><b>1</b><span>Toolbox · Imagini &amp; video</span><em>Comutatorul de temă (soare / lună) e în antet, înaintea butoanelor ferestrei.</em></div>
+  <div class="scroller"><div class="win">
+    <div class="hdr">
+      <span class="logo"><i></i>whenkit</span>
+      <div class="seg"><span class="on">Toolbox <small>53</small></span><span>Learn <small>22</small></span></div>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><span class="q">Ce vrei să faci azi?</span><kbd>Ctrl K</kbd></div>
+      <span class="hbtn"><svg class="i"><use href="#i-tags"/></svg>Categorii</span>
+      <span class="hbtn solid"><svg class="i"><use href="#i-export"/></svg>Exportă</span>
+      <label class="toggle" for="theme" title="Temă luminoasă / întunecată"><svg class="s"><use href="#i-sun"/></svg><svg class="m"><use href="#i-moon"/></svg></label>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="cats">
+      <span class="pill all"><span class="ic"><svg><use href="#i-all"/></svg></span>Toate <small>53</small></span>
+      <span class="pill" style="--c:var(--ai);--ct:var(--ai-t)"><span class="ic"><svg><use href="#g-ai"/></svg></span>AI &amp; LLM <small>25</small></span>
+      <span class="pill" style="--c:var(--cc);--ct:var(--cc-t)"><span class="ic"><svg><use href="#g-cc"/></svg></span>Claude Code &amp; agenți <small>15</small></span>
+      <span class="pill" style="--c:var(--data);--ct:var(--data-t)"><span class="ic"><svg><use href="#g-data"/></svg></span>Date &amp; API-uri <small>5</small></span>
+      <span class="pill" style="--c:var(--disc);--ct:var(--disc-t)"><span class="ic"><svg><use href="#g-disc"/></svg></span>Descoperire &amp; arhive <small>3</small></span>
+      <span class="pill" style="--c:var(--design);--ct:var(--design-t)"><span class="ic"><svg><use href="#g-design"/></svg></span>Design &amp; UI <small>4</small></span>
+      <span class="pill on" style="--c:var(--img);--ct:var(--img-t)"><span class="ic"><svg><use href="#g-img"/></svg></span>Imagini &amp; video <small>6</small></span>
+      <span class="pill" style="--c:var(--mock);--ct:var(--mock-t)"><span class="ic"><svg><use href="#g-mock"/></svg></span>Mockup-uri &amp; capturi de cod <small>4</small></span>
+      <span class="fade"><span><svg class="i"><use href="#i-fwd"/></svg></span></span>
+    </div>
+    <div class="body">
+      <div class="main">
+        <div class="mh"><h2>Imagini &amp; video</h2><span>6 unelte pentru poze, clipuri și tot ce e între ele</span><div class="sort"><b class="on">Noi</b><b>A–Z</b></div></div>
+        <div class="grid">
+          <article class="card sel">
+            <div class="row"><span class="tile"><svg><use href="#g-img"/></svg></span><div><h3>remove.bg</h3><div class="host">remove.bg · site</div></div></div>
+            <p>Scoate automat fundalul din fotografii, cu pensulă pentru retușuri. Fundal alb sau transparent.</p>
+            <div class="bubbles"><span class="bubble">vreau să scot fundalul dintr-o poză</span><span class="bubble">am nevoie de poze de produs pe fundal alb</span><span class="bubble more">+ încă 2 situații</span></div>
+          </article>
+          <article class="card">
+            <div class="row"><span class="tile"><svg><use href="#g-img"/></svg></span><div><h3>Squoosh</h3><div class="host">squoosh.app · site</div></div></div>
+            <p>Comprimă imagini local, în browser: compari originalul cu rezultatul și salvezi varianta mai mică.</p>
+            <div class="bubbles"><span class="bubble">imaginile de pe site-ul meu sunt prea mari</span><span class="bubble">vreau să micșorez o poză sub o dimensiune</span><span class="bubble more">+ încă 2 situații</span></div>
+          </article>
+          <article class="card">
+            <div class="row"><span class="tile"><svg><use href="#g-img"/></svg></span><div><h3>Photopea</h3><div class="host">photopea.com · site</div></div></div>
+            <p>Editor foto în browser, ca Photoshop: deschide PSD, straturi, măști, filtre; rulează local.</p>
+            <div class="bubbles"><span class="bubble">am primit un PSD și nu am Photoshop</span><span class="bubble">vreau să editez cu straturi fără instalare</span><span class="bubble more">+ încă 2 situații</span></div>
+          </article>
+          <article class="card">
+            <div class="row"><span class="tile"><svg><use href="#g-img"/></svg></span><div><h3>Cleanup.pictures</h3><div class="host">cleanup.pictures · site</div></div></div>
+            <p>Treci cu pensula peste un obiect și AI-ul reconstruiește fundalul din spatele lui.</p>
+            <div class="bubbles"><span class="bubble">vreau să șterg o persoană din fundal</span><span class="bubble">vreau să scot data imprimată de pe o poză</span><span class="bubble more">+ încă 2 situații</span></div>
+          </article>
+          <article class="card">
+            <div class="row"><span class="tile"><svg><use href="#g-img"/></svg></span><div><h3>Unscreen</h3><div class="host">unscreen.com → Canva · site</div></div></div>
+            <p>Fundal transparent pe toate cadrele unui clip, fără green screen; acum în Canva Pro.</p>
+            <div class="bubbles"><span class="bubble">vreau să scot fundalul dintr-un clip video</span><span class="bubble">vreau subiectul din video pe alt fundal</span><span class="bubble more">+ încă 2 situații</span></div>
+          </article>
+          <article class="card" style="--c:var(--ai);--ct:var(--ai-t)">
+            <div class="row"><span class="tile"><svg><use href="#g-ai"/></svg></span><div><h3>ComfyUI</h3><div class="host">github · repo</div></div><span class="meta"><svg style="width:12px;height:12px;color:#F5B400"><use href="#i-star"/></svg>137,7k</span></div>
+            <p>Graf de noduri pentru generare de imagini, video și audio cu modele deschise, local.</p>
+            <div class="bubbles"><span class="bubble">vreau să generez imagini cu AI, fără abonament</span><span class="bubble">vreau control pe model, LoRA, ControlNet</span><span class="bubble more">+ încă 2 situații</span></div>
+          </article>
+        </div>
+      </div>
+      <aside class="rail">
+        <h4>Catalogul tău <span class="live">la zi</span></h4>
+        <div class="stats">
+          <div class="stat"><b>75</b><span>fișe în total</span></div>
+          <div class="stat"><b>17</b><span>categorii</span></div>
+          <div class="stat"><b style="color:var(--img-t)">53</b><span>în Toolbox</span></div>
+          <div class="stat"><b style="color:var(--ai-t)">22</b><span>în Learn</span></div>
+        </div>
+        <h4>Sosite recent</h4>
+        <div class="feed">
+          <div style="--c:var(--img);--ct:var(--img-t)"><span class="tile"><svg><use href="#g-img"/></svg></span><span><b>Unscreen</b><small>Imagini &amp; video</small></span><time>ieri, 20:39</time></div>
+          <div style="--c:var(--data);--ct:var(--data-t)"><span class="tile"><svg><use href="#g-data"/></svg></span><span><b>Tipuri de API</b><small>Learn · concept</small></span><time>ieri, 19:40</time></div>
+          <div style="--c:var(--ai);--ct:var(--ai-t)"><span class="tile"><svg><use href="#g-ai"/></svg></span><span><b>ComfyUI</b><small>AI &amp; LLM</small></span><time>ieri, 19:38</time></div>
+          <div style="--c:var(--sec);--ct:var(--sec-t)"><span class="tile"><svg><use href="#g-sec"/></svg></span><span><b>Have I Been Pwned</b><small>Securitate</small></span><time>ieri, 19:31</time></div>
+        </div>
+        <div class="tip"><b>Știai?</b> Poți căuta direct problema, nu numele: „vreau să micșorez o poză” găsește Squoosh. Pentru întrebări mai lungi, în terminal: <code>/gaseste</code></div>
+      </aside>
+    </div>
+  </div></div>
+
+  <!-- ===== 2 ===== -->
+  <div class="shot-label"><b>2</b><span>Fișa completă · remove.bg</span><em>Antet în culoarea categoriei, situațiile ca bule, notițele tale ca bilețel lipit.</em></div>
+  <div class="scroller"><div class="win">
+    <div class="hdr">
+      <span class="logo"><i></i>whenkit</span>
+      <div class="seg"><span class="on">Toolbox <small>53</small></span><span>Learn <small>22</small></span></div>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><span class="q">Ce vrei să faci azi?</span><kbd>Ctrl K</kbd></div>
+      <span class="hbtn"><svg class="i"><use href="#i-tags"/></svg>Categorii</span>
+      <span class="hbtn solid"><svg class="i"><use href="#i-export"/></svg>Exportă</span>
+      <label class="toggle" for="theme" title="Temă luminoasă / întunecată"><svg class="s"><use href="#i-sun"/></svg><svg class="m"><use href="#i-moon"/></svg></label>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="detail">
+      <div class="dcol">
+        <div class="hero">
+          <svg class="art" viewBox="0 0 260 200" aria-hidden="true">
+            <defs><pattern id="chk" width="16" height="16" patternUnits="userSpaceOnUse"><rect width="8" height="8" fill="currentColor" opacity=".10"/><rect x="8" y="8" width="8" height="8" fill="currentColor" opacity=".10"/></pattern></defs>
+            <g style="color:var(--img)">
+              <rect x="70" y="30" width="160" height="128" rx="22" fill="url(#chk)" stroke="currentColor" stroke-opacity=".35" stroke-width="2" stroke-dasharray="6 6"/>
+              <circle cx="150" cy="78" r="22" fill="var(--img)"/>
+              <path d="M112 158c4-28 20-44 38-44s34 16 38 44Z" fill="var(--img)"/>
+              <circle cx="210" cy="52" r="10" fill="var(--sun)"/>
+              <path d="M44 120l26 10M44 132l26-2" stroke="var(--img)" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+            </g>
+          </svg>
+          <span class="back"><svg class="i" style="width:13px;height:13px"><use href="#i-back"/></svg>Imagini &amp; video</span>
+          <h2>remove.bg</h2>
+          <div class="chips"><span class="go"><svg class="i" style="width:13px;height:13px"><use href="#i-ext"/></svg>Deschide remove.bg</span><span>unealtă · site</span><span>adăugată pe 15 oct.</span><span style="color:var(--ok)">✓ verificată</span></div>
+          <p>Serviciu care scoate automat fundalul din fotografii, cu pensulă pentru retușuri. Poți pune fundal alb (pentru produse sau poze de profil) sau transparent (PNG); are API, extensie de Photoshop și aplicații pentru Windows, Mac, Linux și Android.</p>
+        </div>
+        <div class="box">
+          <h4>Când o folosesc <small>4 situații</small></h4>
+          <div class="convo">
+            <span class="bubble">vreau să scot fundalul dintr-o poză</span>
+            <span class="bubble">am nevoie de poze de produs pe fundal alb pentru un magazin online</span>
+            <span class="bubble">vreau un logo sau o persoană decupată pe fundal transparent</span>
+            <span class="bubble">vreau să scot automat fundalul din multe imagini, din aplicația mea, prin API</span>
+          </div>
+        </div>
+        <div class="box" style="padding:14px 18px">
+          <h4 style="margin-bottom:10px">Cuvinte-cheie <small>ajută căutarea, în română și engleză</small></h4>
+          <div class="kws"><span>fundal</span><span>background</span><span>remove background</span><span>decupare</span><span>transparent</span><span>png</span><span>fundal alb</span><span>api</span></div>
+        </div>
+      </div>
+      <div class="dcol">
+        <div class="actions"><span class="abtn"><svg class="i"><use href="#i-edit"/></svg>Editează fișa</span><span class="abtn del"><svg class="i"><use href="#i-trash"/></svg>Șterge</span></div>
+        <div class="box">
+          <h4>Merg bine împreună</h4>
+          <div class="rels">
+            <a href="#" style="--c:var(--img);--ct:var(--img-t)"><span class="tile"><svg><use href="#g-img"/></svg></span><span><b>Unscreen</b><small>același lucru, pentru video</small></span><em>›</em></a>
+            <a href="#" style="--c:var(--img);--ct:var(--img-t)"><span class="tile"><svg><use href="#g-img"/></svg></span><span><b>Photopea</b><small>decupare manuală, cu straturi</small></span><em>›</em></a>
+            <a href="#" style="--c:var(--img);--ct:var(--img-t)"><span class="tile"><svg><use href="#g-img"/></svg></span><span><b>Cleanup.pictures</b><small>șterge obiecte din poză</small></span><em>›</em></a>
+          </div>
+        </div>
+        <div class="sticky">
+          <h4>Notițele mele <small>salvate automat</small></h4>
+          <p>Gratuit doar la rezoluție mică. Pentru produse: 1 credit pe poză.</p>
+          <p style="margin-top:8px">La păr creț retușez marginea cu „Restore”, iese mult mai curat.<span class="caret"></span></p>
+        </div>
+      </div>
+    </div>
+  </div></div>
+
+  <!-- ===== 3 ===== -->
+  <div class="shot-label"><b>3</b><span>Learn · o fișă sosește din import</span><em>Felul ca insignă (concept = bec, material = carte); fișa nouă apare cu un mic confetti, fără să reîncarci nimic.</em></div>
+  <div class="scroller"><div class="win short">
+    <div class="hdr">
+      <span class="logo"><i></i>whenkit</span>
+      <div class="seg"><span>Toolbox <small>53</small></span><span class="on">Learn <small>23</small></span></div>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><span class="q">Ce vrei să înțelegi azi?</span><kbd>Ctrl K</kbd></div>
+      <span class="hbtn"><svg class="i"><use href="#i-tags"/></svg>Categorii</span>
+      <span class="hbtn solid"><svg class="i"><use href="#i-export"/></svg>Exportă</span>
+      <label class="toggle" for="theme" title="Temă luminoasă / întunecată"><svg class="s"><use href="#i-sun"/></svg><svg class="m"><use href="#i-moon"/></svg></label>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="cats">
+      <span class="pill all"><span class="ic"><svg><use href="#i-all"/></svg></span>Toate <small>23</small></span>
+      <span class="pill on" style="--c:var(--data);--ct:var(--data-t)"><span class="ic"><svg><use href="#g-data"/></svg></span>Backend &amp; API-uri <small>8</small></span>
+      <span class="pill" style="--c:var(--cc);--ct:var(--cc-t)"><span class="ic"><svg><use href="#g-book"/></svg></span>Cărți &amp; cursuri gratuite <small>5</small></span>
+      <span class="pill" style="--c:var(--disc);--ct:var(--disc-t)"><span class="ic"><svg><use href="#g-cc"/></svg></span>Construiești ca să înveți <small>3</small></span>
+      <span class="pill" style="--c:var(--design);--ct:var(--design-t)"><span class="ic"><svg><use href="#g-design"/></svg></span>Interviuri <small>4</small></span>
+      <span class="pill" style="--c:var(--ai);--ct:var(--ai-t)"><span class="ic"><svg><use href="#g-ai"/></svg></span>Limbaje <small>3</small></span>
+      <span class="fade"><span><svg class="i"><use href="#i-fwd"/></svg></span></span>
+    </div>
+    <div class="main" style="padding-top:22px">
+      <div class="grid" style="grid-template-columns:repeat(4,1fr)">
+        <article class="card" style="--c:var(--data);--ct:var(--data-t)">
+          <div class="row"><span class="kind concept"><svg><use href="#g-bulb"/></svg>Concept</span><span class="meta">umbrelă · 5</span></div>
+          <h3>Tipuri de API</h3>
+          <p>REST, GraphQL, SOAP, WebSocket și RPC puse față în față, cu reguli de alegere.</p>
+          <div class="bubbles"><span class="bubble">trebuie să aleg ce fel de API expun</span></div>
+        </article>
+        <article class="card" style="--c:var(--data);--ct:var(--data-t)">
+          <div class="row"><span class="kind concept"><svg><use href="#g-bulb"/></svg>Concept</span></div>
+          <h3>WebSocket API</h3>
+          <p>Conexiune permanentă prin care datele circulă instant, în ambele direcții.</p>
+          <div class="bubbles"><span class="bubble">construiesc un chat și mesajele trebuie să apară imediat → WebSocket</span></div>
+        </article>
+        <article class="card" style="--c:var(--data);--ct:var(--data-t)">
+          <div class="row"><span class="kind material"><svg><use href="#g-book"/></svg>Material</span><span class="meta"><svg style="width:12px;height:12px;color:#F5B400"><use href="#i-star"/></svg>374k</span></div>
+          <h3>System Design Primer</h3>
+          <p>Scalare, cache, replicare, cozi de mesaje, cu diagrame și exerciții.</p>
+          <div class="bubbles"><span class="bubble">am un interviu de system design</span></div>
+        </article>
+        <article class="card fresh" style="--c:var(--data);--ct:var(--data-t)">
+          <span class="ribbon">Proaspăt sosit</span>
+          <span class="confetti" aria-hidden="true">
+            <i style="left:20%;top:14px;background:var(--design);--x:-14px;--y:-24px"></i><i style="left:46%;top:8px;background:var(--sun);--x:6px;--y:-30px"></i><i style="left:70%;top:14px;background:var(--img);--x:20px;--y:-22px"></i><i style="left:88%;top:40px;background:var(--disc);--x:26px;--y:-6px"></i><i style="left:6%;top:48px;background:var(--ai);--x:-22px;--y:-8px"></i>
+          </span>
+          <div class="row"><span class="kind concept"><svg><use href="#g-bulb"/></svg>Concept</span></div>
+          <h3>Webhook</h3>
+          <p>Un alt server te anunță printr-un POST la URL-ul tău când se întâmplă ceva.</p>
+          <div class="bubbles"><span class="bubble">vreau să aflu imediat când o plată reușește → webhook</span></div>
+        </article>
+      </div>
+      <div style="margin-top:22px;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--muted)"><span style="width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 1.2s infinite"></span>Claude adaugă fișe în catalog · 2 din 5 · le vezi aici pe măsură ce sosesc</div>
+    </div>
+  </div></div>
+
+  <!-- ===== 4 ===== -->
+  <div class="shot-label"><b>4</b><span>Căutare fără rezultat</span><em>Un gol prietenos: alte formulări de încercat și drumul spre Claude.</em></div>
+  <div class="scroller"><div class="win short" style="height:480px">
+    <div class="hdr">
+      <span class="logo"><i></i>whenkit</span>
+      <div class="seg"><span class="on">Toolbox <small>53</small></span><span>Learn <small>22</small></span></div>
+      <div class="search focus"><svg class="i" style="color:var(--accent)"><use href="#i-search"/></svg><span class="q typed">vreau să transform un video în gif</span><kbd>Esc</kbd></div>
+      <span class="hbtn"><svg class="i"><use href="#i-tags"/></svg>Categorii</span>
+      <span class="hbtn solid"><svg class="i"><use href="#i-export"/></svg>Exportă</span>
+      <label class="toggle" for="theme" title="Temă luminoasă / întunecată"><svg class="s"><use href="#i-sun"/></svg><svg class="m"><use href="#i-moon"/></svg></label>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="empty">
+      <div class="in">
+        <svg width="120" height="96" viewBox="0 0 120 96" aria-hidden="true">
+          <rect x="14" y="22" width="56" height="64" rx="12" fill="color-mix(in srgb,var(--img) 14%,var(--surface))" transform="rotate(-8 42 54)"/>
+          <rect x="36" y="14" width="56" height="64" rx="12" fill="var(--surface)" stroke="var(--line-2)" stroke-width="2"/>
+          <path d="M48 34h32M48 44h22" stroke="var(--line-2)" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="82" cy="60" r="16" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="4"/>
+          <path d="m94 72 12 12" stroke="var(--accent)" stroke-width="5" stroke-linecap="round"/>
+          <circle cx="78" cy="58" r="2.2" fill="var(--accent)"/><circle cx="86" cy="58" r="2.2" fill="var(--accent)"/><path d="M78 66c2.5-2 5.5-2 8 0" stroke="var(--accent)" stroke-width="2" fill="none" stroke-linecap="round"/>
+        </svg>
+        <h3>Încă n-ai nicio unealtă care transformă video în GIF</h3>
+        <p>Am căutat în toate cele 53 de fișe din Toolbox. Încearcă o formulare apropiată:</p>
+        <div class="sugg"><span style="--c:var(--img)"><i></i>gif</span><span style="--c:var(--img)"><i></i>conversie video</span><span style="--c:var(--design)"><i></i>animație</span></div>
+        <div class="ask">sau întreabă-l pe Claude în terminal: <code>/gaseste ceva care face gif din video</code></div>
+      </div>
+    </div>
+  </div></div>
+</div>
+</body>
+</html>

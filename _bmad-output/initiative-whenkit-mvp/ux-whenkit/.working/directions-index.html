@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Direcții vizuale whenkit</title>
+<style>
+/* Index pentru cele 4 direcții. Culori: luminos #F4F3F0 / #FFFFFF / #1B1B1F / #5A5A63; întunecat #141417 / #1D1D22 / #F2F2F5 / #ABABB5 */
+body{
+  --bg:#F4F3F0;--card:#FFFFFF;--ink:#1B1B1F;--ink-2:#5A5A63;--line:#E2E0DA;--accent:#3B4BD8;
+  margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 "Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;-webkit-font-smoothing:antialiased;transition:background .3s,color .3s;
+}
+body:has(#theme:checked){--bg:#141417;--card:#1D1D22;--ink:#F2F2F5;--ink-2:#ABABB5;--line:#2E2E36;--accent:#9AA6FF}
+#theme{position:absolute;opacity:0;pointer-events:none}
+*{box-sizing:border-box}
+.wrap{max-width:1120px;margin:0 auto;padding:56px 24px 80px}
+header{display:flex;align-items:flex-end;gap:24px;margin-bottom:36px}
+header .k{font:600 13px/1 "Segoe UI Variable Text","Segoe UI",sans-serif;color:var(--accent);letter-spacing:.04em}
+h1{margin:10px 0 12px;font:600 46px/1.05 "Segoe UI Variable Display","Segoe UI",sans-serif;letter-spacing:-.02em}
+header p{margin:0;max-width:700px;color:var(--ink-2)}
+.tg{margin-left:auto;flex:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--card)}
+.tg i{width:34px;height:18px;border-radius:999px;background:var(--line);position:relative}
+.tg i::after{content:"";position:absolute;top:2px;left:2px;width:14px;height:14px;border-radius:50%;background:var(--ink);transition:transform .25s}
+body:has(#theme:checked) .tg i::after{transform:translateX(16px)}
+.tg span::before{content:"Temă luminoasă"}
+body:has(#theme:checked) .tg span::before{content:"Temă întunecată"}
+.grid{display:grid;grid-template-columns:repeat(2,1fr);gap:18px}
+a.dir{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden;transition:transform .2s,box-shadow .2s}
+a.dir:hover{transform:translateY(-3px);box-shadow:0 18px 40px -20px rgba(0,0,0,.35)}
+.prev{height:150px;position:relative;overflow:hidden}
+.body{padding:18px 20px 20px}
+.body .n{font:600 12px/1 "Cascadia Mono",Consolas,monospace;color:var(--ink-2)}
+.body h2{margin:6px 0 6px;font:600 26px/1.1 "Segoe UI Variable Display","Segoe UI",sans-serif;letter-spacing:-.01em}
+.body .one{margin:0 0 12px;font-weight:600}
+.body ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:14px}
+.body li{margin:3px 0}
+.open{margin-top:14px;display:inline-flex;gap:6px;font:600 14px/1 "Segoe UI Variable Text","Segoe UI",sans-serif;color:var(--accent)}
+/* mini previews */
+.p1{background-color:#F6F8FA;background-image:linear-gradient(#D4DCE6 1px,transparent 1px),linear-gradient(90deg,#D4DCE6 1px,transparent 1px),linear-gradient(#E2E8EF 1px,transparent 1px),linear-gradient(90deg,#E2E8EF 1px,transparent 1px);background-size:60px 60px,60px 60px,12px 12px,12px 12px}
+.p1 .c{position:absolute;top:34px;width:120px;height:86px;background:#fff;border:1px solid #D2DAE3;border-radius:3px}
+.p1 .c::before{content:"";position:absolute;left:10px;top:12px;width:60px;height:8px;background:#101820;border-radius:1px}
+.p1 .c::after{content:"";position:absolute;left:10px;right:10px;top:34px;height:14px;background:#F1F4F8;border-left:2px solid #2563EB}
+.p1 .c.s{outline:2px solid #1D5BD8}
+.p1 .bar{position:absolute;left:0;right:0;bottom:0;height:16px;background:#E9EEF3;border-top:1px solid #D2DAE3}
+.p1 .bar::before{content:"";position:absolute;left:10px;top:5px;width:6px;height:6px;border-radius:50%;background:#15803D}
+.p2{background:#F6F1E7}
+.p2 .c{position:absolute;top:40px;width:120px;height:96px;background:#FFFDF8;border-radius:5px;box-shadow:0 8px 18px -10px rgba(60,45,20,.4)}
+.p2 .c::before{content:"";position:absolute;top:-7px;left:var(--x);width:40px;height:8px;border-radius:4px 4px 0 0;background:var(--t)}
+.p2 .c::after{content:"";position:absolute;left:12px;right:12px;top:30px;border-top:1.5px solid #B0352A;box-shadow:0 14px 0 -0.5px #E6EEF6,0 26px 0 -0.5px #E6EEF6,0 38px 0 -0.5px #E6EEF6}
+.p2 .st{position:absolute;right:30px;top:96px;transform:rotate(-8deg);font:700 10px/1 "Segoe UI",sans-serif;letter-spacing:.14em;color:#B0352A;border:2px solid #B0352A;padding:3px 6px;border-radius:3px}
+.p3{background:#F5F4FA}
+.p3 .c{position:absolute;top:30px;width:130px;height:100px;background:#fff;border-radius:16px;border:1px solid #E5E2F1;box-shadow:0 8px 18px -10px rgba(40,30,90,.3)}
+.p3 .c i{position:absolute;left:12px;top:12px;width:28px;height:28px;border-radius:9px;background:var(--t)}
+.p3 .c b{position:absolute;left:12px;top:52px;height:16px;width:96px;border-radius:9px 9px 9px 3px;background:var(--t)}
+.p3 .c b+b{top:74px;width:70px}
+.p4{background:radial-gradient(40% 70% at 10% 0%,rgba(122,167,255,.5),transparent 70%),radial-gradient(40% 70% at 80% 0%,rgba(197,155,255,.45),transparent 70%),radial-gradient(40% 70% at 100% 100%,rgba(111,227,208,.4),transparent 70%),#EEF0F4}
+.p4 .shell{position:absolute;left:16px;right:16px;top:30px;bottom:0;background:rgba(249,249,251,.85);border:1px solid #E3E3E8;border-radius:8px 8px 0 0}
+.p4 .c{position:absolute;top:44px;width:90px;height:56px;background:#fff;border:1px solid #E3E3E8;border-radius:6px}
+.p4 .c.s{border-color:#0067C0;box-shadow:0 0 0 1px #0067C0}
+.p4 .ins{position:absolute;right:16px;top:31px;bottom:0;width:120px;background:#fff;border-left:1px solid #E3E3E8}
+.p4 .ins::before{content:"";position:absolute;left:12px;top:14px;width:28px;height:28px;border-radius:7px;background:#0F6CBD}
+.p4 .ins::after{content:"";position:absolute;left:12px;right:12px;bottom:12px;height:20px;border-radius:4px;background:#0067C0}
+.p4 .tab{position:absolute;left:84px;top:12px;width:80px;height:18px;background:rgba(249,249,251,.95);border-radius:6px 6px 0 0;border:1px solid #E3E3E8;border-bottom:0}
+.foot{margin-top:28px;color:var(--ink-2);font-size:14px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}header{flex-direction:column;align-items:flex-start}.tg{margin-left:0}}
+</style>
+</head>
+<body>
+<input type="checkbox" id="theme" aria-label="Temă întunecată">
+<div class="wrap">
+  <header>
+    <div>
+      <div class="k">whenkit · UX · direcții vizuale</div>
+      <h1>Patru personalități pentru aceeași fereastră</h1>
+      <p>Toate pornesc de la același brief: jucăuș și premium, cu aspectul dens al unei unelte profesionale, dar simplu de folosit. Fiecare fișier arată ecranul Toolbox, fișa completă a lui remove.bg și cel puțin o stare (Learn cu felul fișelor, import în timp real, căutare goală sau categorii), pe datele reale din catalog, în temă luminoasă și întunecată.</p>
+    </div>
+    <label class="tg" for="theme"><i></i><span></span></label>
+  </header>
+  <div class="grid">
+    <a class="dir" href="direction-planseta.html">
+      <div class="prev p1"><span class="c s" style="left:24px"></span><span class="c" style="left:156px"></span><span class="c" style="left:288px"></span><span class="c" style="left:420px"></span><span class="bar"></span></div>
+      <div class="body"><span class="n">01</span><h2>Planșetă</h2><p class="one">Omagiu AutoCAD: grilă milimetrică, categorii ca straturi colorate, cartuș tehnic pe fișă.</p>
+        <ul><li><b>Jucăuș:</b> semne de desen (colțuri de decupare, cote), fișe noi care „aterizează” pe grilă.</li><li><b>Premium:</b> Bahnschrift și cifre monospațiate, linii fine, cobalt și portocaliu de semnalizare.</li><li><b>Dens:</b> bară de stare, taste afișate peste tot, grilă cu 4 coloane; întunecat = blueprint.</li></ul>
+        <span class="open">Deschide direcția →</span></div>
+    </a>
+    <a class="dir" href="direction-fisier.html">
+      <div class="prev p2"><span class="c" style="left:24px;--x:12px;--t:#3B73D9"></span><span class="c" style="left:156px;--x:44px;--t:#1E9AA8"></span><span class="c" style="left:288px;--x:76px;--t:#E2683C"></span><span class="c" style="left:420px;--x:12px;--t:#8B5CF6"></span><span class="st">CONCEPT</span></div>
+      <div class="body"><span class="n">02</span><h2>Fișier</h2><p class="one">Catalog de bibliotecă editorial: fișe de carton cu tab colorat, serif cald, ștampile.</p>
+        <ul><li><b>Jucăuș:</b> ștampile pentru concept/material, bandă galbenă „abia sosit”, notițe scrise „de mână”.</li><li><b>Premium:</b> Sitka pentru titluri, hârtie ivoire și roșu de catalog; noaptea, bibliotecă în lemn.</li><li><b>Dens:</b> cote pe fiecare fișă, index A–Z pe margine, înregistrare de catalog cu puncte de legătură.</li></ul>
+        <span class="open">Deschide direcția →</span></div>
+    </a>
+    <a class="dir" href="direction-paleta.html">
+      <div class="prev p3"><span class="c" style="left:24px;--t:#D6E5FD"><i></i><b></b><b></b></span><span class="c" style="left:170px;--t:#EBDDFD"><i></i><b></b><b></b></span><span class="c" style="left:316px;--t:#FCDDEB"><i></i><b></b><b></b></span><span class="c" style="left:462px;--t:#FDE6D3"><i></i><b></b><b></b></span></div>
+      <div class="body"><span class="n">03</span><h2>Paletă</h2><p class="one">Cea mai jucăușă: culoare și micro-ilustrație pe categorie, situațiile ca bule de conversație.</p>
+        <ul><li><b>Jucăuș:</b> bule „vreau să…”, bilețel galben pentru notițe, confetti la import, gol prietenos.</li><li><b>Premium:</b> forme rotunjite precise, Segoe UI Variable Display mare, neutre curate.</li><li><b>Dens:</b> coloană de activitate cu cifre, sosiri recente și un sfat.</li></ul>
+        <span class="open">Deschide direcția →</span></div>
+    </a>
+    <a class="dir" href="direction-mica.html">
+      <div class="prev p4"><span class="tab"></span><span class="shell"></span><span class="c s" style="left:28px"></span><span class="c" style="left:126px"></span><span class="c" style="left:224px"></span><span class="ins"></span></div>
+      <div class="body"><span class="n">04</span><h2>Mica</h2><p class="one">Nativ Windows 11: material Mica cu auroră, tab-uri în bara de titlu, inspector în dreapta.</p>
+        <ul><li><b>Jucăuș:</b> aurora colorată din fundal, insigna „Nou” în gradient, fișe care urcă în grilă.</li><li><b>Premium:</b> finisaj Fluent, accent Windows, fișa construită ca paginile din Setări.</li><li><b>Dens:</b> trei panouri ca în File Explorer, bară de comenzi, dialog de categorii.</li></ul>
+        <span class="open">Deschide direcția →</span></div>
+    </a>
+  </div>
+  <p class="foot">Comutatorul de temă din fiecare fișier schimbă toate ecranele odată (CSS pur, fără JavaScript). Fișele sunt luate din catalogul real (<code>whenkit list</code>); „Webhook” și „Server-Sent Events” sunt exemple inventate de fișe care sosesc dintr-un import.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,606 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>whenkit · Planșetă</title>
+<style>
+/*
+  DIRECȚIA 1 — PLANȘETĂ
+  Omagiu adus programelor de proiectare (AutoCAD): grilă milimetrică, straturi colorate,
+  bloc-cartuș pe fișă, bară de stare. Colțuri aproape drepte, linii fine, cifre monospațiate.
+
+  Fonturi (toate pe Windows 11, fără descărcare):
+    titluri / etichete : Bahnschrift (lățime SemiCondensed pentru etichete)
+    text               : Segoe UI Variable Text
+    metadate / taste   : Cascadia Mono -> Consolas
+  Notă: în aplicația reală aș include Cascadia Mono în pachet (nu e font de sistem,
+  vine doar cu Windows Terminal), ca cifrele să arate la fel peste tot.
+
+  TEMA LUMINOASĂ                       TEMA ÎNTUNECATĂ („blueprint”)
+  --paper     #EEF2F6  fundal pagină    #08121D
+  --canvas    #F6F8FA  zona de lucru    #0B1724
+  --grid      #E2E8EF  grilă fină       #11243A
+  --grid-maj  #D4DCE6  grilă la 5       #17304C
+  --surface   #FFFFFF  carduri/panouri  #0F1F31
+  --surface-2 #F1F4F8  bare, inset      #132841
+  --chrome    #E9EEF3  titlebar         #091521
+  --ink       #101820  text principal   #E4EDF7   (16.9:1 / 14.2:1)
+  --ink-2     #3B4A5A  text secundar    #A9BBCF   (8.6:1 / 8.4:1)
+  --muted     #5A6878  text terțiar     #8399B1   (5.9:1 / 5.6:1)
+  --line      #D2DAE3  borduri          #21405F
+  --accent    #1D5BD8  cobalt           #6AA5FF   (5.9:1 pe alb / 7.0:1 pe surface)
+  --accent-bg #E6EEFC                   #15335A
+  --signal    #C2410C  portocaliu text  #FF9A52   (5.2:1 / 7.6:1)
+  --signal-bg #FFEBDD                   #3A2414
+  Straturi (categorii), aceeași nuanță în ambele teme:
+    AI & LLM #7C3AED · Claude Code #D97706 · Date & API #0891B2 · Descoperire #65A30D
+    Design & UI #DB2777 · Imagini & video #2563EB · Mockup-uri #EA580C · Securitate #DC2626
+    Terminal #475569 (dark: #94A3B8)
+*/
+body{
+  --paper:#EEF2F6;--canvas:#F6F8FA;--grid:#E2E8EF;--grid-maj:#D4DCE6;--surface:#FFFFFF;--surface-2:#F1F4F8;--chrome:#E9EEF3;
+  --ink:#101820;--ink-2:#3B4A5A;--muted:#5A6878;--line:#D2DAE3;--line-strong:#B7C3D0;
+  --accent:#1D5BD8;--accent-bg:#E6EEFC;--signal:#C2410C;--signal-bg:#FFEBDD;--ok:#15803D;
+  --shadow:0 1px 0 rgba(16,24,32,.04),0 8px 24px -12px rgba(16,24,32,.18);
+  --win-shadow:0 24px 64px -24px rgba(16,24,32,.35),0 0 0 1px rgba(16,24,32,.10);
+  --c-ai:#7C3AED;--c-cc:#D97706;--c-data:#0891B2;--c-disc:#65A30D;--c-design:#DB2777;--c-img:#2563EB;--c-mock:#EA580C;--c-sec:#DC2626;--c-term:#475569;
+  --f-head:"Bahnschrift","Segoe UI Variable Display","Segoe UI",sans-serif;
+  --f-text:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --f-mono:"Cascadia Mono","Cascadia Code",Consolas,ui-monospace,monospace;
+  margin:0;background:var(--paper);color:var(--ink);font-family:var(--f-text);font-size:14px;line-height:1.45;
+  -webkit-font-smoothing:antialiased;transition:background .25s,color .25s;
+}
+body:has(#theme:checked){
+  --paper:#08121D;--canvas:#0B1724;--grid:#11243A;--grid-maj:#17304C;--surface:#0F1F31;--surface-2:#132841;--chrome:#091521;
+  --ink:#E4EDF7;--ink-2:#A9BBCF;--muted:#8399B1;--line:#21405F;--line-strong:#2E5478;
+  --accent:#6AA5FF;--accent-bg:#15335A;--signal:#FF9A52;--signal-bg:#3A2414;--ok:#4ADE80;
+  --shadow:0 1px 0 rgba(0,0,0,.2),0 10px 28px -12px rgba(0,0,0,.6);
+  --win-shadow:0 30px 80px -24px rgba(0,0,0,.75),0 0 0 1px rgba(106,165,255,.18);
+  --c-term:#94A3B8;
+}
+#theme{position:absolute;opacity:0;pointer-events:none}
+*{box-sizing:border-box}
+svg.i{width:16px;height:16px;flex:none}
+.mono{font-family:var(--f-mono)}
+
+/* ---------- page ---------- */
+.page{max-width:1360px;margin:0 auto;padding:40px 40px 80px}
+.intro{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:end;margin-bottom:28px}
+.intro .kicker{font:600 12px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+.intro h1{font:600 44px/1.05 var(--f-head);letter-spacing:-.01em;margin:10px 0 12px}
+.intro p{margin:0;max-width:760px;color:var(--ink-2);font-size:15px}
+.intro .swatches{display:flex;gap:6px}
+.intro .swatches span{width:28px;height:28px;border-radius:3px;border:1px solid var(--line)}
+.shot-label{display:flex;align-items:baseline;gap:12px;margin:44px 0 14px;font:600 13px/1 var(--f-head);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2)}
+.shot-label b{font-family:var(--f-mono);color:var(--accent);font-weight:600}
+.shot-label em{font:400 13px/1.3 var(--f-text);letter-spacing:0;text-transform:none;color:var(--muted)}
+.scroller{overflow-x:auto;padding:4px 4px 28px}
+
+/* ---------- window ---------- */
+.win{width:1280px;height:800px;margin:0 auto;border-radius:8px;overflow:hidden;background:var(--canvas);box-shadow:var(--win-shadow);display:flex;flex-direction:column;position:relative}
+.win.short{height:500px}
+.titlebar{height:34px;flex:none;display:flex;align-items:center;background:var(--chrome);border-bottom:1px solid var(--line);user-select:none}
+.titlebar .app{display:flex;align-items:center;gap:9px;padding:0 14px;font:600 12.5px/1 var(--f-head);letter-spacing:.02em}
+.logo{width:18px;height:18px;border-radius:3px;background:var(--accent);display:grid;place-items:center;color:#fff;font:700 11px/1 var(--f-head);position:relative}
+.logo::after{content:"";position:absolute;right:-3px;bottom:-3px;width:7px;height:7px;background:var(--signal);border-radius:1px;border:2px solid var(--chrome)}
+.titlebar .path{font:12px/1 var(--f-mono);color:var(--muted);margin-left:6px}
+.titlebar .spacer{flex:1}
+.caption{display:flex;height:100%}
+.caption span{width:46px;display:grid;place-items:center;color:var(--ink-2)}
+.caption span:last-child:hover{background:#C42B1C;color:#fff}
+.caption svg{width:10px;height:10px}
+
+/* toolbar */
+.toolbar{height:48px;flex:none;display:flex;align-items:center;gap:12px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--line)}
+.tabs{display:flex;height:100%}
+.tab{display:flex;align-items:center;gap:8px;padding:0 16px;font:600 14px/1 var(--f-head);letter-spacing:.03em;color:var(--ink-2);position:relative}
+.tab .n{font:500 11px/1 var(--f-mono);color:var(--muted);padding:3px 5px;border:1px solid var(--line);border-radius:2px}
+.tab.on{color:var(--ink)}
+.tab.on::after{content:"";position:absolute;left:12px;right:12px;bottom:-1px;height:3px;background:var(--accent)}
+.tab.on .n{color:var(--accent);border-color:var(--accent);background:var(--accent-bg)}
+.sep{width:1px;height:24px;background:var(--line)}
+.search{flex:1;min-width:360px;max-width:520px;height:32px;display:flex;align-items:center;gap:10px;padding:0 6px 0 10px;background:var(--surface-2);border:1px solid var(--line);border-radius:3px;color:var(--muted)}
+.search.focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);background:var(--surface);color:var(--ink)}
+.search .q{flex:1;font-size:13.5px}
+.search .q.typed{color:var(--ink)}
+.search .q.typed::after{content:"";display:inline-block;width:1px;height:15px;background:var(--accent);vertical-align:-3px;margin-left:1px;animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+kbd{font:500 10.5px/1 var(--f-mono);padding:3px 5px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:3px;color:var(--ink-2);background:var(--surface)}
+.tool-btn{height:32px;display:flex;align-items:center;gap:7px;padding:0 10px;border:1px solid transparent;border-radius:3px;font:500 13px/1 var(--f-text);color:var(--ink-2)}
+.tool-btn:hover{background:var(--surface-2);border-color:var(--line)}
+.tool-btn.primary{border-color:var(--line-strong);color:var(--ink);background:var(--surface)}
+/* theme switch, pure CSS */
+.theme-switch{display:flex;align-items:center;height:28px;padding:2px;border:1px solid var(--line-strong);border-radius:3px;background:var(--surface-2);cursor:pointer;position:relative}
+.theme-switch span{width:30px;height:22px;display:grid;place-items:center;color:var(--muted);position:relative;z-index:1;transition:color .2s}
+.theme-switch::before{content:"";position:absolute;left:2px;top:2px;width:30px;height:22px;border-radius:2px;background:var(--surface);box-shadow:0 0 0 1px var(--line-strong);transition:transform .25s cubic-bezier(.3,.7,.2,1)}
+.theme-switch span:first-child{color:var(--signal)}
+body:has(#theme:checked) .theme-switch::before{transform:translateX(30px);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
+body:has(#theme:checked) .theme-switch span:first-child{color:var(--muted)}
+body:has(#theme:checked) .theme-switch span:last-child{color:var(--accent)}
+.theme-switch svg{width:14px;height:14px}
+
+/* category bar = straturi */
+.layers{height:40px;flex:none;display:flex;align-items:center;gap:2px;padding:0 6px;background:var(--surface-2);border-bottom:1px solid var(--line);overflow:hidden;position:relative}
+.layers .lbl{font:600 10.5px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:0 8px 0 6px;display:flex;gap:6px;align-items:center}
+.layers .arrow{width:24px;height:28px;display:grid;place-items:center;color:var(--muted);flex:none}
+.chip{display:flex;align-items:center;gap:7px;height:28px;padding:0 10px;border-radius:2px;font:500 13px/1 var(--f-text);color:var(--ink-2);white-space:nowrap;border:1px solid transparent}
+.chip i{width:9px;height:9px;border-radius:1px;flex:none}
+.chip .n{font:11px/1 var(--f-mono);color:var(--muted)}
+.chip.on{background:var(--surface);border-color:var(--line-strong);color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent)}
+.chip.on .n{color:var(--accent)}
+.layers .fade{position:absolute;right:30px;top:0;bottom:0;width:60px;background:linear-gradient(90deg,transparent,var(--surface-2))}
+.layers .arrow.r{position:absolute;right:6px;background:var(--surface-2)}
+
+/* work area */
+.work{flex:1;min-height:0;display:flex;flex-direction:column;background-color:var(--canvas);
+  background-image:linear-gradient(var(--grid-maj) 1px,transparent 1px),linear-gradient(90deg,var(--grid-maj) 1px,transparent 1px),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:80px 80px,80px 80px,16px 16px,16px 16px;background-position:-1px -1px}
+.ruler{display:flex;align-items:center;gap:14px;padding:14px 20px 10px;font:12px/1 var(--f-mono);color:var(--muted)}
+.ruler h2{margin:0;font:600 20px/1 var(--f-head);color:var(--ink);letter-spacing:.01em;display:flex;align-items:center;gap:10px}
+.ruler h2 i{width:12px;height:12px;border-radius:2px}
+.ruler .dim{flex:1;height:9px;border-left:1px solid var(--line-strong);border-right:1px solid var(--line-strong);position:relative}
+.ruler .dim::before{content:"";position:absolute;left:0;right:0;top:4px;border-top:1px solid var(--line-strong)}
+.ruler .sort{display:flex;gap:6px;align-items:center;color:var(--ink-2)}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:4px 20px 20px;align-content:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:3px;padding:14px 14px 12px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:9px;position:relative;min-height:212px}
+.card .top{display:flex;align-items:center;gap:8px;font:11px/1 var(--f-mono);color:var(--muted)}
+.card .top .host{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .type{padding:2px 5px;border:1px solid var(--line);border-radius:2px;text-transform:uppercase;letter-spacing:.06em;font-size:10px}
+.card h3{margin:0;font:600 18px/1.15 var(--f-head);letter-spacing:.01em}
+.card p{margin:0;color:var(--ink-2);font-size:13px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sits{list-style:none;margin:2px 0 0;padding:0;display:flex;flex-direction:column;gap:5px}
+.sits li{font-size:12.5px;line-height:1.35;color:var(--ink);padding:6px 8px 6px 10px;background:var(--surface-2);border-left:2px solid var(--cat,var(--accent));border-radius:0 2px 2px 0}
+.sits li::before{content:"› ";color:var(--muted);font-family:var(--f-mono)}
+.card .foot{margin-top:auto;display:flex;align-items:center;gap:10px;font:11px/1 var(--f-mono);color:var(--muted);padding-top:8px;border-top:1px dashed var(--line)}
+.card .foot .cat{display:flex;align-items:center;gap:6px;color:var(--ink-2);font-family:var(--f-text);font-size:12px}
+.card .foot .cat i{width:8px;height:8px;border-radius:1px;background:var(--cat)}
+.card .foot .star{margin-left:auto;display:flex;align-items:center;gap:4px}
+.card .foot .star svg{width:11px;height:11px;color:var(--c-cc)}
+/* selected card: drafting crop marks */
+.card.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--shadow)}
+.card.sel::before,.card.sel::after{content:"";position:absolute;width:14px;height:14px;border:2px solid var(--accent)}
+.card.sel::before{left:-7px;top:-7px;border-right:0;border-bottom:0}
+.card.sel::after{right:-7px;bottom:-7px;border-left:0;border-top:0}
+.card .hint{position:absolute;top:-10px;right:10px;font:600 10px/1 var(--f-mono);background:var(--accent);color:#fff;padding:4px 6px;border-radius:2px;letter-spacing:.04em}
+body:has(#theme:checked) .card .hint{color:#06121F}
+/* new from import */
+.card.new{border-color:var(--signal);box-shadow:0 0 0 1px var(--signal),0 0 0 6px var(--signal-bg),var(--shadow);animation:land .9s cubic-bezier(.2,.9,.3,1.2) both}
+@keyframes land{from{transform:translateY(-10px) scale(.98);opacity:0}to{transform:none;opacity:1}}
+.card .flag{position:absolute;top:-10px;left:12px;font:600 10px/1 var(--f-mono);background:var(--signal);color:#fff;padding:4px 7px;border-radius:2px;letter-spacing:.06em}
+body:has(#theme:checked) .card .flag{color:#2A1404}
+.kind{display:inline-flex;align-items:center;gap:5px;font:600 10px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;padding:3px 6px;border-radius:2px}
+.kind.concept{color:var(--c-ai);background:color-mix(in srgb,var(--c-ai) 12%,transparent);border:1px solid color-mix(in srgb,var(--c-ai) 40%,transparent)}
+.kind.material{color:var(--c-data);background:color-mix(in srgb,var(--c-data) 12%,transparent);border:1px solid color-mix(in srgb,var(--c-data) 40%,transparent)}
+body:has(#theme:checked) .kind.concept{color:#C4A5FF}
+body:has(#theme:checked) .kind.material{color:#67D8F0}
+.kind .g{font-size:11px}
+
+/* status bar */
+.status{height:26px;flex:none;display:flex;align-items:center;gap:0;background:var(--chrome);border-top:1px solid var(--line);font:11.5px/1 var(--f-mono);color:var(--ink-2)}
+.status > span{padding:0 12px;height:100%;display:flex;align-items:center;gap:7px;border-right:1px solid var(--line)}
+.status .dot{width:7px;height:7px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 3px color-mix(in srgb,var(--ok) 22%,transparent)}
+.status .dot.busy{background:var(--signal);box-shadow:0 0 0 3px var(--signal-bg);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.status .grow{flex:1;border-right:0}
+.status .keys{gap:12px;border-right:0;color:var(--muted)}
+.status .keys b{color:var(--ink-2);font-weight:600}
+
+/* ---------- fișa completă ---------- */
+.crumbbar{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--line)}
+.crumbs{display:flex;align-items:center;gap:8px;font:13px/1 var(--f-text);color:var(--muted)}
+.crumbs b{color:var(--ink);font-weight:600}
+.crumbs .s{color:var(--line-strong)}
+.btn{height:30px;display:inline-flex;align-items:center;gap:7px;padding:0 11px;border-radius:3px;border:1px solid var(--line-strong);background:var(--surface);font:500 13px/1 var(--f-text);color:var(--ink)}
+.btn.ghost{border-color:transparent;color:var(--ink-2)}
+.btn.accent{background:var(--accent);border-color:var(--accent);color:#fff}
+body:has(#theme:checked) .btn.accent{color:#06121F}
+.btn.danger{color:var(--c-sec)}
+body:has(#theme:checked) .btn.danger{color:#FF8A8A}
+.btn kbd{margin-left:2px}
+.sheet{flex:1;min-height:0;display:grid;grid-template-columns:1fr 340px;gap:0;margin:18px 20px;background:var(--surface);border:1px solid var(--line-strong);box-shadow:var(--shadow);position:relative}
+.sheet::before{content:"";position:absolute;inset:5px;border:1px solid var(--line);pointer-events:none}
+.sheet .main{padding:26px 30px 22px;overflow:hidden;display:flex;flex-direction:column;gap:18px;border-right:1px solid var(--line)}
+.sheet .side{display:flex;flex-direction:column;padding:26px 22px 14px;gap:18px;background:color-mix(in srgb,var(--surface-2) 55%,var(--surface))}
+.ftitle{display:flex;align-items:flex-start;gap:16px}
+.ftitle .mark{width:46px;height:46px;border:1px solid var(--c-img);display:grid;place-items:center;color:var(--c-img);position:relative;flex:none;background:color-mix(in srgb,var(--c-img) 8%,transparent)}
+.ftitle .mark svg{width:24px;height:24px}
+.ftitle h2{margin:0;font:600 34px/1 var(--f-head);letter-spacing:-.005em}
+.ftitle .sub{margin-top:8px;display:flex;align-items:center;gap:10px;font:12px/1 var(--f-mono);color:var(--muted)}
+.ftitle .sub a{color:var(--accent);text-decoration:none;display:inline-flex;gap:4px;align-items:center}
+.ftitle .sub a svg{width:12px;height:12px}
+.lead{margin:0;font-size:15px;line-height:1.6;color:var(--ink);max-width:640px}
+.sec-h{display:flex;align-items:center;gap:10px;font:600 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.sec-h::after{content:"";flex:1;border-top:1px solid var(--line)}
+.callouts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.callouts li{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--line);border-radius:2px;font-size:13.5px;line-height:1.4;background:var(--surface)}
+.callouts li b{flex:none;width:22px;height:22px;border-radius:50%;border:1.5px solid var(--c-img);color:var(--c-img);display:grid;place-items:center;font:600 11px/1 var(--f-mono)}
+body:has(#theme:checked) .callouts li b{color:#7FB0FF;border-color:#7FB0FF}
+.tags{display:flex;flex-wrap:wrap;gap:6px}
+.tags span{font:12px/1 var(--f-mono);padding:5px 7px;border:1px solid var(--line);border-radius:2px;color:var(--ink-2);background:var(--surface-2)}
+.notes{border:1.5px dashed var(--signal);border-radius:2px;padding:14px 16px 12px;background:color-mix(in srgb,var(--signal-bg) 45%,var(--surface));position:relative}
+.notes .h{display:flex;align-items:center;gap:8px;font:600 13px/1 var(--f-head);letter-spacing:.04em;color:var(--signal);margin-bottom:8px}
+.notes .h small{margin-left:auto;font:11px/1 var(--f-mono);color:var(--muted);letter-spacing:0}
+.notes p{margin:0;font-size:14px;line-height:1.55}
+.notes p + p{margin-top:6px}
+.notes .caret{display:inline-block;width:1.5px;height:16px;background:var(--signal);vertical-align:-3px;animation:blink 1s steps(1) infinite}
+.side .linkbox{display:flex;flex-direction:column;gap:8px}
+.side .open{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--accent);border-radius:3px;background:var(--accent-bg);color:var(--accent);font:600 14px/1 var(--f-head);letter-spacing:.02em}
+.side .open small{display:block;margin-top:4px;font:11px/1 var(--f-mono);color:var(--ink-2);letter-spacing:0}
+.side .open svg{margin-left:auto}
+.rel{display:flex;flex-direction:column;gap:6px}
+.rel a{display:grid;grid-template-columns:8px 1fr auto;align-items:center;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:2px;background:var(--surface);text-decoration:none;color:var(--ink)}
+.rel a i{width:8px;height:8px;border-radius:1px;background:var(--cat)}
+.rel a b{font:600 14px/1.1 var(--f-head);letter-spacing:.01em;display:block}
+.rel a small{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+.rel a .go{font:11px/1 var(--f-mono);color:var(--accent)}
+.cartus{margin-top:auto;border:1.5px solid var(--ink);display:grid;grid-template-columns:1fr 1fr;font:11px/1.2 var(--f-mono)}
+.cartus div{padding:7px 9px;border-right:1px solid var(--ink);border-bottom:1px solid var(--ink)}
+.cartus div:nth-child(2n){border-right:0}
+.cartus div:nth-last-child(-n+2){border-bottom:0}
+.cartus small{display:block;color:var(--muted);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px}
+.cartus .wide{grid-column:span 2;border-right:0;display:flex;align-items:center;justify-content:space-between;font:600 15px/1 var(--f-head);letter-spacing:.06em}
+.cartus .wide em{font:11px/1 var(--f-mono);font-style:normal;color:var(--muted);letter-spacing:0}
+
+/* empty state */
+.empty{flex:1;display:grid;place-items:center;padding:20px}
+.empty .box{text-align:center;max-width:520px;position:relative}
+.empty .target{width:150px;height:150px;margin:0 auto 18px;position:relative}
+.empty h3{margin:0 0 8px;font:600 24px/1.2 var(--f-head);text-wrap:balance}
+.empty .box{max-width:640px !important}
+.empty p{margin:0 auto;color:var(--ink-2);max-width:440px}
+.empty .try{display:flex;gap:8px;justify-content:center;margin-top:18px;flex-wrap:wrap}
+.empty .try span{font:12.5px/1 var(--f-mono);padding:7px 10px;border:1px solid var(--line-strong);border-radius:3px;background:var(--surface);color:var(--ink)}
+.empty .cmd{margin-top:16px;font:12.5px/1.5 var(--f-mono);color:var(--muted)}
+.empty .cmd b{color:var(--accent);font-weight:600}
+.legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:12px;color:var(--ink-2);font-size:13px}
+.legend b{color:var(--ink)}
+</style>
+</head>
+<body>
+<input type="checkbox" id="theme" aria-label="Temă întunecată">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-search" viewBox="0 0 16 16"><circle cx="7" cy="7" r="4.6" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M10.4 10.4 14 14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 16 16"><circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M8 1.3v1.6M8 13.1v1.6M1.3 8h1.6M13.1 8h1.6M3.3 3.3l1.1 1.1M11.6 11.6l1.1 1.1M3.3 12.7l1.1-1.1M11.6 4.4l1.1-1.1" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 16 16"><path d="M13.2 9.8A5.6 5.6 0 0 1 6.2 2.8a5.6 5.6 0 1 0 7 7Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-export" viewBox="0 0 16 16"><path d="M8 2.2v8M5 5.2l3-3 3 3M2.8 9.5v3.8h10.4V9.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 16 16"><path d="M8 2 2 5l6 3 6-3-6-3ZM2 8l6 3 6-3M2 11l6 3 6-3" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 16 16"><path d="M9 2.8h4.2V7M13 3 7.5 8.5M11.2 9.6v3.6H2.8V4.8h3.6" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-star" viewBox="0 0 16 16"><path d="m8 1.8 1.9 3.9 4.3.6-3.1 3 .7 4.3L8 11.6l-3.8 2 .7-4.3-3.1-3 4.3-.6Z" fill="currentColor"/></symbol>
+  <symbol id="i-back" viewBox="0 0 16 16"><path d="M10 3 5 8l5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-fwd" viewBox="0 0 16 16"><path d="m6 3 5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 16 16"><path d="M2.8 13.2h2.6l7.8-7.8-2.6-2.6-7.8 7.8v2.6Z" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 16 16"><path d="M2.8 4.4h10.4M6.2 4.4V2.8h3.6v1.6M4.3 4.4l.7 8.8h6l.7-8.8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sort" viewBox="0 0 16 16"><path d="M4 3v10M2 11l2 2 2-2M9 4h5M9 8h3.5M9 12h2" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-scissors" viewBox="0 0 24 24"><circle cx="6" cy="17" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="6" cy="7" r="3" fill="none" stroke="currentColor" stroke-width="1.6"/><path d="M8.5 8.6 20 18M8.5 15.4 20 6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></symbol>
+  <symbol id="cap-min" viewBox="0 0 10 10"><path d="M0 5h10" stroke="currentColor"/></symbol>
+  <symbol id="cap-max" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1" fill="none" stroke="currentColor"/></symbol>
+  <symbol id="cap-x" viewBox="0 0 10 10"><path d="m.5.5 9 9m0-9-9 9" stroke="currentColor"/></symbol>
+</svg>
+
+<div class="page">
+  <header class="intro">
+    <div>
+      <div class="kicker">Direcția 1 din 4 · whenkit</div>
+      <h1>Planșetă</h1>
+      <p>Catalogul ca planșă de proiectare: grilă milimetrică, categorii tratate ca <b>straturi colorate</b>, bară de stare și un cartuș tehnic pe fiecare fișă, ca în AutoCAD. Densitatea vine din detalii mici (cifre monospațiate, taste afișate, cote), nu din mai multe butoane: ecranul are tot trei zone, tab-uri, căutare și carduri. Jocul stă în semnele de desen: colțuri de decupare pe cardul selectat, fișe noi care „aterizează” pe grilă, microcopy scris ca de un desenator cu umor.</p>
+    </div>
+    <div class="swatches" title="Paleta">
+      <span style="background:#1D5BD8"></span><span style="background:#C2410C"></span><span style="background:#101820"></span><span style="background:#F6F8FA"></span><span style="background:#0B1724"></span>
+    </div>
+  </header>
+
+  <!-- ================= ECRAN 1 ================= -->
+  <div class="shot-label"><b>01</b> Toolbox · stratul „Imagini &amp; video” <em>Ecranul principal. Comutatorul de temă e în bara de unelte, dreapta (sau apasă-l oriunde apare).</em></div>
+  <div class="scroller">
+  <div class="win">
+    <div class="titlebar">
+      <div class="app"><span class="logo">w</span>whenkit</div>
+      <span class="path">C:\Users\Luca\Programe\whenkit</span>
+      <span class="spacer"></span>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="toolbar">
+      <div class="tabs">
+        <div class="tab on">Toolbox <span class="n">53</span></div>
+        <div class="tab">Learn <span class="n">22</span></div>
+      </div>
+      <span class="sep"></span>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><span class="q">Ce vrei să faci? ex. „scot fundalul”</span><kbd>Ctrl K</kbd></div>
+      <span class="spacer" style="flex:1"></span>
+      <span class="tool-btn"><svg class="i"><use href="#i-layers"/></svg>Categorii</span>
+      <span class="tool-btn primary"><svg class="i"><use href="#i-export"/></svg>Exportă catalogul</span>
+      <span class="sep"></span>
+      <label for="theme" class="theme-switch" title="Comută tema (Ctrl+Shift+L)"><span><svg><use href="#i-sun"/></svg></span><span><svg><use href="#i-moon"/></svg></span></label>
+    </div>
+    <div class="layers">
+      <span class="lbl"><svg class="i" style="width:13px;height:13px"><use href="#i-layers"/></svg>Straturi</span>
+      <span class="chip"><i style="background:var(--ink-2)"></i>Toate <span class="n">53</span></span>
+      <span class="chip"><i style="background:var(--c-ai)"></i>AI &amp; LLM <span class="n">25</span></span>
+      <span class="chip"><i style="background:var(--c-cc)"></i>Claude Code &amp; agenți <span class="n">15</span></span>
+      <span class="chip"><i style="background:var(--c-data)"></i>Date &amp; API-uri <span class="n">5</span></span>
+      <span class="chip"><i style="background:var(--c-disc)"></i>Descoperire &amp; arhive <span class="n">3</span></span>
+      <span class="chip"><i style="background:var(--c-design)"></i>Design &amp; UI <span class="n">4</span></span>
+      <span class="chip on"><i style="background:var(--c-img)"></i>Imagini &amp; video <span class="n">6</span></span>
+      <span class="chip"><i style="background:var(--c-mock)"></i>Mockup-uri &amp; capturi de cod <span class="n">4</span></span>
+      <span class="chip"><i style="background:var(--c-sec)"></i>Securitate <span class="n">4</span></span>
+      <span class="fade"></span><span class="arrow r"><svg class="i"><use href="#i-fwd"/></svg></span>
+    </div>
+    <div class="work">
+      <div class="ruler">
+        <h2><i style="background:var(--c-img)"></i>Imagini &amp; video</h2>
+        <span class="dim"></span>
+        <span>6 fișe</span>
+        <span class="sort"><svg class="i" style="width:13px;height:13px"><use href="#i-sort"/></svg>după adăugare</span>
+      </div>
+      <div class="grid">
+        <article class="card sel" style="--cat:var(--c-img)">
+          <span class="hint">Enter → fișa</span>
+          <div class="top"><span class="host">remove.bg</span><span class="type">site</span></div>
+          <h3>remove.bg</h3>
+          <p>Scoate automat fundalul din fotografii, cu pensulă pentru retușuri. Fundal alb sau transparent (PNG); are API și aplicații desktop.</p>
+          <ul class="sits"><li>vreau să scot fundalul dintr-o poză</li><li>am nevoie de poze de produs pe fundal alb</li></ul>
+          <div class="foot"><span class="cat"><i></i>Imagini &amp; video</span><span class="star">+2 situații</span></div>
+        </article>
+        <article class="card" style="--cat:var(--c-img)">
+          <div class="top"><span class="host">squoosh.app</span><span class="type">site</span></div>
+          <h3>Squoosh</h3>
+          <p>Comprimă imagini local, în browser: compari originalul cu rezultatul și salvezi varianta mai mică.</p>
+          <ul class="sits"><li>imaginile de pe site-ul meu sunt prea mari și pagina se încarcă greu</li><li>vreau să micșorez o poză sub o anumită dimensiune</li></ul>
+          <div class="foot"><span class="cat"><i></i>Imagini &amp; video</span><span class="star">+2 situații</span></div>
+        </article>
+        <article class="card" style="--cat:var(--c-img)">
+          <div class="top"><span class="host">photopea.com</span><span class="type">site</span></div>
+          <h3>Photopea</h3>
+          <p>Editor foto în browser, ca Photoshop: deschide PSD, lucrează cu straturi, măști și filtre, rulează local.</p>
+          <ul class="sits"><li>am primit un fișier PSD și nu am Photoshop</li><li>vreau să editez cu straturi fără să instalez nimic</li></ul>
+          <div class="foot"><span class="cat"><i></i>Imagini &amp; video</span><span class="star">+2 situații</span></div>
+        </article>
+        <article class="card" style="--cat:var(--c-img)">
+          <div class="top"><span class="host">cleanup.pictures</span><span class="type">site</span></div>
+          <h3>Cleanup.pictures</h3>
+          <p>Treci cu pensula peste un obiect și AI-ul reconstruiește fundalul: oameni, text, logo-uri, zgârieturi.</p>
+          <ul class="sits"><li>vreau să șterg o persoană din fundalul unei fotografii</li><li>vreau să scot data imprimată de pe o poză</li></ul>
+          <div class="foot"><span class="cat"><i></i>Imagini &amp; video</span><span class="star">+2 situații</span></div>
+        </article>
+        <article class="card" style="--cat:var(--c-img)">
+          <div class="top"><span class="host">unscreen.com → canva.com</span><span class="type">site</span></div>
+          <h3>Unscreen</h3>
+          <p>Fundal transparent pe toate cadrele unui clip, fără green screen. Acum face parte din Canva Pro.</p>
+          <ul class="sits"><li>vreau să scot fundalul dintr-un clip filmat fără green screen</li><li>vreau subiectul din video pe alt fundal</li></ul>
+          <div class="foot"><span class="cat"><i></i>Imagini &amp; video</span><span class="star" style="color:var(--signal)">⚑ notă de verificare</span></div>
+        </article>
+        <article class="card" style="--cat:var(--c-img)">
+          <div class="top"><span class="host">github.com/comfyanonymous</span><span class="type">repo</span></div>
+          <h3>ComfyUI</h3>
+          <p>Graf de noduri pentru generare de imagini, video și audio cu modele deschise, local, chiar pe 4 GB VRAM.</p>
+          <ul class="sits"><li>vreau să generez imagini cu AI local, fără abonament</li><li>vreau control pe fiecare pas: model, LoRA, ControlNet</li></ul>
+          <div class="foot"><span class="cat"><i style="background:var(--c-ai)"></i>AI &amp; LLM <span style="color:var(--muted)">+1</span></span><span class="star"><svg><use href="#i-star"/></svg>137,7k · azi</span></div>
+        </article>
+      </div>
+    </div>
+    <div class="status">
+      <span><i class="dot"></i>Catalog la zi</span>
+      <span>75 fișe · 53 Toolbox · 22 Learn</span>
+      <span>ultimul import: 15 oct., 20:39</span>
+      <span class="grow"></span>
+      <span class="keys"><span><b>Ctrl K</b> caută</span><span><b>Ctrl 1/2</b> Toolbox/Learn</span><span><b>← →</b> straturi</span><span><b>Enter</b> deschide</span></span>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= ECRAN 2 ================= -->
+  <div class="shot-label"><b>02</b> Fișa completă · remove.bg <em>Situațiile ca repere numerotate, cartușul tehnic jos în dreapta, „Notițele mele” editabile direct, cu chenar punctat.</em></div>
+  <div class="scroller">
+  <div class="win">
+    <div class="titlebar">
+      <div class="app"><span class="logo">w</span>whenkit</div>
+      <span class="path">C:\Users\Luca\Programe\whenkit</span>
+      <span class="spacer"></span>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="toolbar">
+      <div class="tabs">
+        <div class="tab on">Toolbox <span class="n">53</span></div>
+        <div class="tab">Learn <span class="n">22</span></div>
+      </div>
+      <span class="sep"></span>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><span class="q">Ce vrei să faci? ex. „scot fundalul”</span><kbd>Ctrl K</kbd></div>
+      <span class="spacer" style="flex:1"></span>
+      <span class="tool-btn"><svg class="i"><use href="#i-layers"/></svg>Categorii</span>
+      <span class="tool-btn primary"><svg class="i"><use href="#i-export"/></svg>Exportă catalogul</span>
+      <span class="sep"></span>
+      <label for="theme" class="theme-switch" title="Comută tema"><span><svg><use href="#i-sun"/></svg></span><span><svg><use href="#i-moon"/></svg></span></label>
+    </div>
+    <div class="crumbbar">
+      <span class="btn ghost"><svg class="i"><use href="#i-back"/></svg>Înapoi <kbd>Esc</kbd></span>
+      <span class="crumbs">Toolbox <span class="s">/</span> Imagini &amp; video <span class="s">/</span> <b>remove.bg</b></span>
+      <span style="flex:1"></span>
+      <span class="btn"><svg class="i"><use href="#i-edit"/></svg>Editează <kbd>E</kbd></span>
+      <span class="btn danger"><svg class="i"><use href="#i-trash"/></svg>Șterge</span>
+    </div>
+    <div class="work" style="display:flex">
+      <div class="sheet">
+        <div class="main">
+          <div class="ftitle">
+            <div class="mark"><svg><use href="#i-scissors"/></svg></div>
+            <div>
+              <h2>remove.bg</h2>
+              <div class="sub"><a href="#">remove.bg <svg><use href="#i-ext"/></svg></a><span>·</span><span>site</span><span>·</span><span style="display:inline-flex;gap:6px;align-items:center;font-family:var(--f-text);color:var(--ink-2)"><i style="width:8px;height:8px;background:var(--c-img);border-radius:1px"></i>Imagini &amp; video</span></div>
+            </div>
+          </div>
+          <p class="lead">Serviciu care scoate automat fundalul din fotografii, cu pensulă pentru retușuri. Poți pune fundal alb (pentru produse sau poze de profil) sau transparent (PNG); are API, extensie de Photoshop și aplicații pentru Windows, Mac, Linux și Android.</p>
+          <div class="sec-h">Când o folosesc · 4</div>
+          <ol class="callouts">
+            <li><b>01</b>vreau să scot fundalul dintr-o poză</li>
+            <li><b>02</b>am nevoie de poze de produs pe fundal alb pentru un magazin online</li>
+            <li><b>03</b>vreau un logo sau o persoană decupată pe fundal transparent</li>
+            <li><b>04</b>vreau să scot automat fundalul din multe imagini, din aplicația mea, prin API</li>
+          </ol>
+          <div class="sec-h">Cuvinte-cheie</div>
+          <div class="tags"><span>fundal</span><span>background</span><span>remove background</span><span>decupare</span><span>transparent</span><span>png</span><span>fundal alb</span><span>api</span></div>
+          <div class="notes">
+            <div class="h"><svg class="i"><use href="#i-edit"/></svg>Notițele mele <small>salvat automat · doar tu scrii aici</small></div>
+            <p>Gratuit doar la rezoluție mică (previzualizare). Pentru avatar e suficient; pentru produse am plătit 1 credit/poză.</p>
+            <p>Părul creț iese mai bine dacă retușez marginea cu pensula „Restore”.<span class="caret"></span></p>
+          </div>
+        </div>
+        <aside class="side">
+          <div class="linkbox">
+            <div class="sec-h">Link</div>
+            <div class="open"><div>Deschide în browser<small>https://remove.bg</small></div><svg class="i"><use href="#i-ext"/></svg></div>
+          </div>
+          <div>
+            <div class="sec-h" style="margin-bottom:10px">Resurse înrudite · 3</div>
+            <div class="rel">
+              <a href="#" style="--cat:var(--c-img)"><i></i><span><b>Unscreen</b><small>același lucru, pentru video</small></span><span class="go">→</span></a>
+              <a href="#" style="--cat:var(--c-img)"><i></i><span><b>Photopea</b><small>editor complet, decupare manuală</small></span><span class="go">→</span></a>
+              <a href="#" style="--cat:var(--c-img)"><i></i><span><b>Cleanup.pictures</b><small>șterge obiecte, nu fundalul</small></span><span class="go">→</span></a>
+            </div>
+          </div>
+          <div class="cartus">
+            <div class="wide">FIȘĂ · UNEALTĂ <em>rev. 1</em></div>
+            <div><small>Zonă</small>Toolbox</div>
+            <div><small>Tip</small>site</div>
+            <div><small>Adăugat</small>15.10.2026</div>
+            <div><small>Verificat</small>15.10.2026 <span style="color:var(--ok)">✓</span></div>
+            <div><small>Id</small>7f3c…e21a</div>
+            <div><small>Proprietar</small>Luca</div>
+          </div>
+        </aside>
+      </div>
+    </div>
+    <div class="status">
+      <span><i class="dot"></i>Catalog la zi</span>
+      <span>fișa 1 din 6 în strat</span>
+      <span class="grow"></span>
+      <span class="keys"><span><b>E</b> editează</span><span><b>Alt ↓</b> următoarea fișă</span><span><b>Ctrl Enter</b> deschide linkul</span><span><b>Esc</b> înapoi</span></span>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= ECRAN 3 ================= -->
+  <div class="shot-label"><b>03</b> Stare · Learn, în timpul unui import <em>Felul fișei (concept / material) ca etichetă colorată; fișa abia sosită din terminal „aterizează” pe grilă, marcată cu portocaliu.</em></div>
+  <div class="scroller">
+  <div class="win short">
+    <div class="titlebar">
+      <div class="app"><span class="logo">w</span>whenkit</div>
+      <span class="path">C:\Users\Luca\Programe\whenkit</span>
+      <span class="spacer"></span>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="toolbar">
+      <div class="tabs">
+        <div class="tab">Toolbox <span class="n">53</span></div>
+        <div class="tab on">Learn <span class="n">23</span></div>
+      </div>
+      <span class="sep"></span>
+      <div class="search"><svg class="i"><use href="#i-search"/></svg><span class="q">Ce vrei să înțelegi? ex. „aleg un API”</span><kbd>Ctrl K</kbd></div>
+      <span class="spacer" style="flex:1"></span>
+      <span class="tool-btn"><svg class="i"><use href="#i-layers"/></svg>Categorii</span>
+      <span class="tool-btn primary"><svg class="i"><use href="#i-export"/></svg>Exportă catalogul</span>
+      <span class="sep"></span>
+      <label for="theme" class="theme-switch" title="Comută tema"><span><svg><use href="#i-sun"/></svg></span><span><svg><use href="#i-moon"/></svg></span></label>
+    </div>
+    <div class="layers">
+      <span class="lbl"><svg class="i" style="width:13px;height:13px"><use href="#i-layers"/></svg>Straturi</span>
+      <span class="chip"><i style="background:var(--ink-2)"></i>Toate <span class="n">23</span></span>
+      <span class="chip on"><i style="background:var(--c-data)"></i>Backend &amp; API-uri <span class="n">8</span></span>
+      <span class="chip"><i style="background:var(--c-cc)"></i>Cărți &amp; cursuri gratuite <span class="n">5</span></span>
+      <span class="chip"><i style="background:var(--c-disc)"></i>Construiești ca să înveți <span class="n">3</span></span>
+      <span class="chip"><i style="background:var(--c-design)"></i>Interviuri <span class="n">4</span></span>
+      <span class="chip"><i style="background:var(--c-ai)"></i>Limbaje <span class="n">3</span></span>
+      <span class="chip"><i style="background:var(--c-mock)"></i>Roadmaps &amp; cariere <span class="n">3</span></span>
+      <span class="chip"><i style="background:var(--c-sec)"></i>Securitate <span class="n">1</span></span>
+      <span class="fade"></span><span class="arrow r"><svg class="i"><use href="#i-fwd"/></svg></span>
+    </div>
+    <div class="work">
+      <div class="grid" style="padding-top:22px">
+        <article class="card" style="--cat:var(--c-data);min-height:0">
+          <div class="top"><span class="kind concept"><span class="g">◆</span>concept · umbrelă</span><span class="host"></span><span>5 copii</span></div>
+          <h3>Tipuri de API</h3>
+          <p>Comparație între REST, GraphQL, SOAP, WebSocket și RPC, cu criterii după care alegi unul.</p>
+          <ul class="sits"><li>trebuie să aleg ce fel de API expun</li></ul>
+        </article>
+        <article class="card" style="--cat:var(--c-data);min-height:0">
+          <div class="top"><span class="kind concept"><span class="g">◆</span>concept</span></div>
+          <h3>GraphQL API</h3>
+          <p>Clientul cere exact câmpurile de care are nevoie, printr-un singur endpoint.</p>
+          <ul class="sits"><li>frontend-ul face prea multe cereri ca să adune datele unui ecran → GraphQL</li></ul>
+        </article>
+        <article class="card" style="--cat:var(--c-data);min-height:0">
+          <div class="top"><span class="kind material"><span class="g">▤</span>material</span><span class="host"></span><span class="star" style="display:flex;gap:4px;align-items:center"><svg style="width:11px;height:11px;color:var(--c-cc)"><use href="#i-star"/></svg>374k</span></div>
+          <h3>System Design Primer</h3>
+          <p>Scalare, load balancing, cache, replicare și sharding, cozi de mesaje, explicate cu diagrame.</p>
+          <ul class="sits"><li>am un interviu de system design și nu știu cum să structurez răspunsul</li></ul>
+        </article>
+        <article class="card new" style="--cat:var(--c-data);min-height:0">
+          <span class="flag">NOU · ACUM 3 S</span>
+          <div class="top"><span class="kind concept"><span class="g">◆</span>concept</span></div>
+          <h3>Webhook</h3>
+          <p>Serverul altcuiva te anunță printr-un POST la un URL al tău când se întâmplă ceva, fără să întrebi tu.</p>
+          <ul class="sits"><li>vreau să aflu imediat când o plată reușește, fără să verific la fiecare minut → webhook</li></ul>
+        </article>
+      </div>
+    </div>
+    <div class="status">
+      <span><i class="dot busy"></i>Claude importă… 2 din 5 fișe</span>
+      <span>76 fișe</span>
+      <span class="grow"></span>
+      <span class="keys"><span>Fișele noi apar singure, nu trebuie să reîmprospătezi.</span></span>
+    </div>
+  </div>
+  </div>
+
+  <!-- ================= ECRAN 4 ================= -->
+  <div class="shot-label"><b>04</b> Stare · căutare fără rezultat <em>Gol, dar util: sinonime de încercat și cum îl întrebi pe Claude din terminal.</em></div>
+  <div class="scroller">
+  <div class="win short">
+    <div class="titlebar">
+      <div class="app"><span class="logo">w</span>whenkit</div>
+      <span class="path">C:\Users\Luca\Programe\whenkit</span>
+      <span class="spacer"></span>
+      <div class="caption"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div>
+    </div>
+    <div class="toolbar">
+      <div class="tabs">
+        <div class="tab on">Toolbox <span class="n">53</span></div>
+        <div class="tab">Learn <span class="n">22</span></div>
+      </div>
+      <span class="sep"></span>
+      <div class="search focus"><svg class="i" style="color:var(--accent)"><use href="#i-search"/></svg><span class="q typed">convertesc un video în gif</span><kbd>Esc</kbd></div>
+      <span class="spacer" style="flex:1"></span>
+      <span class="tool-btn"><svg class="i"><use href="#i-layers"/></svg>Categorii</span>
+      <span class="tool-btn primary"><svg class="i"><use href="#i-export"/></svg>Exportă catalogul</span>
+      <span class="sep"></span>
+      <label for="theme" class="theme-switch" title="Comută tema"><span><svg><use href="#i-sun"/></svg></span><span><svg><use href="#i-moon"/></svg></span></label>
+    </div>
+    <div class="work">
+      <div class="empty">
+        <div class="box">
+          <svg class="target" viewBox="0 0 150 150" aria-hidden="true">
+            <circle cx="75" cy="75" r="56" fill="none" stroke="var(--line-strong)" stroke-dasharray="4 5"/>
+            <circle cx="75" cy="75" r="30" fill="none" stroke="var(--line-strong)"/>
+            <path d="M75 6v32M75 112v32M6 75h32M112 75h32" stroke="var(--accent)" stroke-width="1.5"/>
+            <circle cx="75" cy="75" r="3" fill="var(--signal)"/>
+            <text x="102" y="40" font-family="Cascadia Mono, Consolas, monospace" font-size="10" fill="var(--muted)">0,00</text>
+          </svg>
+          <h3>Nimic pe planșă pentru „convertesc un video în gif”</h3>
+          <p>Am căutat în nume, „ce face”, situații și cuvinte-cheie, în toate cele 53 de unelte. Poate e scrisă altfel:</p>
+          <div class="try"><span>gif</span><span>video</span><span>conversie</span><span>animație</span></div>
+          <div class="cmd">Sau cere-i lui Claude, în terminal: <b>/gaseste</b> o unealtă care face asta</div>
+        </div>
+      </div>
+    </div>
+    <div class="status">
+      <span><i class="dot"></i>Catalog la zi</span>
+      <span>0 rezultate · 53 căutate</span>
+      <span class="grow"></span>
+      <span class="keys"><span><b>Esc</b> golește căutarea</span></span>
+    </div>
+  </div>
+  </div>
+</div>
+</body>
+</html>

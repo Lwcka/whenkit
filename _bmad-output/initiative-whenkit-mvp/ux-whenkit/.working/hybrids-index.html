@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Planșetă + Fișier</title>
+<style>
+/*
+  Index pentru cele trei hibride Planșetă + Fișier.
+  Previzualizările sunt chiar fișierele variantelor, micșorate (iframe), deschise la primul ecran;
+  tema întunecată a previzualizărilor vine din ancora #dark a fiecărui fișier (CSS :target, fără JS).
+
+  LUMINOS: fundal #F1EEE8 · card #FFFFFF · text #1B1D21 (16.2:1) · secundar #545A63 (6.6:1) · linie #E3DFD7 · accent #1D56C9 (6.3:1)
+  ÎNTUNECAT: fundal #0E141B · card #17202B · text #EEEAE3 (14.4:1) · secundar #AEB4BD (8.0:1) · linie #283445 · accent #86B1FF (7.4:1)
+*/
+body{
+  --bg:#F1EEE8;--card:#FFFFFF;--card-2:#F7F5F1;--ink:#1B1D21;--ink-2:#545A63;--line:#E3DFD7;--accent:#1D56C9;--accent-bg:#E8EEFA;--signal:#B93F0E;
+  --shadow:0 1px 2px rgba(40,30,15,.05),0 18px 40px -26px rgba(40,30,15,.35);
+  --f-head:"Bahnschrift","Segoe UI Variable Display","Segoe UI",sans-serif;
+  --f-text:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --f-mono:"Cascadia Mono",Consolas,ui-monospace,monospace;
+  margin:0;background:var(--bg);color:var(--ink);font:15px/1.55 var(--f-text);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s;
+}
+body:has(#theme:checked){--bg:#0E141B;--card:#17202B;--card-2:#1C2733;--ink:#EEEAE3;--ink-2:#AEB4BD;--line:#283445;--accent:#86B1FF;--accent-bg:#1D3150;--signal:#FFA867;
+  --shadow:0 1px 0 rgba(0,0,0,.3),0 18px 40px -24px rgba(0,0,0,.8)}
+#theme{position:absolute;opacity:0;pointer-events:none}
+*{box-sizing:border-box}
+.wrap{max-width:1240px;margin:0 auto;padding:56px 24px 80px}
+header{display:flex;align-items:flex-end;gap:24px;margin-bottom:30px}
+.k{font:600 12.5px/1 var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--accent)}
+h1{margin:12px 0 12px;font:600 46px/1.05 var(--f-head);letter-spacing:-.01em}
+header p{margin:0;max-width:760px;color:var(--ink-2)}
+.tg{margin-left:auto;flex:none;cursor:pointer;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink-2);padding:8px 14px 8px 10px;border:1px solid var(--line);border-radius:999px;background:var(--card)}
+.tg i{width:36px;height:20px;border-radius:999px;background:var(--line);position:relative}
+.tg i::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--signal);transition:transform .25s,background .25s}
+body:has(#theme:checked) .tg i::after{transform:translateX(16px);background:var(--accent)}
+.tg span::before{content:"Zi"}
+body:has(#theme:checked) .tg span::before{content:"Noapte"}
+
+/* cadranul: de la Planșetă la Fișier */
+.dial{position:relative;margin:8px 0 34px;padding:34px 26px 14px;background:var(--card);border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow)}
+.track{position:relative;height:8px;border-radius:999px;margin:0 60px;background:linear-gradient(90deg,#1D5BD8,#6A7FB8 45%,#C8A27A 75%,#B0352A)}
+.stops{position:relative;height:56px;margin:0 60px}
+.stop{position:absolute;top:-22px;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:10px;text-decoration:none;color:var(--ink);font:600 14px/1.15 var(--f-head);text-align:center;white-space:nowrap}
+.stop i{width:22px;height:22px;border-radius:50%;background:var(--card);border:5px solid var(--accent);box-shadow:0 0 0 4px var(--card)}
+.stop small{display:block;font:12px/1.2 var(--f-text);color:var(--ink-2);margin-top:2px}
+.stop.end i{border-width:3px;border-color:var(--ink-2)}
+.stop.end{color:var(--ink-2)}
+.stop:hover{color:var(--accent)}
+
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px}
+a.dir{display:flex;flex-direction:column;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);transition:transform .2s,box-shadow .2s}
+a.dir:hover{transform:translateY(-3px);box-shadow:0 26px 50px -26px rgba(0,0,0,.45)}
+.prev{height:236px;position:relative;overflow:hidden;background:var(--card-2);border-bottom:1px solid var(--line)}
+.prev iframe{position:absolute;left:0;top:0;width:1396px;height:900px;border:0;transform:scale(.27);transform-origin:0 0;pointer-events:none;transition:opacity .3s}
+.prev iframe.d{opacity:0}
+body:has(#theme:checked) .prev iframe.l{opacity:0}
+body:has(#theme:checked) .prev iframe.d{opacity:1}
+.prev .tag{position:absolute;right:10px;bottom:10px;font:600 11px/1 var(--f-mono);letter-spacing:.04em;padding:5px 9px;border-radius:999px;background:var(--card);color:var(--ink-2);border:1px solid var(--line);z-index:1}
+.body{padding:18px 22px 22px;display:flex;flex-direction:column;flex:1}
+.body .n{font:600 12px/1 var(--f-mono);color:var(--ink-2);display:flex;gap:8px;align-items:center}
+.pips{display:inline-flex;gap:4px}
+.pips b{width:18px;height:6px;border-radius:999px;background:var(--line)}
+.pips b.on{background:var(--accent)}
+.body h2{margin:10px 0 6px;font:600 25px/1.1 var(--f-head);letter-spacing:.005em}
+.body .one{margin:0 0 12px;font-weight:600}
+.body ul{margin:0;padding-left:18px;color:var(--ink-2);font-size:14px}
+.body li{margin:3px 0}
+.open{margin-top:auto;padding-top:16px;display:inline-flex;gap:6px;font:600 14px/1 var(--f-text);color:var(--accent)}
+
+h3.cmp{margin:46px 0 14px;font:600 14px/1 var(--f-head);letter-spacing:.06em;text-transform:uppercase;color:var(--ink-2)}
+.orig{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.orig a{display:grid;grid-template-columns:200px 1fr;text-decoration:none;color:inherit;background:var(--card);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.orig a:hover{border-color:var(--accent)}
+.orig .t{padding:16px 18px}
+.orig .t b{display:block;font:600 19px/1.1 var(--f-head);margin-bottom:6px}
+.orig .t span{font-size:13.5px;color:var(--ink-2)}
+.mini{position:relative;overflow:hidden;min-height:110px}
+/* mini-previzualizări pentru originale (culori fixe, ale direcțiilor) */
+.p1{background-color:#F6F8FA;background-image:linear-gradient(#D4DCE6 1px,transparent 1px),linear-gradient(90deg,#D4DCE6 1px,transparent 1px),linear-gradient(#E2E8EF 1px,transparent 1px),linear-gradient(90deg,#E2E8EF 1px,transparent 1px);background-size:50px 50px,50px 50px,10px 10px,10px 10px}
+.p1 .c{position:absolute;top:26px;width:52px;height:64px;background:#fff;border:1px solid #D2DAE3;border-radius:2px}
+.p1 .c::before{content:"";position:absolute;left:7px;top:9px;width:28px;height:6px;background:#101820}
+.p1 .c::after{content:"";position:absolute;left:7px;right:7px;top:26px;height:10px;background:#F1F4F8;border-left:2px solid #2563EB}
+.p1 .c.s{outline:2px solid #1D5BD8}
+.p2{background:#F6F1E7}
+.p2 .c{position:absolute;top:30px;width:56px;height:66px;background:#FFFDF8;border-radius:4px;box-shadow:0 8px 18px -10px rgba(60,45,20,.4)}
+.p2 .c::before{content:"";position:absolute;top:-6px;left:var(--x);width:22px;height:6px;border-radius:3px 3px 0 0;background:var(--t)}
+.p2 .c::after{content:"";position:absolute;left:8px;right:8px;top:20px;border-top:1.5px solid #B0352A;box-shadow:0 10px 0 -0.5px #E6EEF6,0 20px 0 -0.5px #E6EEF6,0 30px 0 -0.5px #E6EEF6}
+.foot{margin-top:28px;color:var(--ink-2);font-size:14px;max-width:900px}
+code{font:13px var(--f-mono)}
+@media (max-width:1100px){.grid{grid-template-columns:1fr}.prev{height:auto;aspect-ratio:1396/830}.prev iframe{transform:scale(var(--s,.6))}.orig{grid-template-columns:1fr}}
+@media (max-width:760px){header{flex-direction:column;align-items:flex-start}.tg{margin-left:0}.track,.stops{margin:0 34px}.stop{font-size:12px}.stop small{display:none}.orig a{grid-template-columns:1fr}.mini{min-height:120px}h1{font-size:34px}}
+</style>
+</head>
+<body>
+<input type="checkbox" id="theme" aria-label="Temă întunecată">
+<div class="wrap">
+  <header>
+    <div>
+      <div class="k">whenkit · UX · Planșetă + Fișier</div>
+      <h1>Cât din Fișier încape în Planșetă?</h1>
+      <p>Planșeta rămâne baza în toate trei: Bahnschrift, cobalt și portocaliu, straturile pentru categorii, colțurile de decupare și bara de stare, cu noaptea în albastru de blueprint. Fiecare treaptă adaugă ceva din Fișier peste cea dinainte, ca să alegi unde te oprești.</p>
+    </div>
+    <label class="tg" for="theme"><i></i><span></span></label>
+  </header>
+
+  <div class="dial">
+    <div class="track"></div>
+    <div class="stops">
+      <a class="stop end" href="direction-planseta.html" style="left:0"><i></i>Planșetă<small>originalul</small></a>
+      <a class="stop" href="direction-planseta-moale.html" style="left:25%"><i></i>1 · Moale<small>rotund și aerisit</small></a>
+      <a class="stop" href="direction-planseta-calda.html" style="left:50%"><i></i>2 · Caldă<small>+ hârtie și taburi</small></a>
+      <a class="stop" href="direction-planseta-atelier.html" style="left:75%"><i></i>3 · De atelier<small>+ ștampile și scris de mână</small></a>
+      <a class="stop end" href="direction-fisier.html" style="left:100%"><i></i>Fișier<small>originalul</small></a>
+    </div>
+  </div>
+
+  <div class="grid">
+    <a class="dir" href="direction-planseta-moale.html">
+      <div class="prev"><iframe class="l" src="direction-planseta-moale.html#s1" tabindex="-1" aria-hidden="true" scrolling="no" title="Moale, temă luminoasă"></iframe><iframe class="d" src="direction-planseta-moale.html#dark" tabindex="-1" aria-hidden="true" scrolling="no" title="Moale, temă întunecată"></iframe><span class="tag">ecranul Toolbox</span></div>
+      <div class="body"><span class="n">01 <span class="pips"><b class="on"></b><b></b><b></b></span></span><h2>Moale</h2>
+        <p class="one">Doar ce ai cerut: carduri rotunde, straturi ca pastile, mult aer.</p>
+        <ul><li>3 carduri pe rând în loc de 4, padding generos</li><li>grila milimetrică doar pe margini, abia vizibilă</li><li>semnele de desen păstrate: colțuri de decupare și cote</li><li>bara de stare mai discretă</li></ul>
+        <span class="open">Deschide varianta →</span></div>
+    </a>
+    <a class="dir" href="direction-planseta-calda.html">
+      <div class="prev"><iframe class="l" src="direction-planseta-calda.html#s1" tabindex="-1" aria-hidden="true" scrolling="no" title="Caldă, temă luminoasă"></iframe><iframe class="d" src="direction-planseta-calda.html#dark" tabindex="-1" aria-hidden="true" scrolling="no" title="Caldă, temă întunecată"></iframe><span class="tag">ecranul Toolbox</span></div>
+      <div class="body"><span class="n">02 <span class="pips"><b class="on"></b><b class="on"></b><b></b></span></span><h2>Caldă</h2>
+        <p class="one">Moale, plus căldura Fișierului: hârtie ivoire și taburi colorate.</p>
+        <ul><li>fundal ivoire în loc de alb rece</li><li>tab în culoarea categoriei pe fiecare card și pe fișă</li><li>noaptea: blueprint mai catifelat, cu text crem</li></ul>
+        <span class="open">Deschide varianta →</span></div>
+    </a>
+    <a class="dir" href="direction-planseta-atelier.html">
+      <div class="prev"><iframe class="l" src="direction-planseta-atelier.html#s3" tabindex="-1" aria-hidden="true" scrolling="no" title="De atelier, ecranul Learn, temă luminoasă"></iframe><iframe class="d" src="direction-planseta-atelier.html#dark3" tabindex="-1" aria-hidden="true" scrolling="no" title="De atelier, ecranul Learn, temă întunecată"></iframe><span class="tag">ecranul Learn, în timpul importului</span></div>
+      <div class="body"><span class="n">03 <span class="pips"><b class="on"></b><b class="on"></b><b class="on"></b></span></span><h2>De atelier</h2>
+        <p class="one">Caldă, plus jocul Fișierului: ștampile, bandă și scris de mână.</p>
+        <ul><li>ștampile „Concept” / „Material” în Learn</li><li>fișa abia sosită, prinsă cu bandă de planșetă</li><li>„Notițele mele” scrise de mână (Ink Free)</li><li>titlul fișei pe serif (Sitka), doar acolo</li></ul>
+        <span class="open">Deschide varianta →</span></div>
+    </a>
+  </div>
+
+  <h3 class="cmp">Pentru comparație, originalele</h3>
+  <div class="orig">
+    <a href="direction-planseta.html"><div class="mini p1"><span class="c s" style="left:14px"></span><span class="c" style="left:74px"></span><span class="c" style="left:134px"></span></div><div class="t"><b>Planșetă</b><span>Omagiul AutoCAD de la care pornim: grilă milimetrică, straturi, cartuș, 4 coloane, colțuri drepte.</span></div></a>
+    <a href="direction-fisier.html"><div class="mini p2"><span class="c" style="left:14px;--x:6px;--t:#3B73D9"></span><span class="c" style="left:78px;--x:18px;--t:#1E9AA8"></span><span class="c" style="left:142px;--x:28px;--t:#E2683C"></span></div><div class="t"><b>Fișier</b><span>Catalogul de bibliotecă din care împrumutăm: hârtie caldă, taburi, ștampile, serif, notițe de mână.</span></div></a>
+  </div>
+
+  <p class="foot">Previzualizările sunt chiar fișierele variantelor, micșorate; comutatorul de aici le arată pe toate în tema aleasă. În fiecare fișier, comutatorul zi / noapte e în bara de titlu a ferestrei. Fișele sunt cele reale din catalog (<code>whenkit list</code>); „Webhook” e un exemplu inventat de fișă care sosește dintr-un import.</p>
+</div>
+</body>
+</html>

@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="ro">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>WhenKit · Fișa</title>
+<style>
+/*
+  KEY SCREEN 2: entry sheet, view mode + edit mode with the conflict banner.
+  Governing spine sections:
+    DESIGN.md: Components > entry-sheet (incl. "În editare"), sheet-bar, conflict-banner, situation-callout, keyword-tag,
+               my-notes, open-in-browser, related-link, title-block, text-field, select, category-picker, list-editor,
+               Butoane și stări interactive (button, button-primary, button-ghost, button-danger), Layout & Spacing (sheet).
+    EXPERIENCE.md: Component Patterns (sheet-bar, entry-sheet, conflict-banner, my-notes, text-field, select, category-picker,
+               list-editor, open-in-browser, related-link), State Patterns (Fișă modificată din terminal în timpul editării,
+               Salvare refuzată: CONFLICT), Key Flows > Flow 1 step 4, Flow 3 (steps 2-4, failure B).
+  Tokens: every value comes from DESIGN.md front matter (custom properties named after the tokens).
+  Theme: pure CSS (checkbox #theme + :has), light by default. Breakpoints: container queries on .win
+  (the window width), per EXPERIENCE.md "Responsive & Platform". Spines win over this mock.
+*/
+/* ---------- tokens (DESIGN.md front matter; names = token names) ---------- */
+:root{
+  --canvas:#F7F4EE;--surface:#FFFDF9;--surface-2:#F5F1E9;--chrome:#F0EBE2;--line:#E7E0D3;--line-strong:#D4CAB9;
+  --grid:#EEE7DA;--grid-major:#E3D9C8;--ink:#1D1B18;--ink-2:#47423A;--muted:#6A6357;
+  --accent:#1D56C9;--accent-bg:#E8EEFA;--accent-ink:#FFFFFF;--signal:#B93F0E;--signal-bg:#FCEDE1;
+  --ok:#2F7D46;--danger:#B91C1C;--tape:#EFD48A;--tape-ink:#3A2F0C;--scrim:#1D1B18;
+  --category-1:#2563EB;--category-2:#EA580C;--category-3:#DB2777;--category-4:#7C3AED;--category-5:#D97706;
+  --category-6:#DC2626;--category-7:#0891B2;--category-8:#65A30D;--category-9:#475569;
+
+  --ff-head:Bahnschrift,"Segoe UI Variable Display","Segoe UI",sans-serif;
+  --ff-text:"Segoe UI Variable Text","Segoe UI",system-ui,sans-serif;
+  --ff-mono:"Cascadia Mono","Cascadia Code",Consolas,monospace;
+  --typography-display:600 36px/1.05 var(--ff-head);--ls-display:-0.005em;
+  --typography-headline:600 23px/1 var(--ff-head);--ls-headline:0.01em;
+  --typography-card-title:600 21px/1.15 var(--ff-head);--ls-card-title:0.01em;
+  --typography-tab:600 16px/1 var(--ff-head);--ls-tab:0.02em;
+  --typography-title-sm:600 14.5px/1.1 var(--ff-head);--ls-title-sm:0.01em;
+  --typography-app-title:600 13.5px/1 var(--ff-head);--ls-app-title:0.02em;
+  --typography-label:600 13px/1 var(--ff-head);--ls-label:0.05em;
+  --typography-label-sm:600 12px/1 var(--ff-head);--ls-label-sm:0.03em;
+  --typography-stamp:700 11px/1 var(--ff-head);--ls-stamp:0.18em;
+  --typography-tape:600 11.5px/1 var(--ff-head);--ls-tape:0.1em;
+  --typography-body:400 14px/1.5 var(--ff-text);
+  --typography-body-lead:400 14.5px/1.55 var(--ff-text);
+  --typography-body-sm:400 13.5px/1.5 var(--ff-text);
+  --typography-button:500 13.5px/1 var(--ff-text);
+  --typography-situation:400 13px/1.4 var(--ff-text);
+  --typography-caption:400 12px/1.35 var(--ff-text);
+  --typography-mono:400 12px/1.35 var(--ff-mono);
+  --typography-mono-sm:400 11.5px/1 var(--ff-mono);
+  --typography-kbd:500 11px/1 var(--ff-mono);
+
+  --rounded-sm:6px;--rounded-tab:7px;--rounded-md:10px;--rounded-lg:12px;--rounded-xl:14px;--rounded-card:16px;--rounded-sheet:20px;--rounded-full:9999px;
+  --spacing-1:4px;--spacing-2:8px;--spacing-3:12px;--spacing-4:16px;--spacing-5:20px;--spacing-6:24px;--spacing-7:28px;--spacing-8:32px;
+  --spacing-bar-x:24px;--spacing-work-x:32px;--spacing-card-gap-x:24px;--spacing-card-gap-y:26px;--spacing-card-min-width:300px;
+  --spacing-grid-minor:16px;--spacing-grid-major:80px;--spacing-titlebar-height:40px;--spacing-toolbar-height:64px;
+  --spacing-category-bar-height:60px;--spacing-sheet-bar-height:58px;--spacing-status-bar-height:32px;
+  --spacing-sheet-side-width:344px;--category-manager-row-min-height:44px;--category-manager-row-button-height:28px;--category-manager-row-button-typography:var(--typography-caption);--category-bar-fade-width:130px;--toast-stack-gap:var(--spacing-2);--dialog-confirm-width:480px;--entry-sheet-edit-type-width:170px;--spacing-sheet-side-width-narrow:300px;
+
+  --elevation-1:0 1px 2px rgba(60,45,20,.06),0 14px 32px -20px rgba(60,45,20,.32);
+  --elevation-2:0 2px 4px rgba(60,45,20,.07),0 22px 44px -22px rgba(29,86,201,.40);
+  --elevation-tape:0 2px 5px rgba(0,0,0,.12);
+  --elevation-accent:0 10px 24px -14px var(--accent);
+
+  --motion-quick:150ms;--motion-fade:200ms;--motion-slide:250ms;--motion-theme:300ms;--motion-pulse:600ms;--motion-arrival:900ms;
+  --motion-ease:ease-out;--motion-arrival-ease:cubic-bezier(.2,.9,.3,1.2);--motion-arrival-offset:-12px;--motion-enter-scale:0.98;--motion-caret-blink:1s;
+
+  --hover-overlay:color-mix(in srgb,var(--ink) 5%,transparent);
+  --pressed-overlay:color-mix(in srgb,var(--ink) 10%,transparent);
+  --disabled-opacity:0.45;
+  --icon-size:16px;--icon-size-sm:12px;--icon-stroke:1.5;
+
+  /* presentation only (around the window, not product) */
+  --page:color-mix(in srgb,var(--line-strong) 45%,var(--chrome));
+  --win-shadow:0 30px 80px -30px rgba(50,35,15,.42),0 0 0 1px rgba(60,45,20,.14);
+}
+:root:has(#theme:checked){
+  --canvas:#111923;--surface:#17212D;--surface-2:#1C2836;--chrome:#0D131A;--line:#263242;--line-strong:#364557;
+  --grid:#17212C;--grid-major:#1D2A38;--ink:#F0EBE2;--ink-2:#C3BCB0;--muted:#9A9387;
+  --accent:#86B1FF;--accent-bg:#1D3150;--accent-ink:#0B1424;--signal:#FFA867;--signal-bg:#3A2618;
+  --ok:#7BD392;--danger:#FF8A8A;--tape:#D2B866;--tape-ink:#1E1806;--scrim:#05080C;
+  --category-9:#94A3B8;
+  --elevation-1:0 1px 0 rgba(0,0,0,.25),0 14px 34px -18px rgba(0,0,0,.65);
+  --elevation-2:0 1px 0 rgba(0,0,0,.25),0 22px 44px -20px rgba(0,0,0,.8);
+  --page:#070B10;
+  --win-shadow:0 30px 80px -24px rgba(0,0,0,.7),0 0 0 1px rgba(240,235,226,.08);
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{color-scheme:light}
+:root:has(#theme:checked){color-scheme:dark}
+body{margin:0;background:var(--page);color:var(--ink);font:var(--typography-body);-webkit-font-smoothing:antialiased;transition:background var(--motion-theme),color var(--motion-theme)}
+#theme{position:absolute;opacity:0;pointer-events:none}
+svg.i{width:var(--icon-size);height:var(--icon-size);flex:none;fill:none;stroke:currentColor;stroke-width:var(--icon-stroke);stroke-linecap:round;stroke-linejoin:round}
+svg.i.sm{width:var(--icon-size-sm);height:var(--icon-size-sm)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.focus-ring{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- presentation page ---------- */
+.page{padding:40px 40px 120px;display:flex;flex-direction:column;align-items:center;gap:18px}
+.page-head{width:1280px;display:flex;align-items:flex-end;gap:24px;margin-bottom:6px}
+.page-head h1{margin:0;font:var(--typography-display);letter-spacing:var(--ls-display)}
+.page-head p{margin:8px 0 0;color:var(--ink-2);max-width:880px;font:var(--typography-body)}
+.page-head .kicker{font:var(--typography-mono-sm);letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.page-head .sp{flex:1}
+.page-head .th{display:flex;flex-direction:column;align-items:center;gap:6px;font:var(--typography-label-sm);letter-spacing:var(--ls-label-sm);color:var(--muted)}
+.shot{width:1280px;margin-top:30px;display:flex;align-items:baseline;gap:12px;font:var(--typography-label);letter-spacing:var(--ls-label);text-transform:uppercase;color:var(--ink-2)}
+.shot b{font:var(--typography-mono);font-weight:600;color:var(--accent)}
+.shot .nw{white-space:nowrap}
+.shot em{font:var(--typography-body-sm);font-style:normal;text-transform:none;letter-spacing:0;color:var(--muted)}
+
+/* ---------- window frame (Windows 11) ---------- */
+.win{width:1280px;height:800px;flex:none;border-radius:8px;overflow:hidden;background:var(--canvas);box-shadow:var(--win-shadow);display:flex;flex-direction:column;position:relative;container-type:inline-size;container-name:win}
+.win.w720{width:720px}
+.title-bar{height:var(--spacing-titlebar-height);flex:none;display:flex;align-items:center;background:var(--chrome);user-select:none}
+.title-bar .app{display:flex;align-items:center;gap:10px;padding:0 16px;font:var(--typography-app-title);letter-spacing:var(--ls-app-title)}
+.app-mark{width:20px;height:20px;border-radius:var(--rounded-sm);background:var(--accent);display:grid;place-items:center;color:var(--accent-ink);font:700 11.5px/1 var(--ff-head);position:relative}
+.app-mark::after{content:"";position:absolute;right:-3px;bottom:-3px;width:8px;height:8px;background:var(--signal);border-radius:50%;border:2px solid var(--chrome)}
+.title-bar .sp{flex:1}
+.caption-btns{display:flex;height:100%}
+.caption-btns span{width:46px;display:grid;place-items:center;color:var(--ink-2)}
+.caption-btns svg{width:10px;height:10px;stroke:currentColor;fill:none}
+/* theme-switch: pure CSS, label for #theme */
+.theme-switch{display:flex;align-items:center;height:28px;padding:3px;margin-right:10px;border-radius:var(--rounded-full);border:1px solid var(--line-strong);background:var(--surface-2);cursor:pointer;position:relative}
+.theme-switch span{width:32px;height:20px;display:grid;place-items:center;color:var(--muted);position:relative;z-index:1;transition:color var(--motion-fade)}
+.theme-switch svg.i{width:14px;height:14px}
+.theme-switch::before{content:"";position:absolute;left:3px;top:3px;width:32px;height:20px;border-radius:var(--rounded-full);background:var(--surface);box-shadow:0 1px 2px rgba(0,0,0,.14),0 0 0 1px var(--line-strong);transition:transform var(--motion-theme) var(--motion-ease),background var(--motion-theme)}
+.theme-switch span:first-child{color:var(--signal)}
+:root:has(#theme:checked) .theme-switch::before{transform:translateX(32px);background:var(--accent-bg);box-shadow:0 0 0 1px var(--accent)}
+:root:has(#theme:checked) .theme-switch span:first-child{color:var(--muted)}
+:root:has(#theme:checked) .theme-switch span:last-child{color:var(--accent)}
+:root:has(#theme:focus-visible) .theme-switch{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ---------- toolbar ---------- */
+.toolbar{height:var(--spacing-toolbar-height);flex:none;display:flex;align-items:center;gap:16px;padding:0 var(--spacing-bar-x);background:var(--surface);border-bottom:1px solid var(--line)}
+.zone-tabs{display:flex;height:100%;gap:22px;margin-right:6px}
+.zone-tab{display:flex;align-items:center;gap:9px;font:var(--typography-tab);letter-spacing:var(--ls-tab);color:var(--muted);position:relative;cursor:pointer;transition:color var(--motion-quick)}
+.zone-tab:hover{color:var(--ink-2)}
+.zone-tab .n{font:var(--typography-mono-sm);color:var(--muted);padding:4px 8px;border-radius:var(--rounded-full);background:var(--surface-2)}
+.zone-tab.on{color:var(--ink)}
+.zone-tab.on::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:3px;border-radius:3px 3px 0 0;background:var(--accent)}
+.zone-tab.on .n{color:var(--accent);background:var(--accent-bg)}
+.search-box{flex:1;min-width:0;max-width:560px;height:42px;display:flex;align-items:center;gap:11px;padding:0 8px 0 15px;background:var(--surface-2);border:1px solid var(--line);border-radius:var(--rounded-xl);color:var(--muted)}
+.search-box .q{flex:1;min-width:0;font:var(--typography-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kbd{display:inline-block;font:var(--typography-kbd);padding:4px 7px;border:1px solid var(--line-strong);border-bottom-width:2px;border-radius:var(--rounded-sm);color:var(--ink-2);background:var(--surface);white-space:nowrap}
+.toolbar .sp{flex:1}
+.toolbar-button{height:38px;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 15px;border:1px solid transparent;border-radius:var(--rounded-lg);font:var(--typography-button);color:var(--ink-2);white-space:nowrap;background:transparent;cursor:pointer;transition:background var(--motion-quick)}
+.toolbar-button:hover{background:var(--hover-overlay)}
+.toolbar-button.primary{border-color:var(--line-strong);color:var(--ink);background:var(--surface)}
+.toolbar-button.primary:hover{background-image:linear-gradient(var(--hover-overlay),var(--hover-overlay))}
+
+/* ---------- category bar ---------- */
+.category-bar{height:var(--spacing-category-bar-height);flex:none;display:flex;align-items:center;gap:10px;padding:0 0 0 var(--spacing-bar-x);background:var(--surface);border-bottom:1px solid var(--line);position:relative}
+.category-bar .lbl{flex:none;display:flex;align-items:center;gap:7px;font:var(--typography-label);letter-spacing:var(--ls-label);color:var(--muted);padding-right:12px;border-right:1px solid var(--line);height:24px}
+.category-bar .lbl svg.i{width:15px;height:15px}
+.chips{flex:1;min-width:0;overflow:hidden;position:relative;height:100%;display:flex;align-items:center}
+.chips .track{display:flex;gap:6px;transform:translateX(var(--scroll-x,0px))}
+.chips .fade{position:absolute;right:0;top:0;bottom:0;width:var(--category-bar-fade-width);background:linear-gradient(90deg,transparent,var(--surface) 55%);pointer-events:none}
+.chips .fade-l{position:absolute;left:0;top:0;bottom:0;width:var(--category-bar-fade-width);background:linear-gradient(270deg,transparent,var(--surface) 55%);pointer-events:none;display:none}
+.chips .less{position:absolute;left:8px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;place-items:center;color:var(--ink-2);background:var(--surface);border:1px solid var(--line);display:none}
+.chips .more{position:absolute;right:16px;top:50%;transform:translateY(-50%);width:34px;height:34px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);background:var(--surface);border:1px solid var(--line)}
+.category-chip{display:flex;align-items:center;gap:7px;height:34px;padding:0 13px 0 11px;border-radius:var(--rounded-full);font:var(--typography-button);color:var(--ink-2);white-space:nowrap;border:1px solid var(--line);background:var(--surface);cursor:pointer;transition:background var(--motion-quick),border-color var(--motion-quick)}
+.category-chip:hover{border-color:var(--line-strong);background-image:linear-gradient(var(--hover-overlay),var(--hover-overlay))}
+.category-chip i{width:10px;height:10px;border-radius:50%;flex:none;background:var(--category)}
+.category-chip .n{font:var(--typography-mono-sm);color:var(--muted)}
+.category-chip.all{--category:var(--ink-2)}
+.category-chip.on,.category-chip[aria-pressed="true"]{background:color-mix(in srgb,var(--category) 11%,var(--surface));border-color:color-mix(in srgb,var(--category) 55%,var(--surface));color:var(--ink);font-weight:600}
+.category-chip.on i,.category-chip[aria-pressed="true"] i{box-shadow:0 0 0 3px color-mix(in srgb,var(--category) 28%,transparent)}
+.category-chip.on .n{color:var(--ink-2)}
+.category-chip:disabled{opacity:var(--disabled-opacity);cursor:default}
+
+/* ---------- work area with the mm grid ---------- */
+.work{flex:1;min-height:0;position:relative;background:var(--canvas)}
+.work::before{content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(var(--grid-major) 1px,transparent 1px),linear-gradient(90deg,var(--grid-major) 1px,transparent 1px),linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:var(--spacing-grid-major) var(--spacing-grid-major),var(--spacing-grid-major) var(--spacing-grid-major),var(--spacing-grid-minor) var(--spacing-grid-minor),var(--spacing-grid-minor) var(--spacing-grid-minor);
+  background-position:-1px -1px;
+  -webkit-mask-image:radial-gradient(130% 120% at 50% 40%,rgba(0,0,0,.42) 40%,#000 100%);mask-image:radial-gradient(130% 120% at 50% 40%,rgba(0,0,0,.42) 40%,#000 100%)}
+.work .scroll{position:absolute;inset:0;overflow:auto}
+
+/* section header + dimension line */
+.section-header{display:flex;align-items:center;gap:16px;padding:26px var(--spacing-work-x) 22px}
+.section-header h2{margin:0;font:var(--typography-headline);letter-spacing:var(--ls-headline);color:var(--ink);display:flex;align-items:center;gap:11px;white-space:nowrap}
+.section-header h2 i{width:16px;height:9px;border-radius:3px 3px 0 0;background:var(--category)}
+.dim{flex:1;min-width:60px;position:relative;height:18px;display:flex;align-items:center;justify-content:center;--dl:color-mix(in srgb,var(--accent) 45%,var(--canvas))}
+.dim::before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px solid var(--dl)}
+.dim::after{content:"";position:absolute;inset:3px 0;background:linear-gradient(var(--dl),var(--dl)) left/1px 100% no-repeat,linear-gradient(var(--dl),var(--dl)) right/1px 100% no-repeat}
+.dim b{position:absolute;top:50%;width:10px;height:1.5px;background:var(--accent);transform:translate(-50%,-50%) rotate(-45deg)}
+.dim b:first-child{left:0}.dim b:nth-child(2){left:100%}
+.dim span{position:relative;padding:0 12px;background:var(--canvas);font:var(--typography-mono);color:var(--muted);white-space:nowrap}
+
+/* ---------- cards ---------- */
+.card-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(var(--spacing-card-min-width),1fr));gap:var(--spacing-card-gap-y) var(--spacing-card-gap-x);padding:6px var(--spacing-work-x) 28px;align-content:start}
+.entry-card{margin-top:4px;background:var(--surface);border:1px solid var(--line);border-radius:var(--rounded-card);padding:20px 22px 16px;box-shadow:var(--elevation-1);display:flex;flex-direction:column;gap:10px;position:relative;cursor:pointer;transition:border-color var(--motion-quick),box-shadow var(--motion-quick),transform var(--motion-quick)}
+.entry-card:hover{border-color:var(--line-strong);box-shadow:var(--elevation-2);transform:translateY(-2px)}
+.entry-card::after{content:"";position:absolute;top:-8px;left:var(--tab-x,26px);width:50px;height:9px;border-radius:var(--rounded-tab) var(--rounded-tab) 0 0;background:var(--category)}
+.entry-card .meta{display:flex;align-items:center;gap:8px;font:var(--typography-mono);color:var(--muted);min-height:22px}
+.entry-card .meta .host{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.entry-card .type-pill{flex:none;padding:5px 9px;border-radius:var(--rounded-full);border:1px solid var(--line);font:var(--typography-mono-sm);color:var(--ink-2)}
+.entry-card h3{margin:0;font:var(--typography-card-title);letter-spacing:var(--ls-card-title);color:var(--ink)}
+.entry-card .what{margin:0;color:var(--ink-2);font:var(--typography-body-sm);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.entry-card .sits-label{font:var(--typography-label-sm);letter-spacing:var(--ls-label-sm);color:var(--muted);margin-top:4px}
+.situations{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.situation-item{font:var(--typography-situation);color:var(--ink);padding:8px 12px 8px 15px;background:var(--surface-2);border-radius:var(--rounded-md);box-shadow:inset 3px 0 0 var(--category)}
+.card-foot{margin-top:auto;display:flex;align-items:center;gap:8px;font:var(--typography-caption);color:var(--ink-2);padding-top:12px;border-top:1px dashed var(--line);min-width:0}
+.card-foot .dot{width:8px;height:8px;border-radius:50%;background:var(--category);flex:none}
+.card-foot .cat{white-space:nowrap;flex:none}
+.card-foot .plus{color:var(--muted)}
+.card-foot .r{margin-left:auto;min-width:0;overflow:hidden;display:flex;align-items:center;gap:12px;font:var(--typography-mono-sm);color:var(--muted);white-space:nowrap}
+.card-foot .r span{display:inline-flex;align-items:center;gap:5px}
+.verification-flag{color:var(--signal)}
+/* selected (keyboard): crop corners + hint */
+.entry-card.is-selected{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent),var(--elevation-2)}
+.crop{position:absolute;width:16px;height:16px;border:2px solid var(--accent);pointer-events:none;z-index:2}
+.crop.tl{left:-9px;top:-9px;border-right:0;border-bottom:0;border-top-left-radius:5px}
+.crop.br{right:-9px;bottom:-9px;border-left:0;border-top:0;border-bottom-right-radius:5px}
+.kb-hint{position:absolute;top:-12px;right:18px;display:inline-flex;align-items:center;gap:5px;font:var(--typography-mono-sm);font-weight:600;background:var(--accent);color:var(--accent-ink);padding:5px 10px;border-radius:var(--rounded-full)}
+/* learn */
+.entry-card.learn{min-height:220px}
+.entry-card.learn .meta{padding-right:112px}
+.kind-stamp{position:absolute;top:18px;right:18px;transform:rotate(-7deg);font:var(--typography-stamp);letter-spacing:var(--ls-stamp);text-transform:uppercase;padding:6px 9px 5px;border:2px solid currentColor;border-radius:var(--rounded-sm);box-shadow:inset 0 0 0 1.5px var(--surface),inset 0 0 0 2.5px currentColor;opacity:.9;mix-blend-mode:multiply;
+  -webkit-mask-image:radial-gradient(circle at 30% 40%,#000 0 60%,rgba(0,0,0,.75) 61% 63%,#000 64%);mask-image:radial-gradient(circle at 30% 40%,#000 0 60%,rgba(0,0,0,.75) 61% 63%,#000 64%)}
+:root:has(#theme:checked) .kind-stamp{mix-blend-mode:normal}
+.kind-stamp.concept{color:var(--signal)}
+.kind-stamp.material{color:var(--accent)}
+/* arrival */
+@keyframes land{from{transform:translateY(var(--motion-arrival-offset)) scale(var(--motion-enter-scale));opacity:0}to{transform:none;opacity:1}}
+.entry-card.is-new{border-color:transparent;box-shadow:0 0 0 2px var(--tape),0 0 0 8px color-mix(in srgb,var(--tape) 26%,transparent),var(--elevation-1);animation:land var(--motion-arrival) var(--motion-arrival-ease) both}
+.arrival-tape{position:absolute;top:-15px;left:30px;transform:rotate(-3deg);background:color-mix(in srgb,var(--tape) 92%,transparent);color:var(--tape-ink);font:var(--typography-tape);letter-spacing:var(--ls-tape);text-transform:uppercase;padding:8px 18px 7px;box-shadow:var(--elevation-tape);clip-path:polygon(2% 0,98% 6%,100% 48%,97% 100%,3% 94%,0 52%);z-index:2;white-space:nowrap}
+
+/* ---------- status bar ---------- */
+.status-bar{height:var(--spacing-status-bar-height);flex:none;display:flex;align-items:center;gap:22px;padding:0 var(--spacing-bar-x);background:var(--chrome);border-top:1px solid var(--line);font:var(--typography-caption);color:var(--muted);white-space:nowrap;min-width:0}
+.status-bar > span{display:flex;align-items:center;gap:8px}
+.status-bar .dot{width:7px;height:7px;border-radius:50%;background:var(--ok)}
+.status-bar .counters{font:var(--typography-mono-sm)}
+.status-bar .path{min-width:0;flex-shrink:1;overflow:hidden;text-overflow:ellipsis;display:block}
+.status-bar .path .short{display:none}
+.status-bar .keys{margin-left:auto;gap:16px;flex:none}
+.status-bar .keys .kbd{padding:3px 6px;font-size:10.5px;border-bottom-width:1px;background:transparent;color:var(--muted);margin-right:5px}
+
+/* ---------- buttons ---------- */
+.button{height:36px;display:inline-flex;align-items:center;gap:8px;padding:0 14px;border-radius:var(--rounded-lg);border:1px solid var(--line-strong);background:var(--surface);font:var(--typography-button);color:var(--ink);white-space:nowrap;cursor:pointer;transition:background var(--motion-quick)}
+.button:hover{background-image:linear-gradient(var(--hover-overlay),var(--hover-overlay))}
+.button:active{background-image:linear-gradient(var(--pressed-overlay),var(--pressed-overlay));transform:translateY(1px)}
+.button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.button.ghost{background:var(--surface-2);color:var(--ink-2);border-color:transparent}
+.button.danger{background:transparent;color:var(--danger);border-color:transparent}
+.button.danger-solid{background:var(--danger);color:var(--surface);border-color:var(--danger)}
+.button.icon{width:36px;padding:0;justify-content:center}
+.button.sm{height:var(--category-manager-row-button-height);padding:0 10px;font:var(--category-manager-row-button-typography);gap:6px}
+.button:disabled,.button.is-disabled{opacity:var(--disabled-opacity);cursor:default;background-image:none;transform:none}
+
+/* ---------- sheet ---------- */
+.sheet-bar{height:var(--spacing-sheet-bar-height);flex:none;display:flex;align-items:center;gap:14px;padding:0 var(--spacing-bar-x);background:var(--surface);border-bottom:1px solid var(--line)}
+.crumbs{display:flex;align-items:center;gap:9px;font:var(--typography-body-sm);line-height:1;color:var(--muted);white-space:nowrap}
+.crumbs b{color:var(--ink);font-weight:600}
+.crumbs .s{color:var(--line-strong)}
+.sheet-bar .sp{flex:1}
+.sheet-wrap{padding:22px 28px 28px;display:flex;flex-direction:column;gap:18px;min-height:100%}
+.entry-sheet{flex:1;display:grid;grid-template-columns:1fr var(--spacing-sheet-side-width);background:var(--surface);border:1px solid var(--line);border-radius:var(--rounded-sheet);box-shadow:var(--elevation-1);position:relative;margin-top:6px}
+.entry-sheet::after{content:"";position:absolute;top:-10px;left:40px;width:84px;height:11px;border-radius:8px 8px 0 0;background:var(--category)}
+.sheet-main{padding:26px 36px 28px;display:flex;flex-direction:column;gap:14px;min-width:0}
+.sheet-side{display:flex;flex-direction:column;padding:26px 24px 22px;gap:18px;background:color-mix(in srgb,var(--surface-2) 70%,var(--surface));border-left:1px solid var(--line);border-radius:0 var(--rounded-sheet) var(--rounded-sheet) 0;min-width:0}
+.sheet-head{display:flex;align-items:center;gap:18px}
+.sheet-mark{width:50px;height:50px;border-radius:var(--rounded-xl);display:grid;place-items:center;flex:none;background:color-mix(in srgb,var(--category) 10%,var(--surface));border:1px solid color-mix(in srgb,var(--category) 30%,transparent);font:var(--typography-headline);color:var(--ink-2)}
+.sheet-head h1{margin:0;font:var(--typography-display);letter-spacing:var(--ls-display)}
+.subline{margin-top:9px;display:flex;align-items:center;gap:10px;font:var(--typography-mono);color:var(--muted)}
+.subline a{color:var(--accent);text-decoration:none;display:inline-flex;gap:5px;align-items:center}
+.subline .c{display:inline-flex;gap:7px;align-items:center;font:var(--typography-caption);color:var(--ink-2)}
+.subline .c i{width:8px;height:8px;border-radius:50%;background:var(--category)}
+.lead{margin:0;font:var(--typography-body-lead);color:var(--ink);max-width:720px}
+.sec-label{margin:4px 0 0;display:flex;align-items:center;gap:12px;font:var(--typography-label);letter-spacing:var(--ls-label);color:var(--muted)}
+.sec-label::after{content:"";flex:1;border-top:1px solid var(--line)}
+.callouts{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.situation-callout{display:flex;gap:12px;align-items:center;padding:9px 14px;border:1px solid var(--line);border-radius:var(--rounded-lg);font:var(--typography-body);line-height:1.4;background:var(--surface)}
+.situation-callout b{flex:none;width:26px;height:26px;border-radius:50%;background:color-mix(in srgb,var(--category) 10%,var(--surface));color:var(--ink-2);display:grid;place-items:center;font:var(--typography-mono-sm);font-weight:600}
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.keyword-tag{font:var(--typography-caption);padding:7px 12px;border-radius:var(--rounded-full);color:var(--ink-2);background:var(--surface-2);border:1px solid var(--line)}
+.my-notes{border:1.5px dashed color-mix(in srgb,var(--signal) 70%,transparent);border-radius:var(--rounded-xl);padding:14px 18px;background:color-mix(in srgb,var(--signal-bg) 50%,var(--surface));margin-top:4px}
+.my-notes .h{display:flex;align-items:center;gap:8px;font:var(--typography-title-sm);letter-spacing:.03em;color:var(--signal);margin-bottom:8px}
+.my-notes .h small{margin-left:auto;font:var(--typography-caption);color:var(--muted);letter-spacing:0}
+.my-notes p{margin:0;font:var(--typography-body);line-height:1.6}
+.open-in-browser{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:var(--rounded-xl);background:var(--accent);color:var(--accent-ink);font:var(--typography-title-sm);letter-spacing:.02em;box-shadow:var(--elevation-accent);text-decoration:none}
+.open-in-browser small{display:block;margin-top:5px;font:var(--typography-mono-sm);opacity:.85;letter-spacing:0}
+.open-in-browser svg{margin-left:auto}
+.rel{display:flex;flex-direction:column;gap:8px}
+.related-link{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:12px;padding:10px 14px;border:1px solid var(--line);border-radius:var(--rounded-lg);background:var(--surface);text-decoration:none;color:var(--ink);transition:border-color var(--motion-quick)}
+.related-link:hover{border-color:var(--line-strong)}
+.related-link:hover .go{transform:translateX(2px)}
+.related-link i{width:8px;height:8px;border-radius:50%;background:var(--category)}
+.related-link b{font:var(--typography-title-sm);letter-spacing:var(--ls-title-sm);display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.related-link small{display:block;color:var(--muted);font:var(--typography-caption);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.related-link .go{color:var(--accent);display:grid;transition:transform var(--motion-quick)}
+.title-block{margin-top:auto;border:1px solid var(--line-strong);border-radius:var(--rounded-lg);overflow:hidden;display:grid;grid-template-columns:1fr 1fr;font:var(--typography-mono-sm);background:var(--surface)}
+.title-block > div{padding:8px 11px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);line-height:1.2}
+.title-block > div:nth-child(2n){border-right:0}
+.title-block > div:last-child{border-bottom:0}
+.title-block small{display:block;color:var(--muted);font:var(--typography-label-sm);font-size:10.5px;letter-spacing:.06em;margin-bottom:4px}
+.title-block .head{grid-column:span 2;border-right:0;display:flex;align-items:center;justify-content:space-between;font:var(--typography-title-sm);letter-spacing:.08em;background:var(--surface-2)}
+.title-block .head em{font:var(--typography-mono-sm);font-style:normal;color:var(--muted);letter-spacing:0}
+.title-block .span2{grid-column:span 2;border-right:0}
+.title-block .ok{color:var(--ok);vertical-align:-2px}
+
+/* conflict banner */
+.conflict-banner{display:flex;align-items:center;gap:12px;padding:10px 12px 10px 16px;border-radius:var(--rounded-lg);background:var(--signal-bg);border:1px solid color-mix(in srgb,var(--signal) 35%,transparent);border-left:4px solid var(--signal);color:var(--ink);font:var(--typography-body-sm)}
+.conflict-banner > svg{color:var(--signal)}
+.conflict-banner p{margin:0;flex:1}
+
+/* edit-mode controls */
+.field{display:flex;flex-direction:column;gap:7px;min-width:0}
+.field > .f-label{font:var(--typography-label-sm);letter-spacing:var(--ls-label-sm);color:var(--muted)}
+.text-field{height:36px;width:100%;padding:0 12px;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:var(--rounded-lg);font:var(--typography-body);color:var(--ink);outline:none}
+.text-field:focus,.text-field.focus{border-color:var(--accent);outline:2px solid var(--accent);outline-offset:2px}
+.text-field.mono{font:var(--typography-mono);font-size:13px}
+textarea.text-field{height:auto;padding:9px 12px;resize:vertical;line-height:1.5}
+.select{position:relative;display:block}
+.select select{appearance:none;-webkit-appearance:none;height:36px;width:100%;padding:0 34px 0 12px;background:var(--surface-2);border:1px solid var(--line-strong);border-radius:var(--rounded-lg);font:var(--typography-body);color:var(--ink);cursor:pointer}
+.select select:focus{border-color:var(--accent)}
+.select svg{position:absolute;right:11px;top:50%;transform:translateY(-50%);pointer-events:none;color:var(--ink-2)}
+.select.placeholder select{color:var(--muted)}
+.category-picker{display:flex;flex-wrap:wrap;gap:var(--spacing-2)}
+.list-editor{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:var(--spacing-2)}
+.list-editor li{display:grid;grid-template-columns:26px minmax(0,1fr) 36px;gap:10px;align-items:center}
+.list-editor.plain li{grid-template-columns:minmax(0,1fr) 36px}
+.list-editor .num{font:var(--typography-mono-sm);color:var(--muted);text-align:right}
+.edit-head{display:flex;gap:18px;align-items:flex-start}
+.edit-head .sheet-mark{margin-top:22px}
+.edit-head .fields{flex:1;display:flex;flex-direction:column;gap:12px;min-width:0}
+.edit-head .row{display:grid;grid-template-columns:minmax(0,1fr) var(--entry-sheet-edit-type-width);gap:12px}
+
+/* ---------- toast ---------- */
+.toasts{position:absolute;right:var(--spacing-bar-x);bottom:calc(var(--spacing-status-bar-height) + 16px);display:flex;flex-direction:column;gap:var(--toast-stack-gap);z-index:20}
+@keyframes toast-in{from{transform:translateY(16px);opacity:0}to{transform:none;opacity:1}}
+.toast{width:360px;background:var(--surface);border:1px solid var(--line-strong);border-radius:var(--rounded-xl);box-shadow:var(--elevation-2),inset 4px 0 0 var(--tape);padding:12px 10px 12px 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 10px;font:var(--typography-body-sm);color:var(--ink);overflow:hidden;animation:toast-in var(--motion-slide) var(--motion-ease) both}
+.toast.error{box-shadow:var(--elevation-2),inset 4px 0 0 var(--danger)}
+.toast p{margin:0}
+.toast .mini-tape{justify-self:start;display:inline-block;transform:rotate(-3deg);background:color-mix(in srgb,var(--tape) 92%,transparent);color:var(--tape-ink);font:var(--typography-tape);font-size:10px;letter-spacing:var(--ls-tape);text-transform:uppercase;padding:5px 10px 4px;clip-path:polygon(2% 0,98% 6%,100% 48%,97% 100%,3% 94%,0 52%);margin:2px 0 2px}
+.toast .x{border:0;background:transparent;padding:0;cursor:pointer;grid-row:1;grid-column:2;width:28px;height:28px;display:grid;place-items:center;border-radius:var(--rounded-sm);color:var(--muted)}
+.toast .x:hover{background:var(--hover-overlay)}
+.toast .body{grid-column:1 / span 2;display:flex;align-items:baseline;gap:14px}
+.toast .body p{flex:1;min-width:0}
+.toast .action{font:var(--typography-button);color:var(--accent);text-decoration:none;white-space:nowrap}
+
+/* ---------- dialog ---------- */
+.scrim{position:absolute;inset:var(--spacing-titlebar-height) 0 0 0;background:color-mix(in srgb,var(--scrim) 40%,transparent);display:flex;align-items:center;justify-content:center;z-index:30;animation:fade var(--motion-fade) var(--motion-ease) both}
+@keyframes fade{from{opacity:0}}
+@keyframes dialog-in{from{transform:scale(var(--motion-enter-scale));opacity:0}}
+.dialog{background:var(--surface);border:1px solid var(--line);border-radius:var(--rounded-sheet);box-shadow:var(--elevation-2);padding:26px 28px 22px;display:flex;flex-direction:column;gap:14px;animation:dialog-in var(--motion-fade) var(--motion-ease) both;max-height:calc(100% - 48px)}
+.dialog h2{margin:0;font:var(--typography-headline);letter-spacing:var(--ls-headline);line-height:1.2}
+.dialog p{margin:0;font:var(--typography-body);color:var(--ink-2)}
+.dialog .actions{display:flex;justify-content:flex-end;gap:10px;margin-top:6px}
+.dialog.confirm{width:var(--dialog-confirm-width)}
+.category-manager{width:640px}
+.category-manager .list{flex:1;min-height:0;overflow:auto;margin:0 -28px;padding:0 28px;display:flex;flex-direction:column;gap:6px}
+.cm-section{font:var(--typography-label);letter-spacing:var(--ls-label);color:var(--muted);display:flex;align-items:center;gap:12px;margin:10px 0 4px}
+.cm-section::after{content:"";flex:1;border-top:1px solid var(--line)}
+.cm-row{display:flex;align-items:center;gap:10px;min-height:var(--category-manager-row-min-height);padding:4px 6px 4px 12px;border-radius:var(--rounded-lg);border:1px solid transparent}
+.cm-row:hover{background:var(--hover-overlay)}
+.cm-row > i{width:10px;height:10px;border-radius:50%;background:var(--category);flex:none}
+.cm-row .name{flex:1;min-width:0;font:var(--typography-body);color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cm-row .count{font:var(--typography-mono-sm);color:var(--muted);min-width:22px;text-align:right}
+.cm-row .acts{display:flex;gap:6px}
+.cm-row .button.ghost.del{color:var(--danger)}
+.cm-row.editing{background:var(--surface-2);border-color:var(--line)}
+.cm-row.editing .text-field{flex:1;background:var(--surface)}
+.cm-row .hints{display:flex;align-items:center;gap:6px;font:var(--typography-caption);color:var(--muted);white-space:nowrap}
+.dialog .field-row{display:flex;flex-direction:column;gap:7px}
+.dialog .field-row > span{font:var(--typography-label-sm);letter-spacing:var(--ls-label-sm);color:var(--muted)}
+.dialog .consequence{font:var(--typography-body);color:var(--ink)}
+.dialog .count-note{display:flex;align-items:center;gap:8px;font:var(--typography-mono-sm);color:var(--muted)}
+
+/* ---------- responsive (EXPERIENCE.md, Responsive & Platform), on the window width ---------- */
+@container win (max-width: 1199px){
+  .entry-sheet{grid-template-columns:1fr var(--spacing-sheet-side-width-narrow)}
+}
+@container win (max-width: 959px){
+  .toolbar-button .t{display:none}
+  .toolbar-button{width:38px;padding:0}
+  .search-box .kbd{display:none}
+  .chips .track{transform:translateX(var(--scroll-x-narrow,0px))}
+  .chips[style*="--scroll-x-narrow:-"] .fade-l{display:block}
+  .chips[style*="--scroll-x-narrow:-"] .less{display:grid}
+  .status-bar{gap:16px}
+  /* footer right side: lowest priority first (+N situații) when the card is narrow */
+  .card-foot .r:has(.verification-flag,.stars) .more{display:none}
+  .status-bar .path .full{display:none}
+  .status-bar .path .short{display:inline}
+}
+@container win (max-width: 719px){
+  .zone-tab .n{display:none}
+  .status-bar .path,.status-bar .keys{display:none}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none !important;transition:none !important}
+}
+
+</style>
+</head>
+<body>
+<input type="checkbox" id="theme" aria-label="Temă întunecată">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol><symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></symbol><symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol><symbol id="i-layers" viewBox="0 0 24 24"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></symbol><symbol id="i-upload" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></symbol><symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol><symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol><symbol id="i-chevron-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol><symbol id="i-pencil" viewBox="0 0 24 24"><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z"/><path d="m15 5 4 4"/></symbol><symbol id="i-trash-2" viewBox="0 0 24 24"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><path d="M10 11v6"/><path d="M14 11v6"/></symbol><symbol id="i-plus" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5v14"/></symbol><symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol><symbol id="i-triangle-alert" viewBox="0 0 24 24"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol><symbol id="i-star" viewBox="0 0 24 24"><path d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"/></symbol><symbol id="i-external-link" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol><symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol><symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><path d="M4 22v-7"/></symbol><symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol><symbol id="i-corner-down-left" viewBox="0 0 24 24"><path d="M20 4v7a4 4 0 0 1-4 4H4"/><path d="m9 10-5 5 5 5"/></symbol><symbol id="cap-min" viewBox="0 0 10 10"><path d="M0 5h10"/></symbol><symbol id="cap-max" viewBox="0 0 10 10"><rect x=".5" y=".5" width="9" height="9" rx="1.5"/></symbol><symbol id="cap-x" viewBox="0 0 10 10"><path d="m.5.5 9 9m0-9-9 9"/></symbol></svg>
+<div class="page">
+  <header class="page-head"><div><div class="kicker">Ecran-cheie 2 · fișa</div><h1>Fișa remove.bg</h1><p>Fișa completă în citire, apoi aceeași fișă în editare (Flow 3, eșec B): s-a adăugat situația 05, linkul e schimbat, iar Claude a rulat între timp un update, deci apare banda de conflict.</p></div><span class="sp"></span><div class="th">Temă<label for="theme" class="theme-switch" title="Comută tema: zi / noapte"><span><svg class="i " aria-hidden="true"><use href="#i-sun"/></svg></span><span><svg class="i " aria-hidden="true"><use href="#i-moon"/></svg></span></label></div></header>
+<div class="shot"><b>01</b><span class="nw">Fișa, în citire</span> <em>„Editează” / E intră în editare; „Notițele mele” se editează direct, mereu.</em></div>
+<div class="win " style=""><div class="title-bar"><div class="app"><span class="app-mark">W</span>WhenKit</div><span class="sp"></span><label for="theme" class="theme-switch" title="Comută tema: zi / noapte"><span><svg class="i " aria-hidden="true"><use href="#i-sun"/></svg></span><span><svg class="i " aria-hidden="true"><use href="#i-moon"/></svg></span></label><div class="caption-btns" aria-hidden="true"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div></div>
+<div class="toolbar">
+  <div class="zone-tabs" role="tablist"><div class="zone-tab on" role="tab">Toolbox <span class="n">53</span></div><div class="zone-tab " role="tab">Learn <span class="n">22</span></div></div>
+  <div class="search-box"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span class="q">Ce vrei să faci? ex. „scot fundalul”</span><span class="kbd">Ctrl K</span></div>
+  <span class="sp"></span>
+  <button class="toolbar-button" title="Categorii"><svg class="i " aria-hidden="true"><use href="#i-layers"/></svg><span class="t">Categorii</span></button>
+  <button class="toolbar-button primary" title="Exportă catalogul"><svg class="i " aria-hidden="true"><use href="#i-upload"/></svg><span class="t">Exportă catalogul</span></button>
+</div>
+<div class="sheet-bar">
+  <button class="button ghost"><svg class="i " aria-hidden="true"><use href="#i-chevron-left"/></svg>Înapoi <span class="kbd">Esc</span></button>
+  <span class="crumbs">Toolbox <span class="s">/</span> Imagini &amp; video <span class="s">/</span> <b>remove.bg</b></span>
+  <span class="sp"></span>
+  <button class="button"><svg class="i " aria-hidden="true"><use href="#i-pencil"/></svg>Editează <span class="kbd">E</span></button>
+  <button class="button danger"><svg class="i " aria-hidden="true"><use href="#i-trash-2"/></svg>Șterge</button>
+</div>
+<div class="work"><div class="scroll"><div class="sheet-wrap"><div class="entry-sheet" style="--category:var(--category-9)">
+  <div class="sheet-main">
+    <header class="sheet-head"><div class="sheet-mark" aria-hidden="true">I</div><div><h1>remove.bg</h1>
+      <div class="subline"><a href="#">remove.bg <svg class="i sm" aria-hidden="true"><use href="#i-external-link"/></svg></a><span>·</span><span>site</span><span>·</span><span class="c"><i></i>Imagini &amp; video</span></div></div></header>
+    <p class="lead">Serviciu care scoate automat fundalul din fotografii, cu pensulă pentru retușuri. Poți pune fundal alb (pentru produse sau poze de profil) sau transparent (PNG); are API, extensie de Photoshop și aplicații pentru Windows, Mac, Linux și Android.</p>
+    <h2 class="sec-label">Când o folosesc · 4</h2>
+    <ol class="callouts"><li class="situation-callout"><b>01</b>vreau să scot fundalul dintr-o poză</li><li class="situation-callout"><b>02</b>am nevoie de poze de produs pe fundal alb pentru un magazin online</li><li class="situation-callout"><b>03</b>vreau un logo sau o persoană decupată pe fundal transparent</li><li class="situation-callout"><b>04</b>vreau să scot automat fundalul din multe imagini, din aplicația mea, prin API</li></ol>
+    <h2 class="sec-label">Cuvinte-cheie</h2>
+    <div class="tags"><span class="keyword-tag">fundal</span><span class="keyword-tag">background</span><span class="keyword-tag">remove background</span><span class="keyword-tag">decupare</span><span class="keyword-tag">transparent</span><span class="keyword-tag">png</span><span class="keyword-tag">fundal alb</span><span class="keyword-tag">api</span></div>
+    <section class="my-notes">
+  <div class="h"><svg class="i " aria-hidden="true"><use href="#i-pencil"/></svg>Notițele mele <small>se salvează singure · doar tu scrii aici</small></div>
+  <p>Gratuit doar la rezoluție mică.</p>
+</section>
+  </div>
+  <aside class="sheet-side">
+  <a class="open-in-browser" href="#"><div>Deschide în browser<small>https://remove.bg</small></div><svg class="i " aria-hidden="true"><use href="#i-external-link"/></svg></a>
+  <div><div class="sec-label" style="margin:0 0 12px">Resurse înrudite · 3</div>
+  <div class="rel"><a class="related-link" href="#" style="--category:var(--category-9)" title="Unscreen (Canva Video Background Remover)"><i></i><span style="min-width:0"><b>Unscreen (Canva Video Background Remover)</b><small>Unscreen redirecționează acum spre Video Background Remover din Canva, o unealtă din editorul video Canva care detectează automat subiectul din clip.</small></span><span class="go"><svg class="i " aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a><a class="related-link" href="#" style="--category:var(--category-9)" title="Photopea"><i></i><span style="min-width:0"><b>Photopea</b><small>Editor foto în browser, asemănător cu Photoshop, care deschide și salvează fișiere PSD și lucrează cu straturi, măști, smart objects și filtre.</small></span><span class="go"><svg class="i " aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a><a class="related-link" href="#" style="--category:var(--category-9)" title="Cleanup.pictures"><i></i><span style="min-width:0"><b>Cleanup.pictures</b><small>Unealtă web cu AI care șterge elemente nedorite din poze: treci cu pensula peste obiect, iar fundalul se reconstruiește.</small></span><span class="go"><svg class="i " aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a></div></div>
+  <div class="title-block" aria-label="Bloc de titlu">
+    <div class="head">FIȘĂ · UNEALTĂ <em>rev. 1</em></div>
+    <div><small>Zonă</small>Toolbox</div><div><small>Tip</small>site</div>
+    <div><small>Adăugată</small>15.10.2026</div><div><small>Verificată</small>15.10.2026 <svg class="i sm ok" aria-hidden="true"><use href="#i-check"/></svg></div>
+    <div class="span2"><small>Id</small>1fe4…17dc</div>
+  </div>
+</aside>
+</div></div></div></div>
+<div class="status-bar">
+  <span><i class="dot"></i>Catalog la zi</span>
+  <span class="counters">75 de fișe · ultima adăugată 15.10.2026, 20:39</span>
+  <span class="path" title="C:\Users\Luca\Programe\whenkit"><span class="full">C:\Users\Luca\Programe\whenkit</span><span class="short">C:\Users\…\whenkit</span></span>
+  <span class="keys"><span><span class="kbd">E</span>editează</span><span><span class="kbd">Esc</span>înapoi</span></span>
+</div></div>
+<div class="shot"><b>02</b><span class="nw">Fișa, în editare, cu conflict</span> <em>Câmpurile scrise de Claude devin text-field, select, category-picker și list-editor, pe aceleași poziții. Fereastră înaltă, ca să se vadă tot formularul.</em></div>
+<div class="win " style="height:1560px"><div class="title-bar"><div class="app"><span class="app-mark">W</span>WhenKit</div><span class="sp"></span><label for="theme" class="theme-switch" title="Comută tema: zi / noapte"><span><svg class="i " aria-hidden="true"><use href="#i-sun"/></svg></span><span><svg class="i " aria-hidden="true"><use href="#i-moon"/></svg></span></label><div class="caption-btns" aria-hidden="true"><span><svg><use href="#cap-min"/></svg></span><span><svg><use href="#cap-max"/></svg></span><span><svg><use href="#cap-x"/></svg></span></div></div>
+<div class="toolbar">
+  <div class="zone-tabs" role="tablist"><div class="zone-tab on" role="tab">Toolbox <span class="n">53</span></div><div class="zone-tab " role="tab">Learn <span class="n">22</span></div></div>
+  <div class="search-box"><svg class="i " aria-hidden="true"><use href="#i-search"/></svg><span class="q">Ce vrei să faci? ex. „scot fundalul”</span><span class="kbd">Ctrl K</span></div>
+  <span class="sp"></span>
+  <button class="toolbar-button" title="Categorii"><svg class="i " aria-hidden="true"><use href="#i-layers"/></svg><span class="t">Categorii</span></button>
+  <button class="toolbar-button primary" title="Exportă catalogul"><svg class="i " aria-hidden="true"><use href="#i-upload"/></svg><span class="t">Exportă catalogul</span></button>
+</div>
+<div class="sheet-bar">
+  <span class="crumbs">Toolbox <span class="s">/</span> Imagini &amp; video <span class="s">/</span> <b>remove.bg</b></span>
+  <span class="sp"></span>
+  <button class="button ghost">Renunță <span class="kbd">Esc</span></button>
+  <button class="button primary">Salvează <span class="kbd">Ctrl S</span></button>
+</div>
+<div class="work"><div class="scroll"><div class="sheet-wrap">
+  <div class="conflict-banner" role="alert"><svg class="i " aria-hidden="true"><use href="#i-triangle-alert"/></svg><p>Fișa a fost modificată din terminal. Salvarea ta va fi refuzată.</p><button class="button">Reîncarcă fișa</button></div>
+  <div class="entry-sheet" style="--category:var(--category-9)">
+    <div class="sheet-main">
+      <div class="edit-head"><div class="sheet-mark" aria-hidden="true">I</div><div class="fields">
+        <label class="field"><span class="f-label">Nume</span><input class="text-field" value="remove.bg"></label>
+        <div class="row">
+          <label class="field"><span class="f-label">Link</span><input class="text-field mono" value="https://www.remove.bg/ro"></label>
+          <label class="field"><span class="f-label">Tip</span><span class="select"><select><option>repo</option><option selected>site</option><option>aplicație</option></select><svg class="i " aria-hidden="true"><use href="#i-chevron-down"/></svg></span></label>
+        </div>
+      </div></div>
+      <h2 class="sec-label">Categorii</h2>
+      <div class="category-picker" role="group" aria-label="Categorii"><button class="category-chip" aria-pressed="false" style="--category:var(--category-5)"><i></i>AI &amp; LLM</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-4)"><i></i>Claude Code &amp; agenți</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-1)"><i></i>Date &amp; API-uri</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-3)"><i></i>Descoperire &amp; arhive</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-7)"><i></i>Design &amp; UI</button><button class="category-chip" aria-pressed="true" style="--category:var(--category-9)"><i></i>Imagini &amp; video</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-2)"><i></i>Mockup-uri &amp; capturi de cod</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-8)"><i></i>Securitate</button><button class="category-chip" aria-pressed="false" style="--category:var(--category-6)"><i></i>Terminal &amp; dev tools</button></div>
+      <h2 class="sec-label">Ce face</h2>
+      <textarea class="text-field" rows="3">Serviciu care scoate automat fundalul din fotografii, cu pensulă pentru retușuri. Poți pune fundal alb (pentru produse sau poze de profil) sau transparent (PNG); are API, extensie de Photoshop și aplicații pentru Windows, Mac, Linux și Android.</textarea>
+      <h2 class="sec-label">Când o folosesc · 5</h2>
+      <ol class="list-editor"><li><span class="num">01</span><input class="text-field " value="vreau să scot fundalul dintr-o poză"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><span class="num">02</span><input class="text-field " value="am nevoie de poze de produs pe fundal alb pentru un magazin online"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><span class="num">03</span><input class="text-field " value="vreau un logo sau o persoană decupată pe fundal transparent"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><span class="num">04</span><input class="text-field " value="vreau să scot automat fundalul din multe imagini, din aplicația mea, prin API"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><span class="num">05</span><input class="text-field focus" value="vreau o poză de profil cu fundal colorat"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li></ol>
+      <div><button class="button ghost"><svg class="i " aria-hidden="true"><use href="#i-plus"/></svg>Adaugă situație</button></div>
+      <h2 class="sec-label">Cuvinte-cheie</h2>
+      <ul class="list-editor plain"><li><input class="text-field" value="fundal"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="background"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="remove background"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="decupare"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="transparent"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="png"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="fundal alb"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li><li><input class="text-field" value="api"><button class="button ghost icon" title="Șterge rândul"><svg class="i " aria-hidden="true"><use href="#i-x"/></svg></button></li></ul>
+      <div><button class="button ghost"><svg class="i " aria-hidden="true"><use href="#i-plus"/></svg>Adaugă cuvânt-cheie</button></div>
+      <section class="my-notes">
+  <div class="h"><svg class="i " aria-hidden="true"><use href="#i-pencil"/></svg>Notițele mele <small>se salvează singure · doar tu scrii aici</small></div>
+  <p>Gratuit doar la rezoluție mică.</p>
+</section>
+    </div>
+    <aside class="sheet-side">
+  <a class="open-in-browser" href="#"><div>Deschide în browser<small>https://remove.bg</small></div><svg class="i " aria-hidden="true"><use href="#i-external-link"/></svg></a>
+  <div><div class="sec-label" style="margin:0 0 12px">Resurse înrudite · 3</div>
+  <div class="rel"><a class="related-link" href="#" style="--category:var(--category-9)" title="Unscreen (Canva Video Background Remover)"><i></i><span style="min-width:0"><b>Unscreen (Canva Video Background Remover)</b><small>Unscreen redirecționează acum spre Video Background Remover din Canva, o unealtă din editorul video Canva care detectează automat subiectul din clip.</small></span><span class="go"><svg class="i " aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a><a class="related-link" href="#" style="--category:var(--category-9)" title="Photopea"><i></i><span style="min-width:0"><b>Photopea</b><small>Editor foto în browser, asemănător cu Photoshop, care deschide și salvează fișiere PSD și lucrează cu straturi, măști, smart objects și filtre.</small></span><span class="go"><svg class="i " aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a><a class="related-link" href="#" style="--category:var(--category-9)" title="Cleanup.pictures"><i></i><span style="min-width:0"><b>Cleanup.pictures</b><small>Unealtă web cu AI care șterge elemente nedorite din poze: treci cu pensula peste obiect, iar fundalul se reconstruiește.</small></span><span class="go"><svg class="i " aria-hidden="true"><use href="#i-arrow-right"/></svg></span></a></div></div>
+  <div class="title-block" aria-label="Bloc de titlu">
+    <div class="head">FIȘĂ · UNEALTĂ <em>rev. 1</em></div>
+    <div><small>Zonă</small>Toolbox</div><div><small>Tip</small>site</div>
+    <div><small>Adăugată</small>15.10.2026</div><div><small>Verificată</small>15.10.2026 <svg class="i sm ok" aria-hidden="true"><use href="#i-check"/></svg></div>
+    <div class="span2"><small>Id</small>1fe4…17dc</div>
+  </div>
+</aside>
+  </div>
+</div></div></div>
+<div class="status-bar">
+  <span><i class="dot"></i>Catalog la zi</span>
+  <span class="counters">75 de fișe · ultima adăugată 15.10.2026, 20:39</span>
+  <span class="path" title="C:\Users\Luca\Programe\whenkit"><span class="full">C:\Users\Luca\Programe\whenkit</span><span class="short">C:\Users\…\whenkit</span></span>
+  <span class="keys"><span><span class="kbd">Ctrl S</span>salvează</span><span><span class="kbd">Esc</span>renunță</span></span>
+</div></div>
+</div>
+</body>
+</html>
