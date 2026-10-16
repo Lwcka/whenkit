@@ -226,7 +226,7 @@ Fereastra trebuie să arate bine **la orice dimensiune și lățime**, mai ales 
 
 - Dimensiunea minimă a ferestrei: {spacing.window-min-width} × {spacing.window-min-height}.
 - Fereastra își amintește poziția și dimensiunea între reporniri (nu și vederea: pornește mereu pe Toolbox → Toate).
-- **Unde persistă tema și fereastra:** într-un fișier local al aplicației desktop, în folderul ei `userData`, **niciodată** în `%APPDATA%\whenkit\config.json`, care aparține lui `whenkit init` (AD-8), și niciodată în workspace. Pe Windows, `userData` pentru „WhenKit” e același folder cu `%APPDATA%\whenkit` (fără diferență de majuscule), deci fișierul are alt nume decât `config.json`. Regula se trece prin `bmad-architecture` înainte de tichetul care o construiește.
+- **Unde persistă tema și fereastra:** în `window-state.json`, scris doar de main-ul aplicației desktop, în `%APPDATA%\whenkit\desktop\` (`desktop-dev\` pentru `npm start`); **niciodată** lângă `config.json`, care aparține lui `whenkit init` (AD-8), în workspace sau în `localStorage`. Detaliile (pornire, temă fără clipire, salvarea notițelor la închidere) sunt în AD-20.
 - `category-bar` nu se rupe pe mai multe rânduri la nicio lățime: derulare orizontală.
 - Respectă scalarea Windows 100–200% și tema aplicațiilor la prima pornire; fonturile sunt de sistem, plus Cascadia Mono inclus.
 - Un singur exemplar al aplicației: a doua pornire aduce fereastra existentă în față.
