@@ -7,6 +7,8 @@ companions:
   - card-writing-rules.md
   - categories-seed.md
   - ui-screens.md
+  - ../ux-whenkit/DESIGN.md
+  - ../ux-whenkit/EXPERIENCE.md
   - test-scenarios.md
   - post-v1-roadmap.md
   - project-context.md
@@ -69,6 +71,7 @@ sources:
 ## Constraints
 
 - Aplicație **desktop** locală (Windows 11). Nu web, nu mobil.
+- Numele afișat e **WhenKit** (titlul ferestrei, branding, installer); identificatorii tehnici rămân `whenkit` (comanda CLI, pachetul npm, fișiere și foldere).
 - Două puncte de intrare peste același nucleu: UI desktop și CLI (`whenkit init`, `whenkit import`), folosit de Claude Code.
 - **Fără AI și fără chei API în aplicație** în v1. Orice inteligență generativă trăiește în skill-urile Claude Code.
 - Datele stau în workspace, în afara repo-ului (implicit `C:\Users\Luca\Programe\whenkit\`), într-un format portabil, ușor de citit de Claude Code (pentru `/gaseste`). Calea workspace-ului se salvează de `whenkit init` în configurarea utilizatorului (`%APPDATA%\whenkit\config.json`), poate fi suprascrisă de variabila `WHENKIT_WORKSPACE` la dezvoltare și nu e hardcodată.
@@ -86,7 +89,7 @@ sources:
 
 ## Non-goals
 
-- Formular de adăugare manuală în UI (adăugarea trece prin `/importa`).
+- Formular de adăugare manuală sau captură rapidă în UI (adăugarea trece prin `/importa`).
 - AI în aplicație: căutare semantică, embeddings, model local, `AIProvider`.
 - Re-verificarea resurselor existente, câmpul Status, ecranul de Setări.
 - Butoane Claude Code și terminal integrat în aplicație.

@@ -8,6 +8,8 @@ Nu se implementează în MVP. Listate pentru că arhitectura nu trebuie să le b
 | Claude Code în aplicație (open-source) | Butoane generice („Importă”, „Caută”) care rulează `claude -p` headless și arată progresul; terminal integrat pentru utilizatori tehnici | stack-ul permite pornirea de procese locale și PTY; server intern doar pe localhost |
 | Configurare inițială de limbă (open-source) | Fiecare utilizator alege limba UI și a fișelor | textele UI deja într-un singur fișier |
 | Documentație în engleză (open-source) | Traducerea README-ului și a documentației | codul e deja integral în engleză |
+| Jurnal / captură rapidă în aplicație | Notezi direct în WhenKit ce găsești, fără terminal; în v1 îi spui lui Claude, care importă cu `/importa` | scrierea din UI trece prin aceeași verificare ca importul (AD-3) |
+| Setări: ecranul de pornire | Panou de Setări cu alegerea: Toolbox sau unde am rămas; în v1 pornește mereu pe Toolbox → Toate | preferințele ferestrei stau local, în afara `config.json` |
 | Google Safe Browsing | Detectare malware/phishing | verificarea extensibilă cu surse noi |
 | `/rescrie` | Re-documentarea fișelor după reguli noi, păstrând Notițele mele | — (doar dacă cererea apare des) |
 | Quiz / Learn interactiv | Testare, explicații pe concepte | — |
