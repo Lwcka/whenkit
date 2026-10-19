@@ -7,7 +7,7 @@ paradigm: 'hexagonal (ports & adapters), ușor'
 scope: 'whenkit MVP: aplicația desktop Electron, CLI-ul whenkit și șablonul workspace-ului'
 status: final
 created: '2026-10-13'
-updated: '2026-10-17'
+updated: '2026-10-19'
 binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12, CAP-13]
 sources:
   - ../spec-whenkit/spec-whenkit.md
@@ -315,5 +315,5 @@ whenkit/
 - **Restore din export:** `catalog.json` îl face posibil; nu e cerut în v1.
 - **Re-verificare, ecran Setări, câmp Status:** `post-v1-roadmap.md`; AD-7 permite deja verificarea unei fișe existente.
 - **Butoane Claude headless și terminal integrat** (xterm.js + node-pty): după v1; procesele se pornesc doar din `main`.
-- **Convențiile renderer-ului** (forma depozitului din AD-10, stilizarea după tokenii din DESIGN.md, biblioteca Markdown): le fixează primul tichet din epic-fereastra-whenkit, iar tichetele următoare le refolosesc.
+- **Convențiile renderer-ului** (forma depozitului din AD-10, stilizarea după tokenii din DESIGN.md, biblioteca Markdown, testarea componentelor): fiecare o fixează primul tichet din epic-fereastra-whenkit care o folosește, iar tichetele următoare o refolosesc. O dependență nouă (ex. jsdom, Testing Library, biblioteca Markdown) intră în Stack, cu versiune fixată, în sesiunea tichetului care o adaugă.
 - **Numele exacte ale câmpurilor din lot:** urmează `entry-model.md`; le fixează primul tichet care scrie `batch-schema.ts`, sub AD-6.

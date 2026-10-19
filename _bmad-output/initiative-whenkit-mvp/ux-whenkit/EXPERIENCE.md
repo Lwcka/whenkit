@@ -2,7 +2,7 @@
 name: whenkit
 status: final
 created: 2026-10-16
-updated: 2026-10-17
+updated: 2026-10-19
 sources:
   - ../spec-whenkit/spec-whenkit.md
   - ../spec-whenkit/ui-screens.md
@@ -81,7 +81,7 @@ Comportament. Aspectul e în `DESIGN.md`, „Components”.
 | `app-mark` | `title-bar` | Decorativ, fără acțiune. |
 | `theme-switch` | `title-bar` | Click comută zi/noapte, cu tranziție de culoare. Alegerea **persistă** între reporniri (unde, vezi „Responsive & Platform”); la prima pornire urmează tema aplicațiilor din Windows. Nu e un ecran de setări. |
 | `zone-tab` | `toolbar` | Click/Ctrl+1/Ctrl+2 schimbă zona; contorul arată fișele zonei și se actualizează live. Păstrează textul din căutare și îl aplică noii zone. |
-| `search-box` | `toolbar` | Ctrl+K (și Ctrl+F) pune focusul. Filtrare live după {motion.search-debounce} de pauză, în **zona curentă**, peste toate categoriile; câmpurile indexate și sintaxa sunt ale arhitecturii (AD-5: fiecare cuvânt ca prefix, toate obligatorii). Cât există text, nicio pastilă nu e activă și `section-header` arată „Rezultate pentru „fundal”” cu numărul. Dacă cealaltă zonă are potriviri, header-ul adaugă linkul „+2 în Learn”. Golirea căutării revine la categoria de dinainte. Ordinea rezultatelor: relevanța FTS. |
+| `search-box` | `toolbar` | Ctrl+K (și Ctrl+F) pune focusul. Filtrare live după {motion.search-debounce} de pauză, în **zona curentă**, peste toate categoriile; câmpurile indexate și sintaxa sunt ale arhitecturii (AD-5: fiecare cuvânt ca prefix, toate obligatorii). Cât există text, nicio pastilă nu e activă și `section-header` arată „Rezultate pentru „fundal”” cu numărul. Dacă cealaltă zonă are potriviri, header-ul adaugă linkul „+2 în Learn”. Golirea căutării revine la categoria de dinainte. Ordinea rezultatelor e cea a listei: cele mai noi primele (AD-10). |
 | `toolbar-button` „Categorii” | `toolbar` | Deschide `dialog` cu `category-manager`. |
 | `toolbar-button-primary` „Exportă catalogul” | `toolbar` | Deschide dialogul nativ de folder; cât rulează exportul e „în lucru”: „Se exportă…”. Vezi Flow 6. |
 | `toolbar` | cadru | Rămâne la fel în listă și în fișă; nu se ascunde la derulare. La lățimi mici își comprimă butoanele („Responsive & Platform”). |

@@ -45,7 +45,7 @@ Driverul desktop (`src/desktop/main`, `preload`, `renderer`), contractul IPC (`s
 ## Notes
 
 - Decision: indexul `entries_fts` e creat și întreținut de `SqliteCatalogStore` în epic-catalog-prin-claude (la fiecare scriere); acest epic doar îl interoghează pentru căutarea text (2026-10-13).
-- Source conflict: EXPERIENCE.md, `search-box` — „Ordinea rezultatelor: relevanța FTS” vs AD-10 — `entries:search` întoarce doar id-uri, afișate în ordinea instantaneului, iar renderer-ul nu reordonează. Rezolvat în favoarea AD-10 (vezi decizia de mai jos); EXPERIENCE.md se corectează prin `bmad-ux` (2026-10-19).
+- Source conflict: EXPERIENCE.md, `search-box` — „Ordinea rezultatelor: relevanța FTS” vs AD-10 — `entries:search` întoarce doar id-uri, afișate în ordinea instantaneului, iar renderer-ul nu reordonează. Rezolvat în favoarea AD-10 (vezi decizia de mai jos); EXPERIENCE.md corectat prin `bmad-ux` (2026-10-19).
 - Decision: fereastra nu migrează catalogul; o bază cu migrări în așteptare dă `DATABASE_NEEDS_MIGRATION` (app-error), iar store-ul primește un mod care scrie fără să migreze; migrările rămân doar la CLI (decizia autorului, 2026-10-19).
 - Decision: rezultatele căutării apar în ordinea instantaneului (AD-10), nu după relevanța FTS (decizia autorului, 2026-10-19).
 - Decision: convențiile renderer-ului amânate de arhitectură (forma depozitului, stilizarea după tokeni, biblioteca Markdown) și dependențele noi (jsdom, Testing Library, biblioteca Markdown, lucide-react, Cascadia Mono) le fixează primul tichet care le folosește, nu toate primul tichet; fiecare trece versiunea în Stack prin `bmad-architecture`, în aceeași sesiune (decizia autorului, 2026-10-19).
