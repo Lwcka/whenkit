@@ -1,0 +1,193 @@
+# tickets.toml — poveștile epicului „Fereastra whenkit”, în ordinea de construire.
+# O singură linie de lucru (un singur autor). Firul de pornire = intrarea 1.
+# ipc.ts, preload, handlerii din main, ports.ts și SqliteCatalogStore sunt extinse de mai multe intrări, doar prin adăugare, în ordinea de mai jos.
+
+[[entry]]
+id = 1
+type = "story"
+title = "Firul de pornire: catalogul în fereastră"
+description = "Main-ul rezolvă workspace-ul (AD-8) și deschide la pornire o singură conexiune SqliteCatalogStore într-un mod nou care scrie, dar nu migrează (migrări în așteptare ⇒ DATABASE_NEEDS_MIGRATION); cazul de utilizare catalogSnapshot din core citește într-o singură tranzacție toate fișele ambelor zone ca EntryDto și toate categoriile, în ordinea added_at DESC, seq ASC; src/shared/ipc.ts definește catalog:snapshot cu rezultatul { ok, data } | { ok: false, error } (AD-18), preload-ul expune window.whenkit, renderer-ul are depozitul unic al catalogului (forma lui se fixează aici, AD-10) și arată tab-urile Toolbox/Learn cu carduri simple; erorile de pornire din EXPERIENCE apar ca app-error; tot aici se fixează testarea renderer-ului (jsdom + Testing Library, vitest extins la .test.tsx), cu versiunile trecute în Stack."
+verify = "Teste: snapshot-ul pe un catalog temporar întoarce ambele zone în ordinea AD-10; un workspace neconfigurat și o bază cu migrări în așteptare ajung în renderer ca WORKSPACE_NOT_CONFIGURED și DATABASE_NEEDS_MIGRATION, fără nicio scriere; manual, npm start pe workspace-ul de dezvoltare arată fișele importate în ambele tab-uri."
+covers = ["CAP-8"]
+after = ["1.3"]
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-4", "architecture-whenkit/architecture-whenkit.md#ad-10", "architecture-whenkit/architecture-whenkit.md#ad-18", "ux-whenkit/EXPERIENCE.md#state-patterns"]
+
+[[entry]]
+id = 2
+type = "story"
+title = "Ciclul de viață al ferestrei"
+description = "Partea din main a AD-20, fără salvarea notițelor la închidere: userData în desktop\\ sau desktop-dev\\ calculat din aceeași funcție ca config.json, instanță unică (a doua pornire aduce fereastra în față), window-state.json cu tema și poziția, dimensiunea minimă, tema aplicată nativ și trimisă prin additionalArguments, expusă de preload ca window.whenkit.initialTheme, window:setTheme; productName WhenKit, CSP fără surse externe, navigarea și window.open blocate (AD-9), erorile neprevăzute din main în dialog și în data/whenkit.log (AD-19)."
+verify = "Teste pe logica din main: calea userData pentru aplicația instalată și pentru dezvoltare, window-state.json corupt sau cu bounds în afara ecranelor dă valorile implicite; manual: poziția se păstrează după repornire, a doua pornire aduce fereastra existentă în față, un link tras peste fereastră nu o navighează."
+covers = ["CAP-8"]
+after = [1]
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-20", "architecture-whenkit/architecture-whenkit.md#ad-9", "architecture-whenkit/architecture-whenkit.md#ad-19"]
+
+[[entry]]
+id = 3
+type = "story"
+title = "Cadrul vizual: tokeni, temă, bare și scurtături"
+description = "Tokenii din DESIGN.md ca variabile CSS pentru ambele teme sub [data-theme], pus înainte de createRoot din window.whenkit.initialTheme, Cascadia Mono inclus și lucide-react (versiuni în Stack); title-bar cu theme-switch, toolbar cu zone-tab (tablist, contoare live), status-bar cu „Catalog la zi”, numărul de fișe, ultima adăugată și calea workspace-ului tăiată la mijloc, plus indiciile de taste ale listei; componentele comune toast (informare și eroare, maximum 3, aria-live) și starea „în lucru” a butoanelor; formatele de dată și număr și pluralul românesc (Intl.PluralRules) în strings.ro.ts; stratul unic de scurtături după event.code, cu dispecerul pentru Esc în ordinea din EXPERIENCE și fără declanșare în câmpurile de text (Ctrl+1/2, zoom 80–200%); focus-ring doar la :focus-visible, ținte de minimum 24×24, prefers-reduced-motion urmărit live și comportamentul cadrului la lățimi mici."
+verify = "Teste: pluralul dă „1 fișă”, „19 fișe”, „20 de fișe”, „101 fișe”; datele și numerele au formatele din EXPERIENCE; o tastă dintr-un caracter într-un câmp de text nu declanșează scurtătura; Esc respectă prioritatea; manual: tema aleasă se păstrează după repornire, prima pornire urmează tema Windows fără clipire, cadrul arată bine la 720 și 1200 px."
+covers = ["CAP-8"]
+after = [2]
+hitl = true
+risk = "medium"
+references = ["ux-whenkit/DESIGN.md", "ux-whenkit/mockups/key-toolbox.html", "architecture-whenkit/architecture-whenkit.md#ad-20"]
+
+[[entry]]
+id = 4
+type = "story"
+title = "Răsfoirea pe categorii"
+description = "category-bar cu „Toate” și categoriile zonei în ordine alfabetică românească, cu contoare (inclusiv 0), grup de selecție unică, derulare orizontală cu estompări și butoane ‹ ›, tastele [ și ], categoria ținută minte pe zonă cât e deschisă aplicația; section-header; entry-card complet după DESIGN.md (kind-stamp în Learn, category-tab cu culoarea din ordinea id-urilor, primele situații, verification-flag); grila auto-fill cu roving tabindex și săgeți; empty-state pentru catalog gol și categorie fără fișe, skeleton la pornire și cascada la schimbarea categoriei."
+verify = "Teste de componentă: selectarea unei categorii arată doar fișele ei, o fișă cu două categorii apare în ambele, cardurile Learn au ștampila felului, ordinea și contoarele categoriilor sunt corecte; manual, pe catalogul de dezvoltare, la 720 și 1200 px."
+covers = ["CAP-8"]
+after = [3]
+hitl = true
+risk = "medium"
+references = ["ux-whenkit/mockups/key-toolbox.html"]
+
+[[entry]]
+id = 5
+type = "story"
+title = "Fereastra vede importurile"
+description = "Polling-ul PRAGMA data_version din main la câteva secunde și catalog:changed, plus helperul folosit de toate scrierile prin IPC care emite catalog:changed și întoarce EntryDto-urile schimbate; depozitul aplică aceste DTO-uri, reîncarcă instantaneul, îl înlocuiește întreg și clasifică sosirile și actualizările după id și revision, cu linia de bază o dată pe proces (AD-10); sosirile din vederea curentă aterizează cu entry-card-new și arrival-tape cu timp relativ, cardurile actualizate pulsează, contoarele cresc, section-header arată „· N nouă/noi”; toast-urile de sosire, câte unul pe zonă: mai multe fișe cu „Vezi” spre zona respectivă, o singură fișă cu numele și zona ei (acțiunea „Deschide” o adaugă intrarea 7)."
+verify = "Teste: clasificarea sosire / actualizare / revizie mai mică, prima încărcare fără sosiri, propriile scrieri neclasificate ca externe, toast-urile unui lot în ordinea Toolbox, Learn; test de integrare în care o scriere de pe altă conexiune pe același fișier produce catalog:changed; manual, un whenkit import din terminal cu fereastra deschisă face fișa vizibilă în câteva secunde."
+covers = ["CAP-8"]
+after = [4]
+hitl = true
+risk = "high"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-10", "ux-whenkit/mockups/key-learn-import.html"]
+
+[[entry]]
+id = 6
+type = "story"
+title = "Căutarea text"
+description = "Metoda de căutare din SqliteCatalogStore cu singura funcție care construiește interogarea FTS (fiecare token ca \"tok\"*, uniți cu AND, AD-5), cazul de utilizare și canalul entries:search care întorc id-urile potrivite, afișate în ordinea instantaneului (AD-10); search-box cu Ctrl+K/Ctrl+F și debounce, căutarea în zona curentă peste toate categoriile, textul păstrat la schimbarea zonei, section-header „Rezultate pentru …” cu linkul „+N în Learn”, empty-state cu trimiterea la /gaseste, golirea cu Esc care revine la categoria de dinainte, cascada rezultatelor și rularea din nou la catalog:changed."
+verify = "Teste pe un catalog temporar: „fundal” găsește fișa prin cuvântul-cheie bilingv, „photopea” o găsește după nume, diacriticele și prefixele potrivesc, ghilimelele și operatorii FTS din text nu dau eroare; test de componentă pentru „+N în Learn”, ordinea rezultatelor și revenirea la categoria de dinainte."
+covers = ["CAP-9"]
+after = [5]
+hitl = false
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-5", "architecture-whenkit/architecture-whenkit.md#ad-10"]
+
+[[entry]]
+id = 7
+type = "story"
+title = "Fișa și navigarea între fișe"
+description = "entry-sheet cu toate câmpurile din entry-model.md în ordinea din DESIGN.md, în afară de conținutul Markdown și linkurile externe (intrarea 8), cu golurile tratate după EXPERIENCE; sheet-bar, deschiderea din card (click, Enter) și din toast-ul unei singure sosiri („Deschide”), animația de deschidere, stiva cu related-link și umbrelă ↔ copii, Înapoi / Esc / Alt+← / butonul înapoi al mouse-ului care readuce lista cu aceeași categorie, derulare și card selectat, iar zone-tab duce la lista zonei; titlul ferestrei „<nume> — WhenKit”, banda de sosire care dispare la deschidere, reîmprospătarea live cu puls, indiciile de taste ale fișei în status-bar și layout-ul responsive al fișei."
+verify = "Teste de componentă: o fișă arată toate câmpurile, iar golurile ascund secțiunile; stiva revine pe cardul de plecare cu aceeași categorie; „Deschide” din toast deschide fișa sosită; o actualizare din depozit reîmprospătează fișa citită; manual, pașii 1 și 3 din Flow 7 și întoarcerea cu Esc din pasul 5 (conținutul conceptului apare ca text simplu până la intrarea 8), la 720 și 1200 px."
+covers = ["CAP-10"]
+after = [5]
+hitl = true
+risk = "medium"
+references = ["ux-whenkit/mockups/key-fisa.html"]
+
+[[entry]]
+id = 8
+type = "story"
+title = "Markdown și linkurile externe"
+description = "Conținutul conceptelor randat Markdown cu tabele, fără HTML brut și fără imagini externe, cu biblioteca aleasă aici și trecută în Stack (AD-9); un canal IPC care deschide doar URL-uri http/https prin shell.openExternal, folosit de open-in-browser, de surse și de linkurile din Markdown; linkurile cu altă schemă apar ca text simplu."
+verify = "Teste: Markdown cu <script>, <img> extern și link javascript: nu execută și nu încarcă nimic; tabelele se randează; handlerul din main refuză orice altă schemă decât http/https; manual, „Deschide în browser” și un link din „Surse” deschid browserul implicit, iar fereastra rămâne pe loc."
+covers = ["CAP-10"]
+after = [7]
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-9"]
+
+[[entry]]
+id = 9
+type = "story"
+title = "Notițele mele"
+description = "Cazul de utilizare setNotes și canalul entries:setNotes, fără expectedRevision și fără să schimbe revision (AD-16), prin helperul de scriere din intrarea 5; my-notes editabile direct, salvate automat după pauză și la ieșirea din câmp sau din fișă, cu stările „Se salvează…” / „Salvat” / „Nu s-a salvat. Încerc din nou.” și reîncercare, cursorul care clipește, textul local păstrat la reîmprospătarea live; închiderea din AD-20: main-ul cere notițele în așteptare, le așteaptă cu limită de timp, apoi scrie window-state.json și închide."
+verify = "Teste: setNotes nu schimbă revision și nici câmpurile scrise de Claude, iar un import update ulterior le lasă neatinse; o reîmprospătare live nu șterge textul cu focus; închiderea cu o salvare în așteptare o scrie înainte de ieșire; manual, o notiță persistă după repornire."
+covers = ["CAP-10"]
+after = [7]
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-16", "architecture-whenkit/architecture-whenkit.md#ad-20"]
+
+[[entry]]
+id = 10
+type = "story"
+title = "Ștergerea unei fișe"
+description = "Cazul de utilizare deleteEntry (legăturile pleacă prin cascade) și canalul entries:delete, prin helperul de scriere din intrarea 5; componenta dialog reutilizabilă (aria-modal, captură de focus, Esc, focusul revine pe elementul care l-a deschis, butonul implicit nedistructiv, bara de titlu activă, animația de deschidere); confirmarea din „Șterge” / Delete, toast-ul de eroare la DATABASE_BUSY și revenirea în listă cu animația de strângere a cardului."
+verify = "Teste: după ștergere fișa și legăturile ei lipsesc, iar fișele înrudite nu mai trimit spre ea; dialogul ține focusul, iar Esc renunță fără să șteargă; DATABASE_BUSY lasă fișa pe loc și arată toast-ul."
+covers = ["CAP-10"]
+after = [7]
+hitl = false
+risk = "low"
+references = ["ux-whenkit/mockups/key-dialogs.html"]
+
+[[entry]]
+id = 11
+type = "story"
+title = "Editarea în core: entries:patch"
+description = "Cazul de utilizare patchEntry: comenzi pe câmpurile scrise de Claude și pe categorii, validările (nume, 1–2 categorii din zona felului, cel puțin o situație, link http(s)), verificarea AD-7 cu adaptoarele reale din main când se schimbă url sau sources (rejected și OFFLINE nu salvează, warned salvează cu nota; la url schimbat se recalculează verifiedAt și datele GitHub, ca la update-ul din import), dedup_key recalculat cu verificarea duplicatului și curățarea jurnalului de respinse pentru cheia acceptată, compararea expectedRevision în tranzacția de scriere cu CONFLICT și creșterea revision; canalul entries:patch, prin helperul de scriere din intrarea 5, întoarce EntryDto-ul schimbat sau eroarea cu motivele ca VerdictReason (AD-15)."
+verify = "Teste cu HttpClient fals: un link 404 nu salvează nimic și întoarce motivul, un link nou acceptat salvează și crește revision, o sursă moartă se scoate cu avertizare, o revizie schimbată între timp dă CONFLICT fără scriere, myNotes rămân neatinse, un link deja existent în catalog e refuzat ca duplicat, OFFLINE nu scrie nimic."
+covers = ["CAP-10"]
+after = [5]
+hitl = false
+risk = "high"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-3", "architecture-whenkit/architecture-whenkit.md#ad-6", "architecture-whenkit/architecture-whenkit.md#ad-7", "architecture-whenkit/architecture-whenkit.md#ad-15", "architecture-whenkit/architecture-whenkit.md#ad-16"]
+
+[[entry]]
+id = 12
+type = "story"
+title = "Modul de editare al fișei"
+description = "Editarea din fișă (E / „Editează”): text-field, select pentru tip, category-picker (aria-pressed), list-editor pentru situații, cuvinte-cheie și surse, validările locale cu „Salvează” inactiv, Ctrl+S cu „Se verifică linkul…” și câmpurile blocate, motivele de respingere sub câmpul vizat, mesajul OFFLINE, toast-ul DATABASE_BUSY, indiciile de taste ale editării în status-bar, Ctrl+1/Ctrl+2 dezactivate prin dispecerul din intrarea 3; „Renunță” / Esc cu confirmare când formularul are modificări; conflict-banner (aria-live assertive) când fișa se schimbă din terminal în timpul editării sau salvarea dă CONFLICT, cu „Reîncarcă fișa”, care nu atinge notițele."
+verify = "Teste de componentă: un formular invalid ține „Salvează” inactiv; un CONFLICT simulat arată banner-ul și păstrează câmpurile; o schimbare din depozit în timpul editării nu reîncarcă formularul; manual, Flow 3 din EXPERIENCE pe workspace-ul de dezvoltare, inclusiv persistența editării și a notiței după repornire."
+covers = ["CAP-10"]
+after = [9, 10, 11]
+hitl = true
+risk = "high"
+references = ["ux-whenkit/mockups/key-fisa.html"]
+
+[[entry]]
+id = 13
+type = "story"
+title = "Gestionarea categoriilor"
+description = "Cazurile de utilizare renameCategory (unic pe name_key în zonă, fără să schimbe revision), mergeCategories (doar în aceeași zonă, crește revision pe fișele afectate) și deleteCategory (cu țintă obligatorie când e singura categorie a unor fișe, caz în care devine unificare), canalele categories:* prin helperul de scriere din intrarea 5; butonul „Categorii” din toolbar și category-manager cu redenumire pe loc, „Unifică…” și ștergere prin confirmări care înlocuiesc dialogul, eșecurile A și B din Flow 5, toast-ul DATABASE_BUSY și lista actualizată live."
+verify = "Teste: redenumirea apare pe toate fișele și nu schimbă revision; unificarea mută fișele fără dubluri când o fișă le avea pe amândouă și șterge sursa; ștergerea fără țintă a unei categorii unice pe o fișă e refuzată; unificarea între zone e refuzată; un nume existent în zonă e refuzat."
+covers = ["CAP-11"]
+after = [12]
+hitl = false
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-5", "ux-whenkit/mockups/key-dialogs.html"]
+
+[[entry]]
+id = 14
+type = "story"
+title = "Exportul catalogului"
+description = "Cazul de utilizare exportCatalog din core (AD-12): o singură tranzacție de citire sincronă, slugify() și harta id → slug în ordinea (addedAt, id) cu sufixe la coliziune, catalog.json cu DTO-urile, categoriile, legăturile și schemaVersion, fise/<slug>.md cu frontmatter și legături [[slug|Nume]], scrise abia apoi prin portul FileSystem; butonul „Exportă catalogul” cu dialogul nativ de folder, starea „Se exportă…”, toast-ul de reușită cu „Deschide folderul” sau de eșec, nimic la anulare."
+verify = "Teste pe un catalog temporar: toate câmpurile, inclusiv notițele și legăturile, apar în catalog.json; coliziunile și numele rezervate Windows primesc sufix; legăturile din .md țintesc fișiere existente; manual, folderul exportat se deschide ca vault în Obsidian."
+covers = ["CAP-13"]
+after = [3]
+hitl = true
+risk = "medium"
+references = ["architecture-whenkit/architecture-whenkit.md#ad-12"]
+
+[[entry]]
+id = 15
+type = "story"
+title = "Curățenie finală (refactor sweep)"
+description = "Curățenia din planurile și constatările de revizie amânate în epic; scopul se stabilește la pornire, doar curățenie, iar scopul împins din alt tichet devine tichet nou."
+verify = "npm test, npm run lint și npm run typecheck trec, fără schimbări de comportament."
+covers = []
+after = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
+hitl = false
+risk = "low"
+
+[[entry]]
+id = 16
+type = "story"
+title = "Aplicația instalată pe catalogul real"
+description = "npm run make, instalarea WhenKit pe laptop și verificarea Done when 1–6 ale epicului pe workspace-ul real, cu fereastra lângă o sesiune /importa; problemele găsite devin tichete de bug."
+verify = "Autorul bifează Done when 1–6 în aplicația instalată."
+covers = ["CAP-8", "CAP-9", "CAP-10", "CAP-11", "CAP-13"]
+after = [15, "1.14"]
+hitl = true
+risk = "medium"
