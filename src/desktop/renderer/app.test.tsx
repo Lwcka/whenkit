@@ -5,13 +5,29 @@ import {
   render,
   screen,
 } from '@testing-library/react';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EntryDto, IpcResult, CatalogSnapshotDto } from '../../shared/ipc';
 import { errorMessages } from '../../shared/strings.ro';
-import { App } from './app';
+import { App, type FrameApi } from './app';
 import { createCatalogStore } from './catalog-store';
+import { applyTheme } from './theme';
+import { toasts } from './toast-store';
+
+beforeEach(() => {
+  applyTheme('light');
+  toasts.clear();
+});
 
 afterEach(cleanup);
+
+function fakeApi(overrides: Partial<FrameApi> = {}): FrameApi {
+  return {
+    workspacePath: 'C:\\Users\\Luca\\Programe\\whenkit',
+    setTheme: () => Promise.resolve({ ok: true, data: null }),
+    setZoomFactor: () => {},
+    ...overrides,
+  };
+}
 
 function entry(
   id: string,
@@ -48,11 +64,14 @@ function entry(
   };
 }
 
-async function renderWith(result: IpcResult<CatalogSnapshotDto>) {
+async function renderWith(
+  result: IpcResult<CatalogSnapshotDto>,
+  api: FrameApi = fakeApi(),
+) {
   const store = createCatalogStore({
     catalogSnapshot: () => Promise.resolve(result),
   });
-  const view = render(<App store={store} />);
+  const view = render(<App store={store} api={api} />);
   await act(() => store.load());
   return view;
 }
@@ -62,7 +81,7 @@ describe('App', () => {
     const store = createCatalogStore({
       catalogSnapshot: () => new Promise(() => {}),
     });
-    const { container } = render(<App store={store} />);
+    const { container } = render(<App store={store} api={fakeApi()} />);
     expect(container.innerHTML).toBe('');
   });
 
@@ -81,10 +100,11 @@ describe('App', () => {
     });
 
     const tabs = screen.getAllByRole('tab');
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Toolbox', 'Learn']);
+    // Each tab carries its zone's live counter.
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Toolbox2', 'Learn2']);
     expect(
       screen
-        .getByRole('tab', { name: 'Toolbox' })
+        .getByRole('tab', { name: /^Toolbox/ })
         .getAttribute('aria-selected'),
     ).toBe('true');
     // Snapshot order, not alphabetical.
@@ -93,10 +113,10 @@ describe('App', () => {
     ).toEqual(['Zeta tool', 'Alfa tool']);
     expect(screen.getByText('Prima.')).toBeTruthy();
 
-    fireEvent.click(screen.getByRole('tab', { name: 'Learn' }));
+    fireEvent.click(screen.getByRole('tab', { name: /^Learn/ }));
 
     expect(
-      screen.getByRole('tab', { name: 'Learn' }).getAttribute('aria-selected'),
+      screen.getByRole('tab', { name: /^Learn/ }).getAttribute('aria-selected'),
     ).toBe('true');
     expect(
       screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent),
@@ -133,8 +153,61 @@ describe('App', () => {
     const store = createCatalogStore({
       catalogSnapshot: () => Promise.reject(new Error('ipc down')),
     });
-    render(<App store={store} />);
+    render(<App store={store} api={fakeApi()} />);
     await act(() => store.load());
     expect(screen.getByText('INTERNAL')).toBeTruthy();
+  });
+});
+
+describe('App frame', () => {
+  const snapshot: IpcResult<CatalogSnapshotDto> = {
+    ok: true,
+    data: {
+      categories: [],
+      entries: [
+        entry('1', 'Zeta tool', 'toolbox', 'Prima.'),
+        entry('2', 'Un concept', 'learn', 'Învățare.'),
+      ],
+    },
+  };
+
+  it('switches zones with Ctrl+1 and Ctrl+2', async () => {
+    await renderWith(snapshot);
+
+    fireEvent.keyDown(document, { code: 'Digit2', ctrlKey: true });
+    expect(
+      screen.getByRole('tab', { name: /^Learn/ }).getAttribute('aria-selected'),
+    ).toBe('true');
+
+    fireEvent.keyDown(document, { code: 'Digit1', ctrlKey: true });
+    expect(
+      screen
+        .getByRole('tab', { name: /^Toolbox/ })
+        .getAttribute('aria-selected'),
+    ).toBe('true');
+  });
+
+  it('zooms through the bridge on Ctrl+=', async () => {
+    const setZoomFactor = vi.fn();
+    await renderWith(snapshot, fakeApi({ setZoomFactor }));
+
+    fireEvent.keyDown(document, { code: 'Equal', ctrlKey: true });
+    fireEvent.keyDown(document, { code: 'Digit0', ctrlKey: true });
+    expect(setZoomFactor.mock.calls).toEqual([[1.1], [1]]);
+  });
+
+  it('shows the title bar and the status bar from the catalog store', async () => {
+    await renderWith(snapshot);
+
+    expect(screen.getByText('WhenKit')).toBeTruthy();
+    expect(screen.getByText('Catalog la zi')).toBeTruthy();
+    expect(screen.getByText(/^2 fișe · ultima adăugată /)).toBeTruthy();
+  });
+
+  it('keeps the title bar next to the startup error', async () => {
+    await renderWith({ ok: false, error: { code: 'INTERNAL' } });
+
+    expect(screen.getByRole('switch')).toBeTruthy();
+    expect(screen.queryByRole('tablist')).toBeNull();
   });
 });

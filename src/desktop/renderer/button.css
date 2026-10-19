@@ -1,0 +1,88 @@
+.button {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--rounded-lg);
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  font: var(--typography-button);
+  gap: var(--spacing-2);
+  height: var(--button-height);
+  justify-content: center;
+  min-height: var(--button-min-size);
+  min-width: var(--button-min-size);
+  padding: 0 var(--button-padding-x);
+  position: relative;
+  transition: background-color var(--motion-quick) var(--motion-ease);
+  white-space: nowrap;
+}
+
+/* The hover and pressed layers sit over the background without replacing it. */
+.button:hover:not(:disabled) {
+  background-image: linear-gradient(var(--hover-overlay), var(--hover-overlay));
+}
+
+.button:active:not(:disabled) {
+  background-image: linear-gradient(
+    var(--pressed-overlay),
+    var(--pressed-overlay)
+  );
+  top: var(--pressed-offset);
+}
+
+.button[data-variant='primary'] {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button[data-variant='ghost'] {
+  background-color: var(--surface-2);
+  border-color: transparent;
+  color: var(--ink-2);
+}
+
+.button[data-variant='danger'] {
+  background-color: transparent;
+  border-color: transparent;
+  color: var(--danger);
+}
+
+.button[data-variant='danger-solid'] {
+  background-color: var(--danger);
+  border-color: var(--danger);
+  color: var(--surface);
+}
+
+/* Icon only: square, with the same height. */
+.button[data-icon-only] {
+  padding: 0;
+  width: var(--button-height);
+}
+
+.button:disabled {
+  cursor: default;
+  opacity: var(--disabled-opacity);
+}
+
+/* Busy: like disabled, but at full opacity. */
+.button[data-busy]:disabled {
+  opacity: 1;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin var(--motion-spin) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

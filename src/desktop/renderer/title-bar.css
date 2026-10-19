@@ -1,0 +1,52 @@
+/* Height and right inset follow the native overlay (env(titlebar-area-*)), so
+   the bar stays aligned with the window buttons at any zoom; the fallback is
+   the DESIGN height and a fixed room for the buttons. */
+.title-bar {
+  -webkit-app-region: drag;
+  align-items: center;
+  background: var(--chrome);
+  box-sizing: border-box;
+  color: var(--ink);
+  display: flex;
+  flex: none;
+  height: env(titlebar-area-height, var(--spacing-titlebar-height));
+  padding-left: var(--spacing-4);
+  padding-right: calc(
+    100vw - env(titlebar-area-x, 0px) -
+      env(titlebar-area-width, calc(100vw - var(--title-bar-controls-fallback)))
+  );
+  user-select: none;
+}
+
+.title-bar-app {
+  align-items: center;
+  display: flex;
+  font: var(--typography-app-title);
+  gap: var(--spacing-2);
+  letter-spacing: var(--ls-app-title);
+  margin-right: auto;
+}
+
+.app-mark {
+  background: var(--accent);
+  border-radius: var(--rounded-sm);
+  color: var(--accent-ink);
+  display: grid;
+  font: var(--typography-app-mark);
+  height: var(--app-mark-size);
+  place-items: center;
+  position: relative;
+  width: var(--app-mark-size);
+}
+
+.app-mark::after {
+  background: var(--signal);
+  border: var(--app-mark-dot-border) solid var(--chrome);
+  border-radius: 50%;
+  bottom: var(--app-mark-dot-offset);
+  content: '';
+  height: var(--app-mark-dot-size);
+  position: absolute;
+  right: var(--app-mark-dot-offset);
+  width: var(--app-mark-dot-size);
+}

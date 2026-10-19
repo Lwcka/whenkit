@@ -1,0 +1,72 @@
+.toolbar {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  box-sizing: border-box;
+  display: flex;
+  flex: none;
+  gap: var(--spacing-4);
+  height: var(--spacing-toolbar-height);
+  padding: 0 var(--spacing-bar-x);
+}
+
+.zone-tabs {
+  display: flex;
+  gap: var(--spacing-5);
+  height: 100%;
+}
+
+.zone-tab {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex;
+  font: var(--typography-tab);
+  gap: var(--spacing-2);
+  letter-spacing: var(--ls-tab);
+  padding: 0;
+  position: relative;
+  transition: color var(--motion-quick) var(--motion-ease);
+}
+
+.zone-tab:hover {
+  color: var(--ink-2);
+}
+
+.zone-tab[aria-selected='true'] {
+  color: var(--ink);
+}
+
+/* The indicator sits on the bottom edge of the bar. */
+.zone-tab[aria-selected='true']::after {
+  background: var(--accent);
+  border-radius: var(--spacing-1) var(--spacing-1) 0 0;
+  bottom: -1px;
+  content: '';
+  height: var(--zone-tab-indicator-height);
+  left: 0;
+  position: absolute;
+  right: 0;
+}
+
+.zone-tab-count {
+  background: var(--surface-2);
+  border-radius: var(--rounded-full);
+  color: var(--muted);
+  font: var(--typography-mono-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+}
+
+.zone-tab[aria-selected='true'] .zone-tab-count {
+  background: var(--accent-bg);
+  color: var(--accent);
+}
+
+/* Below spacing.bp-narrow (720px) the counters leave the tabs. */
+@media (max-width: 719px) {
+  .zone-tab-count {
+    display: none;
+  }
+}

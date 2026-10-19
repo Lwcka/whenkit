@@ -22,17 +22,17 @@ export function isTheme(value: unknown): value is Theme {
   return value === 'light' || value === 'dark';
 }
 
-/** Main hands the resolved theme to preload as `--whenkit-theme=<theme>`. */
-export const THEME_ARGUMENT_PREFIX = '--whenkit-theme=';
+/** Main hands the resolved workspace to preload as `--whenkit-workspace=<path>`. */
+export const WORKSPACE_ARGUMENT_PREFIX = '--whenkit-workspace=';
 
-/** The theme main put in the arguments of the renderer; `light` when absent. */
-export function themeFromArgv(argv: readonly string[]): Theme {
+/** The workspace main put in the arguments of the renderer; `null` when absent. */
+export function workspaceFromArgv(argv: readonly string[]): string | null {
   for (const argument of argv) {
-    if (!argument.startsWith(THEME_ARGUMENT_PREFIX)) continue;
-    const value = argument.slice(THEME_ARGUMENT_PREFIX.length);
-    if (isTheme(value)) return value;
+    if (!argument.startsWith(WORKSPACE_ARGUMENT_PREFIX)) continue;
+    const value = argument.slice(WORKSPACE_ARGUMENT_PREFIX.length);
+    if (value !== '') return value;
   }
-  return 'light';
+  return null;
 }
 
 /** Handlers never throw: they answer with a value (AD-18). */
@@ -42,8 +42,10 @@ export type IpcResult<T> =
 
 /** The bridge preload exposes as `window.whenkit`. */
 export interface WhenkitApi {
-  /** The theme the window opened with, resolved by main (AD-20). */
-  initialTheme: Theme;
+  /** The workspace main resolved at startup (AD-8); `null` when it could not. */
+  workspacePath: string | null;
   catalogSnapshot(): Promise<IpcResult<CatalogSnapshotDto>>;
   setTheme(theme: Theme): Promise<IpcResult<null>>;
+  /** Zooms the whole interface (preload `webFrame`; no IPC, nothing persisted). */
+  setZoomFactor(factor: number): void;
 }

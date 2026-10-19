@@ -391,7 +391,9 @@ describe('openDesktopCatalog and snapshotResult', () => {
       },
     };
     const log = vi.spyOn(console, 'error').mockImplementation(() => {});
-    expect(snapshotResult({ ok: true, store: broken })).toEqual({
+    expect(
+      snapshotResult({ ok: true, store: broken, workspace: 'D:\\ws' }),
+    ).toEqual({
       ok: false,
       error: { code: 'INTERNAL' },
     });

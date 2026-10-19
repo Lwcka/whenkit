@@ -1,0 +1,273 @@
+/*
+  The design tokens of DESIGN.md as CSS custom properties: the only place a
+  color, size or duration is written down. Components refer to them through
+  var(--…) and never hard-code a value. Names follow the token groups: colors
+  are unprefixed (--canvas), the rest carry their group (--spacing-bar-x,
+  --rounded-lg, --motion-quick, --typography-tab, --elevation-2).
+
+  The theme is the data-theme attribute on <html>, set by the renderer before
+  the first paint (AD-20). Night values are the "-dark" twins of DESIGN.md,
+  swapped by name.
+*/
+
+@import '@fontsource/cascadia-mono/400.css';
+@import '@fontsource/cascadia-mono/500.css';
+
+:root {
+  /* Font families, with their fallbacks (DESIGN.md, Typography). */
+  --ff-head: Bahnschrift, 'Segoe UI Variable Display', 'Segoe UI', sans-serif;
+  --ff-text: 'Segoe UI Variable Text', 'Segoe UI', system-ui, sans-serif;
+  --ff-mono: 'Cascadia Mono', 'Cascadia Code', Consolas, monospace;
+
+  /* Typography: the font shorthand, and the letter-spacing next to it. */
+  --typography-display: 600 36px/1.05 var(--ff-head);
+  --ls-display: -0.005em;
+  --typography-headline: 600 23px/1 var(--ff-head);
+  --ls-headline: 0.01em;
+  --typography-card-title: 600 21px/1.15 var(--ff-head);
+  --ls-card-title: 0.01em;
+  --typography-tab: 600 16px/1 var(--ff-head);
+  --ls-tab: 0.02em;
+  --typography-title-sm: 600 14.5px/1.1 var(--ff-head);
+  --ls-title-sm: 0.01em;
+  --typography-app-title: 600 13.5px/1 var(--ff-head);
+  --ls-app-title: 0.02em;
+  --typography-label: 600 13px/1 var(--ff-head);
+  --ls-label: 0.05em;
+  --typography-label-sm: 600 12px/1 var(--ff-head);
+  --ls-label-sm: 0.03em;
+  --typography-stamp: 700 11px/1 var(--ff-head);
+  --ls-stamp: 0.18em;
+  --typography-tape: 600 11.5px/1 var(--ff-head);
+  --ls-tape: 0.1em;
+  --typography-body: 400 14px/1.5 var(--ff-text);
+  --typography-body-lead: 400 14.5px/1.55 var(--ff-text);
+  --typography-body-sm: 400 13.5px/1.5 var(--ff-text);
+  --typography-button: 500 13.5px/1 var(--ff-text);
+  --typography-situation: 400 13px/1.4 var(--ff-text);
+  --typography-caption: 400 12px/1.35 var(--ff-text);
+  --typography-mono: 400 12px/1.35 var(--ff-mono);
+  --typography-mono-sm: 400 11.5px/1 var(--ff-mono);
+  --typography-kbd: 500 11px/1 var(--ff-mono);
+
+  --rounded-sm: 6px;
+  --rounded-tab: 7px;
+  --rounded-md: 10px;
+  --rounded-lg: 12px;
+  --rounded-xl: 14px;
+  --rounded-card: 16px;
+  --rounded-sheet: 20px;
+  --rounded-full: 9999px;
+
+  --spacing-1: 4px;
+  --spacing-2: 8px;
+  --spacing-3: 12px;
+  --spacing-4: 16px;
+  --spacing-5: 20px;
+  --spacing-6: 24px;
+  --spacing-7: 28px;
+  --spacing-8: 32px;
+  --spacing-bar-x: 24px;
+  --spacing-work-x: 32px;
+  --spacing-card-gap-x: 24px;
+  --spacing-card-gap-y: 26px;
+  --spacing-card-min-width: 300px;
+  --spacing-grid-minor: 16px;
+  --spacing-grid-major: 80px;
+  --spacing-titlebar-height: 40px;
+  --spacing-toolbar-height: 64px;
+  --spacing-category-bar-height: 60px;
+  --spacing-sheet-bar-height: 58px;
+  --spacing-status-bar-height: 32px;
+  --spacing-sheet-side-width: 344px;
+  --spacing-sheet-side-width-narrow: 300px;
+  /* Window widths of the layout rules. Media queries cannot read custom
+     properties, so the @media rules in the component files repeat them. */
+  --spacing-bp-wide: 1200px;
+  --spacing-bp-half: 960px;
+  --spacing-bp-narrow: 720px;
+  --spacing-window-min-width: 640px;
+  --spacing-window-min-height: 480px;
+
+  --elevation-tape: 0 2px 5px rgba(0, 0, 0, 0.12);
+  --elevation-accent: 0 10px 24px -14px var(--accent);
+
+  --motion-quick: 150ms;
+  --motion-fade: 200ms;
+  --motion-slide: 250ms;
+  --motion-theme: 300ms;
+  --motion-pulse: 600ms;
+  --motion-arrival: 900ms;
+  --motion-spin: 900ms;
+  --motion-ease: ease-out;
+  --motion-arrival-ease: cubic-bezier(0.2, 0.9, 0.3, 1.2);
+  --motion-arrival-offset: -12px;
+  --motion-enter-scale: 0.98;
+  --motion-stagger: 30ms;
+  --motion-stagger-max: 8;
+  --motion-caret-blink: 1s;
+  --motion-search-debounce: 150ms;
+  --motion-notes-autosave: 600ms;
+  --motion-saved-min-visible: 800ms;
+  --motion-skeleton-delay: 200ms;
+  --motion-toast-dwell: 6s;
+  --motion-tape-lifetime: 600s;
+
+  --icon-size: 16px;
+  --icon-size-sm: 12px;
+  --icon-stroke: 1.5;
+
+  --hover-overlay: color-mix(in srgb, var(--ink) 5%, transparent);
+  --pressed-overlay: color-mix(in srgb, var(--ink) 10%, transparent);
+  --pressed-offset: 1px;
+  --disabled-opacity: 0.45;
+
+  --focus-ring-width: 2px;
+  --focus-ring-offset: 2px;
+
+  /* Components (DESIGN.md, Components). */
+  --button-height: 36px;
+  --button-padding-x: 14px;
+  --button-min-size: 24px;
+  --toolbar-button-height: 38px;
+  --app-mark-size: 20px;
+  --app-mark-dot-size: 8px;
+  --app-mark-dot-border: 2px;
+  --app-mark-dot-offset: -3px;
+  --typography-app-mark: 700 11.5px/1 var(--ff-head);
+  --theme-switch-height: 28px;
+  --theme-switch-padding: 3px;
+  --theme-switch-gap: 10px;
+  --theme-switch-slot-width: 32px;
+  --theme-switch-slot-height: 20px;
+  --theme-switch-icon-size: 14px;
+  --zone-tab-indicator-height: 3px;
+  --status-bar-dot-size: 7px;
+  --kbd-border-bottom-width: 2px;
+  --toast-width: 360px;
+  --toast-stripe-width: 4px;
+  --toast-stack-gap: var(--spacing-2);
+  --toast-offset: var(--spacing-4);
+  --toast-close-size: 28px;
+  --toast-enter-offset: 16px;
+  /* The room the native window buttons take when the browser does not report
+     titlebar-area-* (the overlay's own rectangle). */
+  --title-bar-controls-fallback: 150px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+
+  --canvas: #f7f4ee;
+  --surface: #fffdf9;
+  --surface-2: #f5f1e9;
+  --chrome: #f0ebe2;
+  --line: #e7e0d3;
+  --line-strong: #d4cab9;
+  --grid: #eee7da;
+  --grid-major: #e3d9c8;
+  --ink: #1d1b18;
+  --ink-2: #47423a;
+  --muted: #6a6357;
+  --accent: #1d56c9;
+  --accent-bg: #e8eefa;
+  --accent-ink: #ffffff;
+  --signal: #b93f0e;
+  --signal-bg: #fcede1;
+  --ok: #2f7d46;
+  --danger: #b91c1c;
+  --tape: #efd48a;
+  --tape-ink: #3a2f0c;
+  --scrim: #1d1b18;
+
+  --category-1: #2563eb;
+  --category-2: #ea580c;
+  --category-3: #db2777;
+  --category-4: #7c3aed;
+  --category-5: #d97706;
+  --category-6: #dc2626;
+  --category-7: #0891b2;
+  --category-8: #65a30d;
+  --category-9: #475569;
+
+  --elevation-1:
+    0 1px 2px rgba(60, 45, 20, 0.06), 0 14px 32px -20px rgba(60, 45, 20, 0.32);
+  --elevation-2:
+    0 2px 4px rgba(60, 45, 20, 0.07), 0 22px 44px -22px rgba(29, 86, 201, 0.4);
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --canvas: #111923;
+  --surface: #17212d;
+  --surface-2: #1c2836;
+  --chrome: #0d131a;
+  --line: #263242;
+  --line-strong: #364557;
+  --grid: #17212c;
+  --grid-major: #1d2a38;
+  --ink: #f0ebe2;
+  --ink-2: #c3bcb0;
+  --muted: #9a9387;
+  --accent: #86b1ff;
+  --accent-bg: #1d3150;
+  --accent-ink: #0b1424;
+  --signal: #ffa867;
+  --signal-bg: #3a2618;
+  --ok: #7bd392;
+  --danger: #ff8a8a;
+  --tape: #d2b866;
+  --tape-ink: #1e1806;
+  --scrim: #05080c;
+
+  --category-1: #2563eb;
+  --category-2: #ea580c;
+  --category-3: #db2777;
+  --category-4: #7c3aed;
+  --category-5: #d97706;
+  --category-6: #dc2626;
+  --category-7: #0891b2;
+  --category-8: #65a30d;
+  --category-9: #94a3b8;
+
+  --elevation-1:
+    0 1px 0 rgba(0, 0, 0, 0.25), 0 14px 34px -18px rgba(0, 0, 0, 0.65);
+  --elevation-2:
+    0 1px 0 rgba(0, 0, 0, 0.25), 0 22px 44px -20px rgba(0, 0, 0, 0.8);
+}
+
+/* "Animation effects" off in Windows: every duration is 0 and the busy icon
+   stands still. The media query is live, so no restart is needed. */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-quick: 0ms;
+    --motion-fade: 0ms;
+    --motion-slide: 0ms;
+    --motion-theme: 0ms;
+    --motion-pulse: 0ms;
+    --motion-arrival: 0ms;
+    --motion-spin: 0ms;
+    --motion-stagger: 0ms;
+    --motion-caret-blink: 0ms;
+  }
+}
+
+/* Base: the focus ring shows for the keyboard only (:focus-visible). */
+:focus-visible {
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
+}
+
+/* Lucide icons: size, stroke and color come from the tokens (DESIGN, Icons). */
+.lucide {
+  flex: none;
+  height: var(--icon-size);
+  stroke-width: var(--icon-stroke);
+  width: var(--icon-size);
+}
+
+.lucide.icon-sm {
+  height: var(--icon-size-sm);
+  width: var(--icon-size-sm);
+}

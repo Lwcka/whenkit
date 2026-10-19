@@ -1,0 +1,11 @@
+/* kbd (DESIGN, kbd): a small key with a thicker bottom edge. */
+.kbd {
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-bottom-width: var(--kbd-border-bottom-width);
+  border-radius: var(--rounded-sm);
+  color: var(--ink-2);
+  font: var(--typography-kbd);
+  padding: var(--spacing-1) var(--spacing-2);
+  white-space: nowrap;
+}

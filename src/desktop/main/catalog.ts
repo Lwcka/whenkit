@@ -14,7 +14,7 @@ import type { IpcResult } from '../../shared/ipc';
 // migrating, and read through core. Electron-free so tests can drive it.
 
 export type DesktopCatalog =
-  | { ok: true; store: CatalogStore }
+  | { ok: true; store: CatalogStore; workspace: string }
   | { ok: false; code: ErrorCode };
 
 export interface DesktopCatalogPorts {
@@ -38,7 +38,8 @@ function codeOf(error: unknown, logError: (error: unknown) => void): ErrorCode {
 
 /**
  * Resolves the workspace and opens its catalog without migrating (a pending
- * migration is a startup error shown by the window, never run by it). Never
+ * migration is a startup error shown by the window, never run by it). On
+ * success the resolved workspace comes back too, for the status bar. Never
  * throws.
  */
 export function openDesktopCatalog({
@@ -50,7 +51,7 @@ export function openDesktopCatalog({
   try {
     const workspace = resolveWorkspace(env, fs);
     const store = openStore(catalogPath(fs, workspace), { migrate: false });
-    return { ok: true, store };
+    return { ok: true, store, workspace };
   } catch (error) {
     return { ok: false, code: codeOf(error, logError) };
   }

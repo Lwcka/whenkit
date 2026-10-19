@@ -1,0 +1,59 @@
+.theme-switch {
+  -webkit-app-region: no-drag;
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--rounded-full);
+  cursor: pointer;
+  display: flex;
+  height: var(--theme-switch-height);
+  margin-right: var(--theme-switch-gap);
+  padding: var(--theme-switch-padding);
+  position: relative;
+}
+
+.theme-switch-slot {
+  color: var(--muted);
+  display: grid;
+  height: var(--theme-switch-slot-height);
+  place-items: center;
+  position: relative;
+  transition: color var(--motion-fade) var(--motion-ease);
+  width: var(--theme-switch-slot-width);
+  z-index: 1;
+}
+
+.theme-switch-slot .lucide {
+  height: var(--theme-switch-icon-size);
+  width: var(--theme-switch-icon-size);
+}
+
+/* The sliding knob. */
+.theme-switch::before {
+  background: var(--surface);
+  border-radius: var(--rounded-full);
+  box-shadow: 0 0 0 1px var(--line-strong);
+  content: '';
+  height: var(--theme-switch-slot-height);
+  left: var(--theme-switch-padding);
+  position: absolute;
+  top: var(--theme-switch-padding);
+  transition:
+    transform var(--motion-theme) var(--motion-ease),
+    background-color var(--motion-theme) var(--motion-ease);
+  width: var(--theme-switch-slot-width);
+}
+
+.theme-switch[aria-checked='true']::before {
+  background: var(--accent-bg);
+  box-shadow: 0 0 0 1px var(--accent);
+  transform: translateX(var(--theme-switch-slot-width));
+}
+
+.theme-switch[aria-checked='false'] [data-slot='light'] {
+  color: var(--signal);
+}
+
+.theme-switch[aria-checked='true'] [data-slot='dark'] {
+  color: var(--accent);
+}

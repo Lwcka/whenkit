@@ -228,9 +228,77 @@ const startupCommands: Partial<Record<ErrorCode, string>> = {
 
 const genericStartupTitle = 'WhenKit nu a putut porni.';
 
+export type PluralForms = Readonly<{ one: string; few: string; other: string }>;
+
+const pluralRules = new Intl.PluralRules('ro');
+
+/**
+ * "N word" with the right Romanian form (EXPERIENCE, "Voice and Tone"):
+ * one "1 fișă"; few "0 fișe", "2 fișe" … "19 fișe", "101 fișe"; other
+ * "20 de fișe", "100 de fișe". Other plurals (situations, children) reuse it.
+ */
+export function plural(n: number, forms: PluralForms): string {
+  const category = pluralRules.select(n);
+  const form =
+    category === 'one'
+      ? forms.one
+      : category === 'few'
+        ? forms.few
+        : forms.other;
+  return `${n} ${form}`;
+}
+
+export const entryCount = (n: number): string =>
+  plural(n, { one: 'fișă', few: 'fișe', other: 'de fișe' });
+
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+function asDate(value: Date | string): Date {
+  return typeof value === 'string' ? new Date(value) : value;
+}
+
+/** `15.10.2026`, in local time. */
+export function formatDate(value: Date | string): string {
+  const date = asDate(value);
+  return `${pad2(date.getDate())}.${pad2(date.getMonth() + 1)}.${date.getFullYear()}`;
+}
+
+/** `15.10.2026, 20:39`, in local time. */
+export function formatDateTime(value: Date | string): string {
+  const date = asDate(value);
+  return `${formatDate(date)}, ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+}
+
+/** `999`, `1k`, `137,7k`: decimal comma, no trailing `,0`. */
+export function formatCompact(n: number): string {
+  if (n < 1000) return String(n);
+  const [divisor, suffix] = n >= 999_950 ? [1_000_000, 'M'] : [1000, 'k'];
+  const rounded = (n / divisor)
+    .toFixed(1)
+    .replace(/\.0$/, '')
+    .replace('.', ',');
+  return `${rounded}${suffix}`;
+}
+
 export const appStrings = {
   productName: 'WhenKit',
   tablistLabel: 'Zone',
+  themeSwitchLabel: 'Temă întunecată',
+  themeSwitchTitle: 'Comută tema: zi / noapte',
+  themeNotChanged: 'Nu am putut schimba tema.',
+  statusLabel: 'Starea catalogului',
+  statusUpToDate: 'Catalog la zi',
+  statusSummary: (count: number, lastAddedAt: string | null): string =>
+    lastAddedAt === null
+      ? entryCount(count)
+      : `${entryCount(count)} · ultima adăugată ${formatDateTime(lastAddedAt)}`,
+  /** The key hints of the list view (EXPERIENCE, status-bar). */
+  listKeyHints: [
+    { keys: 'Ctrl K', action: 'caută' },
+    { keys: 'Enter', action: 'deschide' },
+  ],
+  toastsLabel: 'Notificări',
+  toastClose: 'Închide',
   startupTitle: (code: ErrorCode): string =>
     startupTitles[code] ?? genericStartupTitle,
   startupCommand: (code: ErrorCode): string | undefined =>

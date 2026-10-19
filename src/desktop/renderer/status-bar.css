@@ -1,0 +1,85 @@
+.status-bar {
+  align-items: center;
+  background: var(--chrome);
+  border-top: 1px solid var(--line);
+  box-sizing: border-box;
+  color: var(--muted);
+  display: flex;
+  flex: none;
+  font: var(--typography-caption);
+  gap: var(--spacing-5);
+  height: var(--spacing-status-bar-height);
+  min-width: 0;
+  padding: 0 var(--spacing-bar-x);
+  white-space: nowrap;
+}
+
+.status-state {
+  flex: none;
+}
+
+.status-state,
+.status-keys,
+.status-keys > span {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-2);
+}
+
+.status-dot {
+  background: var(--ok);
+  border-radius: 50%;
+  height: var(--status-bar-dot-size);
+  width: var(--status-bar-dot-size);
+}
+
+.status-counters {
+  flex: none;
+  font: var(--typography-mono-sm);
+}
+
+/* The head of the path shrinks (cut with an ellipsis); the last segment stays. */
+.status-path {
+  display: flex;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.status-path-head {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.status-path-tail {
+  flex: none;
+}
+
+.status-keys {
+  flex: none;
+  gap: var(--spacing-4);
+  margin-left: auto;
+}
+
+/* In the status bar the keys have no background (DESIGN, status-bar). */
+.status-keys .kbd {
+  background: transparent;
+  border-bottom-width: 1px;
+  color: var(--muted);
+}
+
+/* Between spacing.bp-narrow (720px) and spacing.bp-half (960px). */
+@media (max-width: 959px) {
+  .status-bar {
+    gap: var(--spacing-4);
+  }
+}
+
+/* Below 720px the status bar keeps the state and the entry count only. */
+@media (max-width: 719px) {
+  .status-path,
+  .status-keys {
+    display: none;
+  }
+}

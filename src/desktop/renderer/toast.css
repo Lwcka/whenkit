@@ -1,0 +1,90 @@
+.toast-host {
+  bottom: calc(var(--spacing-status-bar-height) + var(--toast-offset));
+  display: flex;
+  flex-direction: column;
+  gap: var(--toast-stack-gap);
+  pointer-events: none;
+  position: fixed;
+  right: var(--spacing-bar-x);
+  z-index: 20;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(var(--toast-enter-offset));
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.toast {
+  align-items: center;
+  animation: toast-in var(--motion-slide) var(--motion-ease) both;
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--rounded-xl);
+  box-shadow:
+    var(--elevation-2),
+    inset var(--toast-stripe-width) 0 0 var(--accent);
+  color: var(--ink);
+  display: flex;
+  font: var(--typography-body-sm);
+  gap: var(--spacing-3);
+  overflow: hidden;
+  padding: var(--spacing-3) var(--spacing-2) var(--spacing-3)
+    calc(var(--spacing-4) + var(--spacing-1));
+  pointer-events: auto;
+  width: var(--toast-width);
+}
+
+.toast[data-kind='error'] {
+  box-shadow:
+    var(--elevation-2),
+    inset var(--toast-stripe-width) 0 0 var(--danger);
+}
+
+@keyframes toast-out {
+  to {
+    opacity: 0;
+  }
+}
+
+/* Leaving: it fades (motion.fade) and no longer takes the mouse. */
+.toast[data-leaving] {
+  animation: toast-out var(--motion-fade) var(--motion-ease) both;
+  pointer-events: none;
+}
+
+.toast-message {
+  flex: 1;
+  margin: 0;
+  min-width: 0;
+}
+
+/* The action sits on the text's row, at its right. */
+.toast-action {
+  background: transparent;
+  border: 0;
+  color: var(--accent);
+  cursor: pointer;
+  flex: none;
+  font: var(--typography-button);
+  padding: var(--spacing-1) 0;
+  white-space: nowrap;
+}
+
+/* The ×: transparent, muted, with only the hover layer (not a filled button). */
+.toast .toast-close {
+  align-self: flex-start;
+  background-color: transparent;
+  border-color: transparent;
+  border-radius: var(--rounded-sm);
+  color: var(--muted);
+  flex: none;
+  height: var(--toast-close-size);
+  width: var(--toast-close-size);
+}

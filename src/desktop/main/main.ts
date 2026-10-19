@@ -3,6 +3,7 @@ import {
   BrowserWindow,
   dialog,
   ipcMain,
+  Menu,
   nativeTheme,
   screen,
 } from 'electron';
@@ -18,7 +19,7 @@ import { desktopDataDir, resolveWorkspace } from '../../core/workspace';
 import {
   IPC_CHANNELS,
   isTheme,
-  THEME_ARGUMENT_PREFIX,
+  WORKSPACE_ARGUMENT_PREFIX,
   type IpcResult,
   type Theme,
 } from '../../shared/ipc';
@@ -136,7 +137,7 @@ function main(): void {
     }
   };
 
-  const createWindow = (theme: Theme) => {
+  const createWindow = (theme: Theme, workspace: string | null) => {
     const { backgroundColor, titleBarOverlay } = nativeThemeSettings(theme);
     const window = new BrowserWindow({
       ...(saved.bounds ?? { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }),
@@ -153,7 +154,14 @@ function main(): void {
         contextIsolation: true,
         sandbox: true,
         nodeIntegration: false,
-        additionalArguments: [`${THEME_ARGUMENT_PREFIX}${theme}`],
+        // The workspace is resolved once, here; the renderer reads it from
+        // its launch arguments (no channel needed). The theme is not passed:
+        // the renderer follows prefers-color-scheme, which Electron ties to
+        // nativeTheme.themeSource (AD-20).
+        additionalArguments:
+          workspace === null
+            ? []
+            : [`${WORKSPACE_ARGUMENT_PREFIX}${workspace}`],
       },
     });
     mainWindow = window;
@@ -230,11 +238,26 @@ function main(): void {
         if (catalog.ok) catalog.store.close();
       });
 
-      createWindow(currentTheme());
+      // No application menu: the renderer's keyboard layer owns Ctrl+=/−/0,
+      // and nothing else (Ctrl+R, Ctrl+Shift+I) is reachable in production.
+      Menu.setApplicationMenu(null);
+
+      // With no saved theme the renderer follows Windows live; the native
+      // half (background, caption buttons) must follow it too.
+      nativeTheme.on('updated', () => {
+        if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+        const { backgroundColor, titleBarOverlay } =
+          nativeThemeSettings(currentTheme());
+        mainWindow.setBackgroundColor(backgroundColor);
+        mainWindow.setTitleBarOverlay(titleBarOverlay);
+      });
+
+      const workspace = catalog.ok ? catalog.workspace : null;
+      createWindow(currentTheme(), workspace);
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
-          createWindow(currentTheme());
+          createWindow(currentTheme(), workspace);
         }
       });
     })

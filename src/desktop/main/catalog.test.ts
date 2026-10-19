@@ -10,6 +10,12 @@ const env: Environment = {
 const fs = { joinPath: (...parts: string[]) => parts.join('\\') } as FileSystem;
 
 describe('openDesktopCatalog', () => {
+  it('returns the resolved workspace with the store', () => {
+    const store = {} as CatalogStore;
+    const opened = openDesktopCatalog({ env, fs, openStore: () => store });
+    expect(opened).toEqual({ ok: true, store, workspace: 'D:\\ws' });
+  });
+
   it('passes an unexpected failure to logError and answers INTERNAL', () => {
     const logged: unknown[] = [];
     const failure = new Error('disk on fire');
@@ -45,7 +51,11 @@ describe('snapshotResult', () => {
     const logged: unknown[] = [];
     // A store without methods: reading the snapshot throws a TypeError.
     const store = {} as CatalogStore;
-    expect(snapshotResult({ ok: true, store }, (e) => logged.push(e))).toEqual({
+    expect(
+      snapshotResult({ ok: true, store, workspace: 'D:\\ws' }, (e) =>
+        logged.push(e),
+      ),
+    ).toEqual({
       ok: false,
       error: { code: 'INTERNAL' },
     });
@@ -64,9 +74,12 @@ describe('snapshotResult', () => {
 
   it('survives a logError that throws', () => {
     expect(
-      snapshotResult({ ok: true, store: {} as CatalogStore }, () => {
-        throw new Error('log down');
-      }),
+      snapshotResult(
+        { ok: true, store: {} as CatalogStore, workspace: 'D:\\ws' },
+        () => {
+          throw new Error('log down');
+        },
+      ),
     ).toEqual({ ok: false, error: { code: 'INTERNAL' } });
   });
 });

@@ -1,72 +1,107 @@
+/* Base styles of the window: the page layout and the pieces that have no
+   component of their own yet. Every value comes from tokens.css. */
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
 body {
-  font-family:
-    -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial,
-    sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font: var(--typography-body);
   margin: 0;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
 }
 
-.shell,
-.app-error {
-  margin: auto;
-  max-width: 60rem;
-  padding: 2rem;
+#root {
+  display: flex;
+  flex-direction: column;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/* While the theme changes, the colors cross-fade (the duration is 0 with
+   Animation effects off). */
+[data-theme-changing] *,
+[data-theme-changing] *::before,
+[data-theme-changing] *::after {
+  transition:
+    background-color var(--motion-theme) var(--motion-ease),
+    border-color var(--motion-theme) var(--motion-ease),
+    color var(--motion-theme) var(--motion-ease),
+    box-shadow var(--motion-theme) var(--motion-ease),
+    transform var(--motion-theme) var(--motion-ease) !important;
+}
+
+button {
+  font: inherit;
+}
+
+/* The work area: it scrolls, the bars around it do not. */
+.shell {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--spacing-6) var(--spacing-work-x);
 }
 
 .app-error {
+  flex: 1;
+  margin: 0 auto;
   max-width: 38rem;
+  overflow: auto;
+  padding: var(--spacing-8);
+}
+
+.app-error h1 {
+  font: var(--typography-headline);
+  letter-spacing: var(--ls-headline);
 }
 
 .app-error-command {
-  background: #eee;
-  border-radius: 4px;
-  padding: 0.25rem 0.5rem;
+  background: var(--surface-2);
+  border-radius: var(--rounded-sm);
+  font: var(--typography-mono);
+  padding: var(--spacing-1) var(--spacing-2);
 }
 
 .app-error-code {
-  color: #666;
-  font-size: 0.875rem;
-}
-
-[role='tablist'] {
-  display: flex;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
-}
-
-[role='tab'][aria-selected='true'] {
-  font-weight: 600;
+  color: var(--muted);
+  font: var(--typography-mono);
 }
 
 .card-grid {
   display: grid;
-  gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--spacing-card-gap-y) var(--spacing-card-gap-x);
+  grid-template-columns: repeat(
+    auto-fill,
+    minmax(var(--spacing-card-min-width), 1fr)
+  );
 }
 
 .card {
-  border: 1px solid #ccc;
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-card);
+  box-shadow: var(--elevation-1);
+  padding: var(--spacing-3) var(--spacing-4);
 }
 
 .card h2 {
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
+  font: var(--typography-card-title);
+  letter-spacing: var(--ls-card-title);
+  margin: 0 0 var(--spacing-2);
 }
 
 .card p {
+  color: var(--ink-2);
+  font: var(--typography-body-sm);
   margin: 0;
-}
-
-/* Placeholder title bar (entry 3 replaces it): draggable, and clear of the
-   native window buttons on the right (titlebar-height 40). */
-.drag-strip {
-  -webkit-app-region: drag;
-  align-items: center;
-  box-sizing: border-box;
-  display: flex;
-  font-size: 0.875rem;
-  height: 40px;
-  padding: 0 150px 0 1rem;
-  user-select: none;
 }
