@@ -229,10 +229,23 @@ const startupCommands: Partial<Record<ErrorCode, string>> = {
 const genericStartupTitle = 'WhenKit nu a putut porni.';
 
 export const appStrings = {
+  productName: 'WhenKit',
   tablistLabel: 'Zone',
   startupTitle: (code: ErrorCode): string =>
     startupTitles[code] ?? genericStartupTitle,
   startupCommand: (code: ErrorCode): string | undefined =>
     startupCommands[code],
   restartLine: 'Apoi repornește WhenKit.',
+} as const;
+
+/** Texts of the main process: native dialogs, outside the renderer (AD-19). */
+export const mainStrings = {
+  unexpectedErrorTitle: 'Eroare neprevăzută',
+  unexpectedErrorBody: (logPath: string | undefined): string =>
+    logPath === undefined
+      ? 'WhenKit a întâlnit o eroare neprevăzută. Nu am putut nota detaliile într-un fișier de jurnal.'
+      : `WhenKit a întâlnit o eroare neprevăzută. Detaliile sunt în ${logPath}.`,
+  noAppDataTitle: 'WhenKit nu poate porni',
+  noAppDataBody:
+    'Variabila de mediu APPDATA lipsește, deci nu știu unde să țin datele ferestrei. Repornește Windows sau contactează autorul.',
 } as const;

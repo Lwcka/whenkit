@@ -1,86 +1,259 @@
-import { app, BrowserWindow, ipcMain } from 'electron';
-import { existsSync } from 'node:fs';
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  ipcMain,
+  nativeTheme,
+  screen,
+} from 'electron';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import started from 'electron-squirrel-startup';
 import { createProcessEnvironment } from '../../adapters/env/process-environment';
 import { nodeFileSystem } from '../../adapters/fs/node-file-system';
 import { openCatalogStore } from '../../adapters/sqlite/sqlite-catalog-store';
 import { randomIdGenerator, systemClock } from '../../adapters/system';
-import { IPC_CHANNELS } from '../../shared/ipc';
+import { desktopDataDir, resolveWorkspace } from '../../core/workspace';
+import {
+  IPC_CHANNELS,
+  isTheme,
+  THEME_ARGUMENT_PREFIX,
+  type IpcResult,
+  type Theme,
+} from '../../shared/ipc';
+import { appStrings, mainStrings } from '../../shared/strings.ro';
 import { openDesktopCatalog, snapshotResult } from './catalog';
-
-// Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (started) {
-  app.quit();
-}
+import { createErrorReporter } from './error-log';
+import { isAppNavigation } from './navigation';
+import {
+  nativeThemeSettings,
+  WINDOW_MIN_HEIGHT,
+  WINDOW_MIN_WIDTH,
+} from './theme';
+import {
+  readWindowState,
+  writeWindowState,
+  type WindowState,
+} from './window-state';
 
 /** The window never waits long for a lock held by the CLI (AD-4). */
 const DESKTOP_BUSY_TIMEOUT_MS = 2000;
+const DEFAULT_WIDTH = 1200;
+const DEFAULT_HEIGHT = 800;
+const STATE_FILE = 'window-state.json';
+const LOG_FILE = 'whenkit.log';
 
-const createWindow = () => {
-  const mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 800,
-    title: 'whenkit',
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.cjs'),
-      // Set explicitly (AD-9) so a default change in Electron cannot weaken them.
-      contextIsolation: true,
-      sandbox: true,
-      nodeIntegration: false,
-    },
-  });
-
-  if (MAIN_WINDOW_VITE_DEV_SERVER_URL) {
-    mainWindow.loadURL(MAIN_WINDOW_VITE_DEV_SERVER_URL);
-    // DevTools only in development, never in a packaged build.
-    mainWindow.webContents.openDevTools();
-  } else {
-    mainWindow.loadFile(
-      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
-    );
+/** Where unexpected errors are logged: `<workspace>\data\whenkit.log`, when data/ exists. */
+function resolveLogPath(
+  env: ReturnType<typeof createProcessEnvironment>,
+): string | undefined {
+  try {
+    const dataDir = path.join(resolveWorkspace(env, nodeFileSystem), 'data');
+    return existsSync(dataDir) ? path.join(dataDir, LOG_FILE) : undefined;
+  } catch {
+    return undefined;
   }
-};
+}
 
-app.whenReady().then(() => {
-  // `npm start` does not load .env (the CLI's cli:dev does): without it the
-  // dev window would resolve the real workspace (AD-19). Packaged builds
-  // never read it.
+function main(): void {
+  // 1. Dev only: `npm start` does not load .env (the CLI's cli:dev does).
+  // Without it the dev window would resolve the real workspace (AD-19).
+  // Packaged builds never read it. It runs before anything resolves a path.
   if (!app.isPackaged) {
     const envFile = path.join(app.getAppPath(), '.env');
     if (existsSync(envFile)) process.loadEnvFile(envFile);
   }
 
-  // The single connection of the process (AD-10), opened before the window
-  // asks for anything. A refusal is kept and answered by the handler.
-  const catalog = openDesktopCatalog({
-    // __filename: the CJS main bundle has no usable import.meta.url.
-    env: createProcessEnvironment(__filename),
-    fs: nodeFileSystem,
-    openStore: (dbPath, options) =>
-      openCatalogStore(dbPath, {
-        ...options,
-        clock: systemClock,
-        ids: randomIdGenerator,
-        busyTimeoutMs: DESKTOP_BUSY_TIMEOUT_MS,
-      }),
-  });
-  ipcMain.handle(IPC_CHANNELS.catalogSnapshot, () => snapshotResult(catalog));
-  app.on('will-quit', () => {
-    if (catalog.ok) catalog.store.close();
+  // 2. userData beside config.json, before the lock and before `ready`
+  // (AD-20): the dev and the installed app never share a profile or a lock.
+  // __filename: the CJS main bundle has no usable import.meta.url.
+  const env = createProcessEnvironment(__filename);
+  const userData = desktopDataDir(env, nodeFileSystem, app.isPackaged);
+  if (userData === undefined) {
+    dialog.showErrorBox(mainStrings.noAppDataTitle, mainStrings.noAppDataBody);
+    app.exit(1);
+    return;
+  }
+  mkdirSync(userData, { recursive: true });
+  app.setPath('userData', userData);
+
+  // 3. One instance per profile.
+  if (!app.requestSingleInstanceLock()) {
+    app.quit();
+    return;
+  }
+  let mainWindow: BrowserWindow | undefined;
+  app.on('second-instance', () => {
+    if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
   });
 
-  createWindow();
+  // 4. Unexpected errors: a dialog and the workspace log (AD-19).
+  const reporter = createErrorReporter({
+    logPath: resolveLogPath(env),
+    append: (file, text) => appendFileSync(file, text, 'utf8'),
+    showDialog: (logPath) =>
+      dialog.showErrorBox(
+        mainStrings.unexpectedErrorTitle,
+        mainStrings.unexpectedErrorBody(logPath),
+      ),
+    now: () => new Date(),
+  });
+  process.on('uncaughtException', (error) => reporter.report(error));
+  process.on('unhandledRejection', (reason) => reporter.report(reason));
 
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+  const appUrl =
+    MAIN_WINDOW_VITE_DEV_SERVER_URL ||
+    pathToFileURL(
+      path.join(__dirname, `../renderer/${MAIN_WINDOW_VITE_NAME}/index.html`),
+    ).href;
+
+  // AD-9: the window shows the app's own page only, whatever it is asked to
+  // open or attach.
+  app.on('web-contents-created', (_event, contents) => {
+    contents.on('will-navigate', (event) => {
+      if (!isAppNavigation(event.url, appUrl)) event.preventDefault();
+    });
+    contents.setWindowOpenHandler(() => ({ action: 'deny' }));
+    contents.on('will-attach-webview', (event) => event.preventDefault());
+  });
+
+  const statePath = path.join(userData, STATE_FILE);
+  /** What window-state.json holds; main is its only writer (AD-20). */
+  let saved: WindowState = {};
+
+  const saveState = (window: BrowserWindow): boolean => {
+    try {
+      if (!window.isDestroyed()) saved.bounds = window.getNormalBounds();
+      writeWindowState(statePath, saved);
+      return true;
+    } catch (error) {
+      reporter.log(error);
+      return false;
+    }
+  };
+
+  const createWindow = (theme: Theme) => {
+    const { backgroundColor, titleBarOverlay } = nativeThemeSettings(theme);
+    const window = new BrowserWindow({
+      ...(saved.bounds ?? { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }),
+      center: saved.bounds === undefined,
+      minWidth: WINDOW_MIN_WIDTH,
+      minHeight: WINDOW_MIN_HEIGHT,
+      title: appStrings.productName,
+      titleBarStyle: 'hidden',
+      titleBarOverlay,
+      backgroundColor,
+      webPreferences: {
+        preload: path.join(__dirname, 'preload.cjs'),
+        // Set explicitly (AD-9) so a default change in Electron cannot weaken them.
+        contextIsolation: true,
+        sandbox: true,
+        nodeIntegration: false,
+        additionalArguments: [`${THEME_ARGUMENT_PREFIX}${theme}`],
+      },
+    });
+    mainWindow = window;
+    window.on('close', () => {
+      saveState(window);
+    });
+
+    void window.loadURL(appUrl);
+    // DevTools only in development, never in a packaged build.
+    if (MAIN_WINDOW_VITE_DEV_SERVER_URL) window.webContents.openDevTools();
+  };
+
+  const currentTheme = (): Theme =>
+    nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
+
+  void app
+    .whenReady()
+    .then(() => {
+      saved = readWindowState(
+        statePath,
+        screen.getAllDisplays().map((display) => display.workArea),
+      );
+      nativeTheme.themeSource = saved.theme ?? 'system';
+
+      // The single connection of the process (AD-10), opened before the window
+      // asks for anything. A refusal is kept and answered by the handler.
+      const catalog = openDesktopCatalog({
+        env,
+        fs: nodeFileSystem,
+        openStore: (dbPath, options) =>
+          openCatalogStore(dbPath, {
+            ...options,
+            clock: systemClock,
+            ids: randomIdGenerator,
+            busyTimeoutMs: DESKTOP_BUSY_TIMEOUT_MS,
+          }),
+        logError: reporter.log,
+      });
+      ipcMain.handle(IPC_CHANNELS.catalogSnapshot, () =>
+        snapshotResult(catalog, reporter.log),
+      );
+      ipcMain.handle(
+        IPC_CHANNELS.windowSetTheme,
+        (event, theme: unknown): IpcResult<null> => {
+          if (!isTheme(theme)) {
+            return { ok: false, error: { code: 'ARGUMENTS_INVALID' } };
+          }
+          try {
+            nativeTheme.themeSource = theme;
+            const { backgroundColor, titleBarOverlay } =
+              nativeThemeSettings(theme);
+            const window = BrowserWindow.fromWebContents(event.sender);
+            saved.theme = theme;
+            if (window === null) {
+              try {
+                writeWindowState(statePath, saved);
+              } catch (error) {
+                reporter.log(error);
+              }
+            } else {
+              window.setBackgroundColor(backgroundColor);
+              window.setTitleBarOverlay(titleBarOverlay);
+              // The theme is applied; a failed save is already logged.
+              saveState(window);
+            }
+            return { ok: true, data: null };
+          } catch (error) {
+            reporter.log(error);
+            return { ok: false, error: { code: 'INTERNAL' } };
+          }
+        },
+      );
+      app.on('will-quit', () => {
+        if (catalog.ok) catalog.store.close();
+      });
+
+      createWindow(currentTheme());
+
+      app.on('activate', () => {
+        if (BrowserWindow.getAllWindows().length === 0) {
+          createWindow(currentTheme());
+        }
+      });
+    })
+    // A failed startup must not leave a windowless process holding the lock.
+    .catch((error: unknown) => {
+      reporter.report(error);
+      app.exit(1);
+    });
+
+  app.on('window-all-closed', () => {
+    if (process.platform !== 'darwin') {
+      app.quit();
     }
   });
-});
+}
 
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
-});
+// Squirrel install/uninstall events: nothing else may run (it also quits).
+if (started) {
+  app.quit();
+} else {
+  main();
+}

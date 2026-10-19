@@ -221,6 +221,22 @@ export function configPath(
   return dir === undefined ? undefined : fs.joinPath(dir, 'config.json');
 }
 
+/**
+ * The Electron userData folder (AD-20): `desktop` next to `config.json` for
+ * the installed app, `desktop-dev` for `npm start`, so the two never share a
+ * profile or a single-instance lock. Undefined when APPDATA is not set.
+ */
+export function desktopDataDir(
+  env: Environment,
+  fs: FileSystem,
+  packaged: boolean,
+): string | undefined {
+  const dir = configDir(env, fs);
+  return dir === undefined
+    ? undefined
+    : fs.joinPath(dir, packaged ? 'desktop' : 'desktop-dev');
+}
+
 const DRIVE_ROOT = /^([a-zA-Z]):[\\/]/;
 const UNC_ROOT = /^[\\/]{2}(?![?.][\\/])([^\\/]+)[\\/]([^\\/]+)(?=[\\/]|$)/;
 

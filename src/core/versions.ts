@@ -18,3 +18,6 @@ export const CLI_OUTPUT_VERSION = 1;
  * lower number is reported as outdated.
  */
 export const TEMPLATE_VERSION = 7;
+
+/** Format of `window-state.json` in the desktop userData folder (AD-20). */
+export const WINDOW_STATE_VERSION = 1;

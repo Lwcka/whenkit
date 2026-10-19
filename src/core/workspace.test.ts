@@ -4,6 +4,7 @@ import { WhenkitError } from './errors';
 import type { Environment, FileSystem, OpenStoreOptions } from './ports';
 import { BATCH_SCHEMA_VERSION, TEMPLATE_VERSION } from './versions';
 import {
+  desktopDataDir,
   initWorkspace,
   isSameOrInside,
   normalizeWorkspacePath,
@@ -107,6 +108,29 @@ function codeOf(action: () => unknown) {
   }
   throw new Error('expected a WhenkitError');
 }
+
+describe('desktopDataDir', () => {
+  const fs = new FakeFileSystem();
+
+  it('is desktop next to config.json when packaged', () => {
+    expect(desktopDataDir(fakeEnv({ APPDATA: 'C:\\A' }), fs, true)).toBe(
+      'C:\\A\\whenkit\\desktop',
+    );
+  });
+
+  it('is desktop-dev when not packaged', () => {
+    expect(desktopDataDir(fakeEnv({ APPDATA: 'C:\\A' }), fs, false)).toBe(
+      'C:\\A\\whenkit\\desktop-dev',
+    );
+  });
+
+  it('is undefined without APPDATA', () => {
+    expect(desktopDataDir(fakeEnv({}), fs, true)).toBeUndefined();
+    expect(
+      desktopDataDir(fakeEnv({ APPDATA: ' ' }), fs, false),
+    ).toBeUndefined();
+  });
+});
 
 describe('resolveWorkspace', () => {
   it('prefers WHENKIT_WORKSPACE over config.json', () => {

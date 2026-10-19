@@ -21,12 +21,18 @@ export interface DesktopCatalogPorts {
   env: Environment;
   fs: FileSystem;
   openStore: (dbPath: string, options: OpenStoreOptions) => CatalogStore;
+  /** Where an unexpected (non-WhenkitError) failure is recorded; default console.error. */
+  logError?: (error: unknown) => void;
 }
 
 /** The code of a failure; anything but a WhenkitError is logged and is INTERNAL. */
-function codeOf(error: unknown): ErrorCode {
+function codeOf(error: unknown, logError: (error: unknown) => void): ErrorCode {
   if (isWhenkitError(error)) return error.code;
-  console.error(error);
+  try {
+    logError(error);
+  } catch {
+    // Logging must not turn an answer into a throw (AD-18).
+  }
   return 'INTERNAL';
 }
 
@@ -39,19 +45,21 @@ export function openDesktopCatalog({
   env,
   fs,
   openStore,
+  logError = console.error,
 }: DesktopCatalogPorts): DesktopCatalog {
   try {
     const workspace = resolveWorkspace(env, fs);
     const store = openStore(catalogPath(fs, workspace), { migrate: false });
     return { ok: true, store };
   } catch (error) {
-    return { ok: false, code: codeOf(error) };
+    return { ok: false, code: codeOf(error, logError) };
   }
 }
 
 /** The `catalog:snapshot` answer for what startup opened. Never throws. */
 export function snapshotResult(
   opened: DesktopCatalog,
+  logError: (error: unknown) => void = console.error,
 ): IpcResult<CatalogSnapshotDto> {
   const failure = (code: ErrorCode): { ok: false; error: ErrorDto } => ({
     ok: false,
@@ -61,6 +69,6 @@ export function snapshotResult(
   try {
     return { ok: true, data: catalogSnapshot(opened.store) };
   } catch (error) {
-    return failure(codeOf(error));
+    return failure(codeOf(error, logError));
   }
 }
