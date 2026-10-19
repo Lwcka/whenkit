@@ -196,6 +196,13 @@ export interface CatalogReader {
   entryById(id: string): StoredEntry | undefined;
   /** Every entry without `content`, oldest first. */
   entrySummaries(): StoredEntrySummary[];
+  /**
+   * Every entry of both zones with its `content`, in display order:
+   * `added_at` descending, then batch order (AD-10).
+   */
+  allEntries(): StoredEntry[];
+  /** Every category of both zones, by zone and then `name_key`. */
+  allCategories(): StoredCategory[];
   entryIdByDedupKey(dedupKey: string): string | undefined;
   /** The umbrellas of an entry (`parent` links ending at it); sorted by id. */
   parentIdsOf(id: string): string[];
@@ -260,6 +267,12 @@ export interface CatalogStore extends CatalogReader {
    * rolls back and rethrows when it throws. Refused on a read-only store.
    */
   writeTransaction<T>(fn: (writer: CatalogWriter) => T): T;
+  /**
+   * Runs `fn` in one read transaction, so everything it reads is one
+   * consistent view (AD-10, AD-12): commits when it returns, rolls back and
+   * rethrows when it throws. `fn` must be synchronous; nesting is refused.
+   */
+  readTransaction<T>(fn: (reader: CatalogReader) => T): T;
   close(): void;
 }
 
@@ -271,6 +284,13 @@ export interface OpenStoreOptions {
    * refused (DATABASE_NEEDS_MIGRATION). For the read commands.
    */
   readOnly?: boolean;
+  /**
+   * Whether opening for writing also migrates (default true). `false` opens
+   * for writing without migrating: a database with pending migrations is
+   * refused (DATABASE_NEEDS_MIGRATION) before anything is written. The
+   * window's mode (AD-4, AD-10).
+   */
+  migrate?: boolean;
 }
 
 /**

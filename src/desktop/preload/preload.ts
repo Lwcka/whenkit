@@ -1,3 +1,9 @@
-// oxlint-disable eslint-plugin-unicorn/no-empty-file
-// The preload bridge (`window.whenkit`, typed by src/shared/ipc.ts) is added
-// with the first IPC channel. See AD-9 and AD-18.
+import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNELS, type WhenkitApi } from '../../shared/ipc';
+
+// The only thing the sandboxed renderer can reach (AD-9): `window.whenkit`.
+const api = {
+  catalogSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.catalogSnapshot),
+} satisfies WhenkitApi;
+
+contextBridge.exposeInMainWorld('whenkit', api);

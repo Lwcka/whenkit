@@ -90,6 +90,15 @@ class FakeStore implements CatalogStore {
   entrySummaries(): never {
     throw new Error('not used by import');
   }
+  allEntries(): never {
+    throw new Error('not used by import');
+  }
+  allCategories(): never {
+    throw new Error('not used by import');
+  }
+  readTransaction(): never {
+    throw new Error('not used by import');
+  }
   entryIdByDedupKey(key: string) {
     return this.entries.find((e) => e.dedupKey === key)?.id;
   }
@@ -114,6 +123,8 @@ class FakeStore implements CatalogStore {
       categoriesInZone: (zone) => this.categoriesInZone(zone),
       entryById: (id) => this.entryById(id),
       entrySummaries: () => this.entrySummaries(),
+      allEntries: () => this.allEntries(),
+      allCategories: () => this.allCategories(),
       entryIdByDedupKey: (key) => this.entryIdByDedupKey(key),
       parentIdsOf: (id) => this.parentIdsOf(id),
       rejections: () => this.rejections(),

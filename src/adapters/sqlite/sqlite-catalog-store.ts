@@ -5,6 +5,7 @@ import type { EntryKind, ResourceType, Zone } from '../../core/entry';
 import { WhenkitError, isWhenkitError } from '../../core/errors';
 import { nameKey } from '../../core/name-key';
 import type {
+  CatalogReader,
   CatalogStore,
   CatalogWriter,
   Clock,
@@ -304,6 +305,32 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     );
   }
 
+  allEntries(): StoredEntry[] {
+    const rows = this.all<EntryRow>(
+      `SELECT ${SUMMARY_COLUMNS}, content FROM entries
+       WHERE owner_id = ? ORDER BY added_at DESC, seq ASC`,
+      this.owner,
+    );
+    const categories = this.categoriesByEntry();
+    const links = this.linksByEntry();
+    return rows.map((row) => ({
+      ...toSummary(
+        row,
+        categories.get(row.id) ?? [],
+        links.get(row.id) ?? NO_LINKS(),
+      ),
+      content: row.content ?? null,
+    }));
+  }
+
+  allCategories(): StoredCategory[] {
+    return this.all<CategoryRow>(
+      `SELECT id, zone, name, name_key FROM categories
+       WHERE owner_id = ? ORDER BY zone, name_key`,
+      this.owner,
+    ).map(toCategory);
+  }
+
   entryIdByDedupKey(dedupKey: string): string | undefined {
     return this.get<{ id: string }>(
       'SELECT id FROM entries WHERE owner_id = ? AND dedup_key = ?',
@@ -548,6 +575,21 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     }
   }
 
+  readTransaction<T>(fn: (reader: CatalogReader) => T): T {
+    if (this.db.isTransaction) {
+      throw new WhenkitError('INTERNAL', { detail: 'nested transaction' });
+    }
+    try {
+      this.db.exec('BEGIN');
+      const result = fn(this);
+      this.db.exec('COMMIT');
+      return result;
+    } catch (error) {
+      if (this.db.isTransaction) this.db.exec('ROLLBACK');
+      throw toWhenkitError(error);
+    }
+  }
+
   close(): void {
     if (this.db.isOpen) this.db.close();
   }
@@ -562,7 +604,15 @@ export function configureConnection(
   db: DatabaseSync,
   busyTimeoutMs: number,
 ): void {
+  setBusyTimeout(db, busyTimeoutMs);
+  applyWritePragmas(db);
+}
+
+function setBusyTimeout(db: DatabaseSync, busyTimeoutMs: number): void {
   db.exec(`PRAGMA busy_timeout = ${Math.max(0, Math.trunc(busyTimeoutMs))}`);
+}
+
+function applyWritePragmas(db: DatabaseSync): void {
   db.exec('PRAGMA journal_mode = WAL');
   db.exec('PRAGMA foreign_keys = ON');
   db.exec('PRAGMA recursive_triggers = ON');
@@ -573,7 +623,10 @@ export function configureConnection(
  * CATALOG_NOT_FOUND unless `create` is set (only `whenkit init`). In write
  * mode the connection gets the AD-4 pragmas and the database is migrated;
  * with `readOnly` nothing is written: the database must already be at the
- * code's version (DATABASE_NEEDS_MIGRATION otherwise). Throws a WhenkitError
+ * code's version (DATABASE_NEEDS_MIGRATION otherwise). With `migrate: false`
+ * the connection is opened for writing but not migrated: the same check runs
+ * before any pragma that could write, so a refused open leaves the file
+ * untouched. Throws a WhenkitError
  * when the database is refused (MIGRATION_MISMATCH, DATABASE_TOO_NEW) or
  * locked (DATABASE_BUSY); the connection is closed in that case.
  */
@@ -582,7 +635,10 @@ export function openCatalogStore(
   options: OpenCatalogStoreOptions,
 ): CatalogStore {
   const readOnly = options.readOnly === true;
-  if (!existsSync(dbPath) && (readOnly || options.create !== true)) {
+  if (
+    !existsSync(dbPath) &&
+    (readOnly || options.migrate === false || options.create !== true)
+  ) {
     throw new WhenkitError('CATALOG_NOT_FOUND', { detail: dbPath });
   }
 
@@ -603,10 +659,14 @@ export function openCatalogStore(
       db = new DatabaseSync(dbPath, { readOnly: true });
       // journal_mode is persistent (set by the writer); setting it here
       // would be a write.
-      db.exec(
-        `PRAGMA busy_timeout = ${Math.max(0, Math.trunc(options.busyTimeoutMs))}`,
-      );
+      setBusyTimeout(db, options.busyTimeoutMs);
       version = checkMigrated(db, migrations);
+    } else if (options.migrate === false) {
+      db = new DatabaseSync(dbPath);
+      setBusyTimeout(db, options.busyTimeoutMs);
+      // Before journal_mode: setting it on a non-WAL file writes its header.
+      version = checkMigrated(db, migrations);
+      applyWritePragmas(db);
     } else {
       db = new DatabaseSync(dbPath);
       configureConnection(db, options.busyTimeoutMs);

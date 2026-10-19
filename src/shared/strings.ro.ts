@@ -207,3 +207,32 @@ export const categoryStrings = {
   zoneHeader: (zone: string) => `${zone}:`,
   line: (name: string) => `  ${name}`,
 } as const;
+
+/** Titles of the startup errors the window shows (EXPERIENCE, „Erori de pornire”). */
+const startupTitles: Partial<Record<ErrorCode, string>> = {
+  WORKSPACE_NOT_CONFIGURED: 'Nu găsesc workspace-ul.',
+  CONFIG_INVALID: 'Configurarea workspace-ului e invalidă.',
+  CATALOG_NOT_FOUND: 'Workspace-ul nu are catalog.',
+  DATABASE_NEEDS_MIGRATION: 'Catalogul trebuie actualizat.',
+  DATABASE_TOO_NEW: 'Catalogul e mai nou decât WhenKit.',
+  MIGRATION_MISMATCH: 'Catalogul nu se potrivește cu această versiune.',
+};
+
+/** The command that fixes a startup error, when there is one. */
+const startupCommands: Partial<Record<ErrorCode, string>> = {
+  WORKSPACE_NOT_CONFIGURED: 'whenkit init <cale>',
+  CONFIG_INVALID: 'whenkit init <cale>',
+  CATALOG_NOT_FOUND: 'whenkit init',
+  DATABASE_NEEDS_MIGRATION: 'whenkit init',
+};
+
+const genericStartupTitle = 'WhenKit nu a putut porni.';
+
+export const appStrings = {
+  tablistLabel: 'Zone',
+  startupTitle: (code: ErrorCode): string =>
+    startupTitles[code] ?? genericStartupTitle,
+  startupCommand: (code: ErrorCode): string | undefined =>
+    startupCommands[code],
+  restartLine: 'Apoi repornește WhenKit.',
+} as const;

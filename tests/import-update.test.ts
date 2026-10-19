@@ -108,9 +108,12 @@ function failingOnWrite(writes: number): CatalogStoreOpener {
       categoriesInZone: (zone) => store.categoriesInZone(zone),
       entryById: (id) => store.entryById(id),
       entrySummaries: () => store.entrySummaries(),
+      allEntries: () => store.allEntries(),
+      allCategories: () => store.allCategories(),
       entryIdByDedupKey: (key) => store.entryIdByDedupKey(key),
       parentIdsOf: (id) => store.parentIdsOf(id),
       rejections: () => store.rejections(),
+      readTransaction: (fn) => store.readTransaction(fn),
       writeTransaction: (fn) =>
         store.writeTransaction((writer) => fn(failing(writer))),
       close: () => store.close(),

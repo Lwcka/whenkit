@@ -5,8 +5,55 @@ body {
   margin: 0;
 }
 
-.shell {
+.shell,
+.app-error {
   margin: auto;
-  max-width: 38rem;
+  max-width: 60rem;
   padding: 2rem;
+}
+
+.app-error {
+  max-width: 38rem;
+}
+
+.app-error-command {
+  background: #eee;
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+}
+
+.app-error-code {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+[role='tablist'] {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+[role='tab'][aria-selected='true'] {
+  font-weight: 600;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.card {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+}
+
+.card h2 {
+  font-size: 1rem;
+  margin: 0 0 0.5rem;
+}
+
+.card p {
+  margin: 0;
 }

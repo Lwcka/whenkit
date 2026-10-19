@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { ERROR_CODES } from './errors';
 import { ENTRY_KINDS, RESOURCE_TYPES, ZONES, zoneOf } from './entry';
 import type {
   StoredCategory,
@@ -77,6 +78,21 @@ export const rejectionDtoSchema = z.strictObject({
 });
 
 export type RejectionDto = z.infer<typeof rejectionDtoSchema>;
+
+/** What the window shows at startup: every entry of both zones and every category. */
+export const catalogSnapshotDtoSchema = z.strictObject({
+  entries: z.array(entryDtoSchema),
+  categories: z.array(categoryDtoSchema),
+});
+
+export type CatalogSnapshotDto = z.infer<typeof catalogSnapshotDtoSchema>;
+
+/** An error as it crosses IPC: the code only; the interface owns the text (AD-18). */
+export const errorDtoSchema = z.strictObject({
+  code: z.enum(ERROR_CODES),
+});
+
+export type ErrorDto = z.infer<typeof errorDtoSchema>;
 
 export function toCategoryDto(category: StoredCategory): CategoryDto {
   return { id: category.id, zone: category.zone, name: category.name };
