@@ -71,7 +71,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** CAP-2, CAP-8, CAP-9, CAP-10, CAP-11, CAP-13
 - **Prevents:** module native compilate diferit pentru Electron și Node; scrieri concurente care se suprascriu; migrări divergente din ramuri diferite; pierderea catalogului la o migrare greșită.
-- **Rule:** Catalogul e `<workspace>/data/catalog.sqlite`, deschis doar prin `SqliteCatalogStore`, care setează pe fiecare conexiune `journal_mode=WAL`, `foreign_keys=ON` și `busy_timeout` (≤ 2000 ms în main). Migrările sunt fișiere numerotate, append-only, în `src/adapters/sqlite/migrations/NNNN-<nume>.sql`; numărul se fixează la merge în `main`. Tabelul `schema_migrations(version, name, sha256)` ține ce s-a aplicat, iar o nepotrivire oprește deschiderea (`MIGRATION_MISMATCH`). Înainte de orice migrare baza se copiază în `data/backups/catalog-v<N>-<dată>.sqlite`. Migrarea rulează în `BEGIN IMMEDIATE`, iar al doilea proces reverifică versiunea după lock. O bază mai nouă decât codul e refuzată. Nicio altă bibliotecă SQLite.
+- **Rule:** Catalogul e `<workspace>/data/catalog.sqlite`, deschis doar prin `SqliteCatalogStore`, care setează pe fiecare conexiune `journal_mode=WAL`, `foreign_keys=ON` și `busy_timeout` (≤ 2000 ms în main). Migrările sunt fișiere numerotate, append-only, în `src/adapters/sqlite/migrations/NNNN-<nume>.sql`; numărul se fixează la merge în `main`. Tabelul `schema_migrations(version, name, sha256)` ține ce s-a aplicat, iar o nepotrivire oprește deschiderea (`MIGRATION_MISMATCH`). Înainte de orice migrare baza se copiază în `data/backups/catalog-v<N>-<dată>.sqlite`. Migrarea rulează în `BEGIN IMMEDIATE`, iar al doilea proces reverifică versiunea după lock. O bază mai nouă decât codul e refuzată. Migrează doar CLI-ul: main-ul deschide catalogul în modul care scrie fără să migreze (`OpenStoreOptions.migrate: false`), iar migrările în așteptare dau `DATABASE_NEEDS_MIGRATION` înainte de orice pragma care scrie. Nicio altă bibliotecă SQLite.
 
 ### AD-5 — Modelul de date
 
@@ -133,7 +133,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 - **Binds:** CAP-2, CAP-8, CAP-10
 - **Prevents:** UI care afișează date vechi; editări nesalvate pierdute la o reîncărcare; propria editare semnalată ca venită din terminal; sosiri fără toast; toast, bandă și contoare care numără diferit; ordini diferite ale fișelor.
 - **Rule:** Main-ul ține o singură conexiune, deschisă la pornire, pentru polling și scrieri. La câteva secunde citește `PRAGMA data_version`; la schimbare emite `catalog:changed`. După propriile scrieri prin IPC, main-ul emite el însuși `catalog:changed` (`data_version` nu vede scrierile aceleiași conexiuni). Un formular cu modificări nesalvate nu se reîncarcă; se marchează „modificată din terminal”. Fără watchers pe fișiere.
-  - **Un singur depozit al catalogului în renderer.** Ține un instantaneu neparametrizat, citit de `catalog:snapshot` într-o singură tranzacție: toate fișele **ambelor zone** ca `EntryDto` complet și toate categoriile. Bara de categorii, contoarele, grila, fișa, toast-urile și dialogul de categorii citesc doar din el.
+  - **Un singur depozit al catalogului în renderer.** Ține un instantaneu neparametrizat, citit de `catalog:snapshot` într-o singură tranzacție: toate fișele **ambelor zone** ca `EntryDto` complet și toate categoriile. Bara de categorii, contoarele, grila, fișa, toast-urile și dialogul de categorii citesc doar din el. E un store extern fără framework (`src/desktop/renderer/catalog-store.ts`, stare `loading | error { code } | ready { entries, categories }`), citit cu `useSyncExternalStore`, fără bibliotecă de stare; tichetele următoare îi adaugă metode, nu alt depozit.
   - La `catalog:changed` depozitul reîncarcă instantaneul și îl **înlocuiește în întregime**; `id` și `revision` servesc doar la clasificare: `id` nou = **sosire** (doar importul creează fișe); `revision` mai mare decât cea cunoscută = **actualizare din terminal**. O revizie mai mică decât cea cunoscută păstrează versiunea din depozit. Linia de bază se stabilește o singură dată pe proces de renderer (prima încărcare nu produce sosiri).
   - Fiecare scriere prin IPC întoarce `EntryDto`-urile pe care le-a schimbat; depozitul le aplică înainte de comparația următoare, deci propriile scrieri nu apar ca externe.
   - Instantaneul vine în ordinea finală: `added_at DESC, seq ASC` (un lot are un singur `now`, deci `seq` păstrează ordinea din lot). `entries:search` întoarce doar id-urile potrivite, afișate în ordinea instantaneului, și se rulează din nou la fiecare `catalog:changed`. Renderer-ul nu reordonează.
@@ -190,7 +190,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** all
 - **Prevents:** CLI-ul și aplicația instalată pe versiuni diferite de schemă; dezvoltarea care strică catalogul real; erori invizibile.
-- **Rule:** CLI-ul se compilează separat în `dist/cli` (ESM) și se expune prin `npm link`; aplicația se rulează cu `npm start` sau se instalează cu `npm run make`. `productName` e `WhenKit` (titlul ferestrei, installer, executabil); numele pachetului npm și comanda CLI rămân `whenkit`. În v1, CLI-ul și aplicația instalată provin din același commit de pe `main`. Dezvoltarea și testele folosesc `WHENKIT_WORKSPACE` spre un workspace de dezvoltare (din `.env`, încărcat cu `--env-file`); doar codul de pe `main` atinge workspace-ul real. Erorile neprevăzute din main apar într-un dialog și în `data/whenkit.log`.
+- **Rule:** CLI-ul se compilează separat în `dist/cli` (ESM) și se expune prin `npm link`; aplicația se rulează cu `npm start` sau se instalează cu `npm run make`. `productName` e `WhenKit` (titlul ferestrei, installer, executabil); numele pachetului npm și comanda CLI rămân `whenkit`. În v1, CLI-ul și aplicația instalată provin din același commit de pe `main`. Dezvoltarea și testele folosesc `WHENKIT_WORKSPACE` spre un workspace de dezvoltare (din `.env`: CLI-ul îl încarcă cu `--env-file`, main-ul cu `process.loadEnvFile` când `!app.isPackaged`); doar codul de pe `main` atinge workspace-ul real. Erorile neprevăzute din main apar într-un dialog și în `data/whenkit.log`.
 
 ### AD-20 — Ciclul de viață și preferințele ferestrei au un singur proprietar: main-ul
 
@@ -212,7 +212,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | Mapare | `snake_case` ↔ `camelCase` doar în `SqliteCatalogStore` |
 | Erori și motive | coduri închise (AD-15, AD-18); texte doar în `src/shared/strings.ro.ts` |
 | Configurare | doar prin `resolveWorkspace()` (AD-8); fără chei API în v1 |
-| Teste | Vitest; `core` cu adaptoare false; `SqliteCatalogStore` pe fișier temporar (WAL și `data_version` nu funcționează pe `:memory:`); HTTP real testat cu un server local; fixture-urile sunt sintetice, niciodată copii din `C:\Users\Luca\Personal\` |
+| Teste | Vitest; renderer-ul în `*.test.tsx`, sub jsdom, în proiectul Vitest separat de cel `node` (`*.test.ts`), cu Testing Library și `cleanup` explicit; `core` cu adaptoare false; `SqliteCatalogStore` pe fișier temporar (WAL și `data_version` nu funcționează pe `:memory:`); HTTP real testat cu un server local; fixture-urile sunt sintetice, niciodată copii din `C:\Users\Luca\Personal\` |
 | Granițe | oxlint `no-restricted-imports` pentru `src/core/**` și `src/desktop/renderer/**` |
 | Domenii interzise | `<workspace>/data/blocked-domains.txt`, o regulă pe linie, `#` comentariu, `libgen.*` = orice TLD, subdomeniile incluse; parsat de o singură funcție din `core` |
 
@@ -235,6 +235,9 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | SQLite driver | `node:sqlite` (inclus în Node/Electron; Release Candidate în Node 24) |
 | lucide-react | 1.58.0 (singurul set de icoane, DESIGN.md) |
 | @fontsource/cascadia-mono | 5.3.0 (fontul inclus în pachet, greutățile 400 și 500; CSP fără surse externe) |
+| jsdom | 30.1.3 (mediul testelor renderer-ului) |
+| @testing-library/react | 16.3.3 |
+| @testing-library/dom | 10.4.2 |
 
 ## Structural Seed
 
@@ -315,5 +318,5 @@ whenkit/
 - **Restore din export:** `catalog.json` îl face posibil; nu e cerut în v1.
 - **Re-verificare, ecran Setări, câmp Status:** `post-v1-roadmap.md`; AD-7 permite deja verificarea unei fișe existente.
 - **Butoane Claude headless și terminal integrat** (xterm.js + node-pty): după v1; procesele se pornesc doar din `main`.
-- **Convențiile renderer-ului** (forma depozitului din AD-10, stilizarea după tokenii din DESIGN.md, biblioteca Markdown, testarea componentelor): fiecare o fixează primul tichet din epic-fereastra-whenkit care o folosește, iar tichetele următoare o refolosesc. O dependență nouă (ex. jsdom, Testing Library, biblioteca Markdown) intră în Stack, cu versiune fixată, în sesiunea tichetului care o adaugă.
+- **Convențiile renderer-ului rămase** (stilizarea după tokenii din DESIGN.md, biblioteca Markdown): fiecare o fixează primul tichet din epic-fereastra-whenkit care o folosește, iar tichetele următoare o refolosesc. O dependență nouă (ex. biblioteca Markdown) intră în Stack, cu versiune fixată, în sesiunea tichetului care o adaugă. Forma depozitului (AD-10) și testarea componentelor (Consistency Conventions) sunt fixate.
 - **Numele exacte ale câmpurilor din lot:** urmează `entry-model.md`; le fixează primul tichet care scrie `batch-schema.ts`, sub AD-6.
