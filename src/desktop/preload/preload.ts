@@ -21,6 +21,23 @@ const api = {
       ipcRenderer.removeListener(IPC_CHANNELS.catalogChanged, handler);
     };
   },
+  setNotes: (id: string, notes: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.entriesSetNotes, id, notes),
+  onFlushNotes: (flush: () => Promise<void>) => {
+    // Main waits for the answer (with a time limit): it is sent whether the
+    // flush worked or not.
+    const handler = async () => {
+      try {
+        await flush();
+      } finally {
+        ipcRenderer.send(IPC_CHANNELS.windowNotesFlushed);
+      }
+    };
+    ipcRenderer.on(IPC_CHANNELS.windowFlushNotes, handler);
+    return () => {
+      ipcRenderer.removeListener(IPC_CHANNELS.windowFlushNotes, handler);
+    };
+  },
   setTheme: (theme: Theme) =>
     ipcRenderer.invoke(IPC_CHANNELS.windowSetTheme, theme),
   openExternal: (url: string) =>

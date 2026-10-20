@@ -205,6 +205,18 @@
   --markdown-content-table-border: var(--line);
   --markdown-content-table-radius: var(--rounded-lg);
   --markdown-content-code-background: var(--surface-2);
+  --my-notes-background: color-mix(
+    in srgb,
+    var(--signal-bg) 50%,
+    var(--surface)
+  );
+  --my-notes-border: 1.5px dashed
+    color-mix(in srgb, var(--signal) 70%, transparent);
+  --my-notes-heading: var(--signal);
+  --my-notes-hint: var(--muted);
+  --my-notes-error: var(--danger);
+  --my-notes-caret: var(--signal);
+  --my-notes-radius: var(--rounded-xl);
 }
 
 :root[data-theme='light'] {

@@ -346,34 +346,6 @@
   padding: var(--spacing-2) var(--spacing-3);
 }
 
-.my-notes {
-  background: color-mix(in srgb, var(--signal-bg) 50%, var(--surface));
-  border: 1.5px dashed color-mix(in srgb, var(--signal) 70%, transparent);
-  border-radius: var(--rounded-xl);
-  padding: var(--spacing-4) var(--spacing-5);
-}
-
-.my-notes-heading {
-  align-items: center;
-  color: var(--signal);
-  display: flex;
-  font: var(--typography-title-sm);
-  gap: var(--spacing-2);
-  letter-spacing: 0.03em;
-  margin: 0 0 var(--spacing-2);
-}
-
-.my-notes-text {
-  font: var(--typography-body);
-  margin: 0;
-  overflow-wrap: anywhere;
-  white-space: pre-wrap;
-}
-
-.my-notes-text[data-empty] {
-  color: var(--muted);
-}
-
 /* ---------- side panel ---------- */
 
 /* The accent block that opens the URL in the browser (DESIGN, open-in-browser). */

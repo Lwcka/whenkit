@@ -75,6 +75,7 @@ const api: FrameApi = {
           .map((entry) => entry.id),
       },
     }),
+  setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
 };

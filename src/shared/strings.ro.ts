@@ -410,8 +410,13 @@ export const appStrings = {
   footnoteBack: (referenceIndex: number, rereferenceIndex: number): string =>
     `Înapoi la referința ${referenceIndex + 1}${rereferenceIndex > 1 ? `-${rereferenceIndex}` : ''}`,
   sheetRelated: (count: number): string => `Resurse înrudite · ${count}`,
-  /** The read-only notes box when nothing was written yet. */
+  /** The placeholder of the empty notes field (my-notes). */
   notesPlaceholder: 'Scrie aici ce vrei să-ți amintești.',
+  /** The right side of the notes header (my-notes), in its four states. */
+  notesHint: 'se salvează singure · doar tu scrii aici',
+  notesSaving: 'Se salvează…',
+  notesSaved: 'Salvat',
+  notesSaveFailed: 'Nu s-a salvat. Încerc din nou.',
   /** The title block: „FIȘĂ · UNEALTĂ” and „rev. 3”. */
   titleBlockLabel: 'Bloc de titlu',
   titleBlockHead: (kind: EntryKind): string =>

@@ -164,9 +164,10 @@ export interface NewEntryRow {
 /**
  * What core writes when an update rewrites an entry (AD-6): every field
  * Claude writes, plus the recomputed verification and duplicate key. The
- * store also increments `revision`; it never touches `my_notes`, `owner_id`
- * or `added_at`, and `forced` only ever goes from false to true: a `false`
- * here keeps the stored value (the flag is sticky).
+ * store also increments `revision`; `updateEntry` never touches `my_notes`,
+ * `owner_id` or `added_at` (notes are written only by `setEntryNotes`). `forced`
+ * only ever goes from false to true: a `false` here keeps the stored value (the
+ * flag is sticky).
  */
 export type EntryUpdateRow = Omit<NewEntryRow, 'addedAt'>;
 
@@ -227,6 +228,11 @@ export interface CatalogWriter extends CatalogReader {
    * Throws when the entry does not exist.
    */
   updateEntry(entry: EntryUpdateRow): void;
+  /**
+   * Replaces the author's notes of an entry, stored exactly as given. Never
+   * touches `revision` (AD-5, AD-16). False when the entry does not exist.
+   */
+  setEntryNotes(id: string, notes: string): boolean;
   /** Replaces every category of an entry with `categoryIds`. */
   replaceEntryCategories(entryId: string, categoryIds: readonly string[]): void;
   /**

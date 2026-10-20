@@ -4,6 +4,7 @@ import { describe, expect, it } from 'vitest';
 import { bundledMigrations } from '../src/adapters/sqlite/migrate';
 import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
 import { errorOutputSchema } from '../src/core/cli-schemas';
+import { setNotes } from '../src/core/set-notes';
 import type {
   CatalogStore,
   CatalogStoreOpener,
@@ -66,13 +67,17 @@ async function catalogWithTwoTools() {
   expect((await runCli(s, ['init'])).exitCode).toBe(0);
   const added = await importReport(s, batch([tool('a'), tool('b')]));
   const [a, b] = added.items.map((item) => String(item.id));
-  // What the window (entries:setNotes) will write; `forced` is also set by
-  // `import --force`.
+  // The notes go through the use case the window uses (entries:setNotes);
+  // `forced` is also set by `import --force`.
+  const store = testStoreOpener()(s.dbPath, {});
+  try {
+    setNotes(store, String(a), 'Merge și pe PNG mari.');
+  } finally {
+    store.close();
+  }
   const db = new DatabaseSync(s.dbPath);
   try {
-    db.prepare(
-      "UPDATE entries SET my_notes = 'Merge și pe PNG mari.', forced = 1 WHERE id = ?",
-    ).run(a);
+    db.prepare('UPDATE entries SET forced = 1 WHERE id = ?').run(a);
   } finally {
     db.close();
   }

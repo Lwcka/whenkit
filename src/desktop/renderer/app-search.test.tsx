@@ -57,6 +57,7 @@ function snapshot(entries: readonly EntryDto[]): IpcResult<CatalogSnapshotDto> {
 
 const api: FrameApi = {
   workspacePath: 'C:\\ws',
+  setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
   openExternal: () => Promise.resolve({ ok: true, data: null }),

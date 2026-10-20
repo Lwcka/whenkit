@@ -49,6 +49,7 @@ export type FrameApi = Pick<
   WhenkitApi,
   | 'openExternal'
   | 'searchEntries'
+  | 'setNotes'
   | 'setTheme'
   | 'setZoomFactor'
   | 'workspacePath'
@@ -491,6 +492,9 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
                 pulses={pulses.get(shownEntry.id) ?? 0}
                 onOpen={openEntry}
                 onOpenExternal={(url) => void api.openExternal(url)}
+                onSaveNotes={(id, notes) =>
+                  store.write(() => api.setNotes(id, notes))
+                }
               />
             </div>
           </main>
