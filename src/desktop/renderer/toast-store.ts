@@ -1,10 +1,16 @@
+import type { RichText } from '../../shared/strings.ro';
+
 // The toast queue (EXPERIENCE, toast): a framework-free external store, read
 // through useSyncExternalStore, like the catalog store.
 
 /** Most toasts on screen; a fourth pushes the oldest out. */
 export const MAX_TOASTS = 3;
 
-export type ToastKind = 'info' | 'error';
+/** `arrival`: an import landed (stripe and small tape in the tape color). */
+export type ToastKind = 'info' | 'error' | 'arrival';
+
+/** Plain text, or text with parts in strong. */
+export type ToastMessage = string | RichText;
 
 export interface ToastAction {
   label: string;
@@ -13,7 +19,7 @@ export interface ToastAction {
 
 export interface ToastInput {
   kind: ToastKind;
-  message: string;
+  message: ToastMessage;
   action?: ToastAction;
 }
 

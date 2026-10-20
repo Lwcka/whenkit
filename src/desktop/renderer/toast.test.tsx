@@ -147,3 +147,35 @@ describe('ToastHost', () => {
     expect(screen.queryByText('nou')).toBeNull();
   });
 });
+
+describe('ToastHost: arrival', () => {
+  it('shows the small tape, strong parts and the stripe kind', () => {
+    const { container } = render(<ToastHost store={store} />);
+    act(() => {
+      store.push({
+        kind: 'arrival',
+        message: [{ strong: '5 fișe noi' }, ' în Toolbox'],
+        action: { label: 'Vezi', run: () => {} },
+      });
+    });
+
+    const toast = container.querySelector('.toast');
+    expect(toast?.getAttribute('data-kind')).toBe('arrival');
+    expect(container.querySelector('.toast-tape')?.textContent).toBe('Adăugat');
+    expect(container.querySelector('.toast-message b')?.textContent).toBe(
+      '5 fișe noi',
+    );
+    expect(container.querySelector('.toast-message')?.textContent).toBe(
+      '5 fișe noi în Toolbox',
+    );
+    expect(screen.getByRole('button', { name: 'Vezi' })).toBeTruthy();
+  });
+
+  it('has no tape on other kinds', () => {
+    const { container } = render(<ToastHost store={store} />);
+    act(() => {
+      store.push({ kind: 'info', message: 'simplu' });
+    });
+    expect(container.querySelector('.toast-tape')).toBeNull();
+  });
+});

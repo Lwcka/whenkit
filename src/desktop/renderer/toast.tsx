@@ -3,12 +3,24 @@ import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { appStrings } from '../../shared/strings.ro';
 import { Button } from './button';
 import './toast.css';
-import { toasts, type Toast, type ToastStore } from './toast-store';
+import {
+  toasts,
+  type Toast,
+  type ToastMessage,
+  type ToastStore,
+} from './toast-store';
 
 /** DESIGN motion.toast-dwell (6 s), mirrored from tokens.css for the timer. */
 export const TOAST_DWELL_MS = 6000;
 /** DESIGN motion.fade (200 ms): how long a leaving toast fades before it goes. */
 export const TOAST_FADE_MS = 200;
+
+function Message({ message }: { message: ToastMessage }) {
+  if (typeof message === 'string') return message;
+  return message.map((part, index) =>
+    typeof part === 'string' ? part : <b key={index}>{part.strong}</b>,
+  );
+}
 
 function ToastCard({ toast, store }: { toast: Toast; store: ToastStore }) {
   const [hovered, setHovered] = useState(false);
@@ -47,19 +59,26 @@ function ToastCard({ toast, store }: { toast: Toast; store: ToastStore }) {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <p className="toast-message">{toast.message}</p>
-      {toast.action !== undefined && (
-        <button
-          type="button"
-          className="toast-action"
-          onClick={() => {
-            toast.action?.run();
-            dismiss();
-          }}
-        >
-          {toast.action.label}
-        </button>
+      {toast.kind === 'arrival' && (
+        <span className="toast-tape">{appStrings.arrivalToastTape}</span>
       )}
+      <div className="toast-body">
+        <p className="toast-message">
+          <Message message={toast.message} />
+        </p>
+        {toast.action !== undefined && (
+          <button
+            type="button"
+            className="toast-action"
+            onClick={() => {
+              toast.action?.run();
+              dismiss();
+            }}
+          >
+            {toast.action.label}
+          </button>
+        )}
+      </div>
       <Button
         variant="ghost"
         iconOnly

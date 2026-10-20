@@ -590,6 +590,18 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     }
   }
 
+  dataVersion(): number {
+    try {
+      const row = this.get<{ data_version: number }>('PRAGMA data_version');
+      if (row === undefined) {
+        throw new WhenkitError('INTERNAL', { detail: 'no data_version' });
+      }
+      return Number(row.data_version);
+    } catch (error) {
+      throw toWhenkitError(error);
+    }
+  }
+
   close(): void {
     if (this.db.isOpen) this.db.close();
   }

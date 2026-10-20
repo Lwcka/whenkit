@@ -61,6 +61,76 @@
   outline: none;
 }
 
+/* A fresh arrival: a double ring in the tape color instead of the border, and
+   the tape on top. The card lands from above when it mounts. */
+@keyframes entry-card-land {
+  from {
+    opacity: 0;
+    transform: translateY(var(--motion-arrival-offset))
+      scale(var(--motion-enter-scale));
+  }
+}
+
+.entry-card[data-new] {
+  animation: entry-card-land var(--motion-arrival) var(--motion-arrival-ease)
+    both;
+  border-color: transparent;
+  box-shadow: var(--entry-card-new-ring), var(--elevation-1);
+}
+
+.entry-card[data-new]:hover {
+  border-color: transparent;
+  box-shadow: var(--entry-card-new-ring), var(--elevation-2);
+}
+
+.entry-card[data-new]:focus-visible {
+  border-color: var(--accent);
+  box-shadow:
+    var(--entry-card-new-ring),
+    0 0 0 1px var(--accent),
+    var(--elevation-2);
+}
+
+.arrival-tape {
+  background: color-mix(in srgb, var(--tape) 92%, transparent);
+  box-shadow: var(--elevation-tape);
+  clip-path: var(--arrival-tape-clip);
+  color: var(--tape-ink);
+  font: var(--typography-tape);
+  left: var(--arrival-tape-offset-left);
+  letter-spacing: var(--ls-tape);
+  padding: var(--arrival-tape-padding);
+  pointer-events: none;
+  position: absolute;
+  text-transform: uppercase;
+  top: var(--arrival-tape-offset-top);
+  transform: rotate(var(--arrival-tape-rotate));
+  white-space: nowrap;
+  z-index: 2;
+}
+
+/* An update from the terminal: one pulse of the accent outline. Two identical
+   keyframes, swapped by the parity in data-pulse, so every update restarts it. */
+@keyframes entry-card-pulse-a {
+  from {
+    box-shadow: var(--entry-card-pulse-ring), var(--elevation-1);
+  }
+}
+
+@keyframes entry-card-pulse-b {
+  from {
+    box-shadow: var(--entry-card-pulse-ring), var(--elevation-1);
+  }
+}
+
+.entry-card[data-pulse='a'] {
+  animation: entry-card-pulse-a var(--motion-pulse) var(--motion-ease);
+}
+
+.entry-card[data-pulse='b'] {
+  animation: entry-card-pulse-b var(--motion-pulse) var(--motion-ease);
+}
+
 /* The crop corners and the Enter hint exist on every card and show only on
    the selected one (the keyboard is on it). */
 .entry-card-crop,

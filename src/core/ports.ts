@@ -273,6 +273,12 @@ export interface CatalogStore extends CatalogReader {
    * rethrows when it throws. `fn` must be synchronous; nesting is refused.
    */
   readTransaction<T>(fn: (reader: CatalogReader) => T): T;
+  /**
+   * SQLite's `PRAGMA data_version`: changes when ANOTHER connection commits to
+   * the database, never for this connection's own writes (AD-10). The window
+   * polls it to notice what the CLI wrote.
+   */
+  dataVersion(): number;
   close(): void;
 }
 

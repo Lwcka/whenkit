@@ -18,8 +18,12 @@ if (!container) {
 // applied, so this is right after a reload and follows Windows live.
 followSystemTheme();
 
-// The one store of the renderer process, loaded once.
+// The one store of the renderer process. Listening comes first: a change
+// announced while the first load runs makes the store read once more.
 const store = createCatalogStore(window.whenkit);
+window.whenkit.onCatalogChanged(() => {
+  void store.reload();
+});
 void store.load();
 
 createRoot(container).render(

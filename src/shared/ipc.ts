@@ -1,4 +1,4 @@
-import type { CatalogSnapshotDto, ErrorDto } from '../core/dto';
+import type { CatalogSnapshotDto, EntryDto, ErrorDto } from '../core/dto';
 
 // The contract between the window's processes (AD-9, AD-18). Only types come
 // from core, and only from core/dto.ts.
@@ -12,6 +12,7 @@ export type {
 
 export const IPC_CHANNELS = {
   catalogSnapshot: 'catalog:snapshot',
+  catalogChanged: 'catalog:changed',
   windowSetTheme: 'window:setTheme',
 } as const;
 
@@ -40,11 +41,26 @@ export type IpcResult<T> =
   | { ok: true; data: T }
   | { ok: false; error: ErrorDto };
 
+/**
+ * What every write answers with (AD-10): the entries it changed, as the
+ * database now holds them, so the renderer's store applies them before the
+ * next comparison and the user's own edits never look like terminal ones.
+ */
+export interface WriteResult {
+  changed: readonly EntryDto[];
+}
+
 /** The bridge preload exposes as `window.whenkit`. */
 export interface WhenkitApi {
   /** The workspace main resolved at startup (AD-8); `null` when it could not. */
   workspacePath: string | null;
   catalogSnapshot(): Promise<IpcResult<CatalogSnapshotDto>>;
+  /**
+   * Calls `listener` whenever main saw the catalog change (AD-10); returns
+   * the function that stops listening. The event carries no data: the
+   * renderer reloads the snapshot.
+   */
+  onCatalogChanged(listener: () => void): () => void;
   setTheme(theme: Theme): Promise<IpcResult<null>>;
   /** Zooms the whole interface (preload `webFrame`; no IPC, nothing persisted). */
   setZoomFactor(factor: number): void;

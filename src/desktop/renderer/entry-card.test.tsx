@@ -137,3 +137,52 @@ describe('EntryCard in Learn', () => {
     expect(screen.getByText('example.org')).toBeTruthy();
   });
 });
+
+describe('EntryCard: arrival and update', () => {
+  it('wears the tape and the new mark while it is a fresh arrival', () => {
+    const { container } = render(
+      <EntryCard
+        entry={makeEntry('Nou')}
+        slot={null}
+        index={0}
+        tabIndex={0}
+        tape="Adăugat · acum 3 s"
+      />,
+    );
+    const card = container.querySelector('.entry-card');
+    expect(card?.hasAttribute('data-new')).toBe(true);
+    expect(container.querySelector('.arrival-tape')?.textContent).toBe(
+      'Adăugat · acum 3 s',
+    );
+    // The card keeps its name: the tape is decoration.
+    expect(screen.getByRole('button', { name: 'Nou' })).toBeTruthy();
+  });
+
+  it('has neither the tape nor a pulse without them', () => {
+    const { container } = render(
+      <EntryCard
+        entry={makeEntry('Vechi')}
+        slot={null}
+        index={0}
+        tabIndex={0}
+      />,
+    );
+    const card = container.querySelector('.entry-card');
+    expect(card?.hasAttribute('data-new')).toBe(false);
+    expect(card?.hasAttribute('data-pulse')).toBe(false);
+    expect(container.querySelector('.arrival-tape')).toBeNull();
+  });
+
+  it('carries the pulse parity as data-pulse, so every update restarts it', () => {
+    const entry = makeEntry('Puls');
+    const { container, rerender } = render(
+      <EntryCard entry={entry} slot={null} index={0} tabIndex={0} pulse="a" />,
+    );
+    const card = container.querySelector('.entry-card');
+    expect(card?.getAttribute('data-pulse')).toBe('a');
+    rerender(
+      <EntryCard entry={entry} slot={null} index={0} tabIndex={0} pulse="b" />,
+    );
+    expect(card?.getAttribute('data-pulse')).toBe('b');
+  });
+});

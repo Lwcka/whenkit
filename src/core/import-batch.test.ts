@@ -45,6 +45,9 @@ class FakeStore implements CatalogStore {
   schemaVersion() {
     return 1;
   }
+  dataVersion() {
+    return 1;
+  }
   close() {}
 
   categoriesInZone(zone: Zone) {

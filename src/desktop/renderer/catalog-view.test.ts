@@ -1,11 +1,14 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import type { CategoryDto, EntryDto } from '../../shared/ipc';
 import {
+  TAPE_LIFETIME_MS,
+  arrivalToasts,
   barCategories,
   cardHost,
   categoryCounts,
   categorySlots,
   entriesInView,
+  isNew,
   neighborCategoryId,
   nextGridIndex,
   viewCategoryId,
@@ -225,5 +228,74 @@ describe('nextGridIndex', () => {
 
   it('stays at 0 in an empty grid', () => {
     expect(nextGridIndex(0, 'ArrowRight', 3, 0)).toBe(0);
+  });
+});
+
+describe('isNew', () => {
+  it('lasts the tape lifetime (600 s)', () => {
+    expect(TAPE_LIFETIME_MS).toBe(600_000);
+    expect(isNew(1000, 1000)).toBe(true);
+    expect(isNew(1000, 1000 + TAPE_LIFETIME_MS - 1)).toBe(true);
+    expect(isNew(1000, 1000 + TAPE_LIFETIME_MS)).toBe(false);
+  });
+
+  it('counts an arrival ahead of a stale clock as new', () => {
+    expect(isNew(5000, 4000)).toBe(true);
+  });
+});
+
+describe('arrivalToasts', () => {
+  const backend = category('c-be', 'Backend & API-uri', 'learn');
+  const imagini = category('c-img', 'Imagini & video');
+  const named = (id: string, zone: EntryDto['zone'], cat?: CategoryDto) => ({
+    ...entry(id, zone, cat === undefined ? [] : [cat]),
+    name: id,
+  });
+
+  it('makes one toast per zone, Toolbox first, whatever the batch order', () => {
+    const arrived = [
+      named('Webhook', 'learn', backend),
+      ...['t1', 't2', 't3', 't4', 't5'].map((id) =>
+        named(id, 'toolbox', imagini),
+      ),
+    ];
+    const toasts = arrivalToasts(arrived, vi.fn());
+
+    expect(toasts.map((toast) => [toast.kind, toast.message])).toEqual([
+      ['arrival', [{ strong: '5 fișe noi' }, ' în Toolbox']],
+      [
+        'arrival',
+        ['Fișă nouă: ', { strong: 'Webhook' }, ' · Learn / Backend & API-uri'],
+      ],
+    ]);
+  });
+
+  it('gives „Vezi” to a zone with several entries, which goes to that zone', () => {
+    const onSee = vi.fn();
+    const [many] = arrivalToasts(
+      [named('a', 'learn', backend), named('b', 'learn', backend)],
+      onSee,
+    );
+    expect(many?.action?.label).toBe('Vezi');
+    many?.action?.run();
+    expect(onSee).toHaveBeenCalledWith('learn');
+  });
+
+  it('gives no action to a single entry', () => {
+    const [one] = arrivalToasts([named('a', 'toolbox', imagini)], vi.fn());
+    expect(one?.action).toBeUndefined();
+  });
+
+  it('names only the zone for an entry without categories', () => {
+    const [one] = arrivalToasts([named('Webhook', 'learn')], vi.fn());
+    expect(one?.message).toEqual([
+      'Fișă nouă: ',
+      { strong: 'Webhook' },
+      ' · Learn',
+    ]);
+  });
+
+  it('makes nothing for no arrivals', () => {
+    expect(arrivalToasts([], vi.fn())).toEqual([]);
   });
 });

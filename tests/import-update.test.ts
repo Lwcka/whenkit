@@ -116,6 +116,7 @@ function failingOnWrite(writes: number): CatalogStoreOpener {
       readTransaction: (fn) => store.readTransaction(fn),
       writeTransaction: (fn) =>
         store.writeTransaction((writer) => fn(failing(writer))),
+      dataVersion: () => store.dataVersion(),
       close: () => store.close(),
     };
     return wrapped;

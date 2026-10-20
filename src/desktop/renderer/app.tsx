@@ -12,10 +12,12 @@ import { AppError } from './app-error';
 import { CardGrid, SkeletonGrid } from './card-grid';
 import type { CatalogStore } from './catalog-store';
 import {
+  arrivalToasts,
   barCategories,
   categoryCounts,
   categorySlots,
   entriesInView,
+  isNew,
   neighborCategoryId,
   viewCategoryId,
   type Zone,
@@ -27,6 +29,7 @@ import { SectionHeader } from './section-header';
 import { StatusBar } from './status-bar';
 import { TitleBar } from './title-bar';
 import { ToastHost } from './toast';
+import { toasts } from './toast-store';
 import { Toolbar, ZONE_ORDER } from './toolbar';
 
 /** What the frame needs from the bridge. */
@@ -37,6 +40,12 @@ export type FrameApi = Pick<
 
 /** DESIGN motion.skeleton-delay (200 ms), mirrored from tokens.css for the timer. */
 export const SKELETON_DELAY_MS = 200;
+
+/** The arrival tape's clock ticks once a second (EXPERIENCE: „acum 3 s” → „acum 4 s”). */
+const TAPE_TICK_MS = 1000;
+
+/** What the view shows when there are no arrivals. */
+const NO_COUNTS: ReadonlyMap<string, number> = new Map();
 
 /** The category each zone showed last (kept while the app runs, not across restarts). */
 type CategoryByZone = Readonly<Record<Zone, string | null>>;
@@ -68,6 +77,47 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const selectCategory = (id: string | null) =>
     setCategoryByZone((previous) => ({ ...previous, [zone]: id }));
   const viewKey = `${zone}:${selectedId ?? ''}`;
+
+  // The entries the view lists, and which of them still wear their tape. The
+  // clock runs only while one does: a second-by-second tick for nothing else.
+  const arrivals = state.status === 'ready' ? state.arrivals : NO_COUNTS;
+  const pulses = state.status === 'ready' ? state.pulses : NO_COUNTS;
+  const entries =
+    state.status === 'ready'
+      ? entriesInView(state.entries, zone, selectedId)
+      : [];
+  const [now, setNow] = useState(() => Date.now());
+  // The clock is stale while no tape is visible: bring it up to date before
+  // paint whenever the view or the arrivals change, so an arrival older than
+  // the tape lifetime never shows its tape for a frame.
+  useLayoutEffect(() => {
+    setNow(Date.now());
+  }, [viewKey, arrivals]);
+  const freshInView = entries.filter((entry) => {
+    const arrivedAt = arrivals.get(entry.id);
+    return arrivedAt !== undefined && isNew(arrivedAt, now);
+  }).length;
+  const tapeVisible = freshInView > 0;
+  useEffect(() => {
+    if (!tapeVisible) return undefined;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), TAPE_TICK_MS);
+    return () => clearInterval(timer);
+  }, [tapeVisible]);
+
+  // Every import that lands makes one toast per zone; „Vezi” opens that zone
+  // at Toate.
+  useEffect(
+    () =>
+      store.subscribeArrivals((arrived) => {
+        const see = (target: Zone) => {
+          setZone(target);
+          setCategoryByZone((previous) => ({ ...previous, [target]: null }));
+        };
+        for (const toast of arrivalToasts(arrived, see)) toasts.push(toast);
+      }),
+    [store],
+  );
 
   // A new view remounts the grid (and, across zones, the bar), which would drop
   // the focus to <body>. Where the focus was last decides where it goes back:
@@ -162,7 +212,6 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const bar = barCategories(state.categories, zone);
   const counts = categoryCounts(state.entries, zone);
   const zoneEntries = entriesInView(state.entries, zone, null);
-  const entries = entriesInView(state.entries, zone, selectedId);
   const selected = bar.find((category) => category.id === selectedId);
 
   const items: CategoryBarItem[] = [
@@ -203,9 +252,17 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
                 selected === undefined ? null : (slots.get(selected.id) ?? null)
               }
               count={entries.length}
+              fresh={freshInView}
             />
             {entries.length > 0 ? (
-              <CardGrid entries={entries} slots={slots} viewKey={viewKey} />
+              <CardGrid
+                entries={entries}
+                slots={slots}
+                viewKey={viewKey}
+                arrivals={arrivals}
+                pulses={pulses}
+                now={now}
+              />
             ) : state.entries.length === 0 ? (
               <EmptyState
                 size="big"

@@ -150,6 +150,8 @@
   --toast-offset: var(--spacing-4);
   --toast-close-size: 28px;
   --toast-enter-offset: 16px;
+  --toast-tape-font-size: 10px;
+  --toast-tape-padding: 5px 10px 4px;
   /* The room the native window buttons take when the browser does not report
      titlebar-area-* (the overlay's own rectangle). */
   --title-bar-controls-fallback: 150px;
@@ -177,6 +179,15 @@
   --kind-stamp-rotate: -7deg;
   --kind-stamp-opacity: 0.9;
   --kind-stamp-room: 112px;
+  --entry-card-new-ring:
+    0 0 0 2px var(--tape),
+    0 0 0 8px color-mix(in srgb, var(--tape) 26%, transparent);
+  --entry-card-pulse-ring: 0 0 0 3px var(--accent);
+  --arrival-tape-offset-top: -15px;
+  --arrival-tape-offset-left: 30px;
+  --arrival-tape-rotate: -3deg;
+  --arrival-tape-padding: 8px 18px 7px;
+  --arrival-tape-clip: polygon(2% 0, 98% 6%, 100% 48%, 97% 100%, 3% 94%, 0 52%);
   --entry-card-body-lines: 2;
   --empty-state-target-size: 120px;
   --empty-state-target-size-small: 72px;

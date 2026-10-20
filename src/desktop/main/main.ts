@@ -25,6 +25,7 @@ import {
 } from '../../shared/ipc';
 import { appStrings, mainStrings } from '../../shared/strings.ro';
 import { openDesktopCatalog, snapshotResult } from './catalog';
+import { watchCatalog, type CatalogWatcher } from './catalog-watch';
 import { createErrorReporter } from './error-log';
 import { isAppNavigation } from './navigation';
 import {
@@ -40,6 +41,8 @@ import {
 
 /** The window never waits long for a lock held by the CLI (AD-4). */
 const DESKTOP_BUSY_TIMEOUT_MS = 2000;
+/** How often main looks for writes of other processes (AD-10). */
+const CATALOG_POLL_INTERVAL_MS = 2000;
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
 const STATE_FILE = 'window-state.json';
@@ -234,7 +237,19 @@ function main(): void {
           }
         },
       );
+      // Tells the window the catalog changed (AD-10): from the poll below and,
+      // later, from the handlers that write.
+      const notifyCatalogChanged = () => {
+        if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+        const { webContents } = mainWindow;
+        if (!webContents.isDestroyed()) {
+          webContents.send(IPC_CHANNELS.catalogChanged);
+        }
+      };
+      let watcher: CatalogWatcher | undefined;
       app.on('will-quit', () => {
+        // Stop polling first: it reads through the store that closes next.
+        watcher?.stop();
         if (catalog.ok) catalog.store.close();
       });
 
@@ -254,6 +269,16 @@ function main(): void {
 
       const workspace = catalog.ok ? catalog.workspace : null;
       createWindow(currentTheme(), workspace);
+
+      if (catalog.ok) {
+        const { store } = catalog;
+        watcher = watchCatalog({
+          readVersion: () => store.dataVersion(),
+          emit: notifyCatalogChanged,
+          intervalMs: CATALOG_POLL_INTERVAL_MS,
+          logError: reporter.log,
+        });
+      }
 
       app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

@@ -20,6 +20,16 @@ export interface EntryCardProps {
   index: number;
   tabIndex: 0 | -1;
   onFocus?: () => void;
+  /**
+   * The text of the arrival tape („Adăugat · acum 3 s”); present only while
+   * the entry is a fresh arrival, which also gives the card its ring.
+   */
+  tape?: string;
+  /**
+   * Set when an update from the terminal landed. The parity of the store's
+   * counter: a change of value restarts the pulse.
+   */
+  pulse?: 'a' | 'b';
 }
 
 function Meta({ entry }: { entry: EntryDto }) {
@@ -98,6 +108,8 @@ export function EntryCard({
   index,
   tabIndex,
   onFocus,
+  tape,
+  pulse,
 }: EntryCardProps) {
   const shown = SITUATIONS_SHOWN[entry.zone];
   const situations = entry.situations.slice(0, shown);
@@ -110,8 +122,15 @@ export function EntryCard({
       data-zone={entry.zone}
       data-tab={index % 3}
       data-slot={slot ?? undefined}
+      data-new={tape === undefined ? undefined : ''}
+      data-pulse={pulse}
       onFocus={onFocus}
     >
+      {tape !== undefined && (
+        <span className="arrival-tape" aria-hidden="true">
+          {tape}
+        </span>
+      )}
       <i className="entry-card-crop" data-corner="start" aria-hidden="true" />
       <i className="entry-card-crop" data-corner="end" aria-hidden="true" />
       <span className="entry-card-hint" aria-hidden="true">
