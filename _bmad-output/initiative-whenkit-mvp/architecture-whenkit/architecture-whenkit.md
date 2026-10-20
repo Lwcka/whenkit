@@ -7,7 +7,7 @@ paradigm: 'hexagonal (ports & adapters), ușor'
 scope: 'whenkit MVP: aplicația desktop Electron, CLI-ul whenkit și șablonul workspace-ului'
 status: final
 created: '2026-10-13'
-updated: '2026-10-19'
+updated: '2026-10-21'
 binds: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, CAP-11, CAP-12, CAP-13]
 sources:
   - ../spec-whenkit/spec-whenkit.md
@@ -215,6 +215,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | Configurare | doar prin `resolveWorkspace()` (AD-8); fără chei API în v1 |
 | Teste | Vitest; renderer-ul în `*.test.tsx`, sub jsdom, în proiectul Vitest separat de cel `node` (`*.test.ts`), cu Testing Library și `cleanup` explicit; `core` cu adaptoare false; `SqliteCatalogStore` pe fișier temporar (WAL și `data_version` nu funcționează pe `:memory:`); HTTP real testat cu un server local; fixture-urile sunt sintetice, niciodată copii din `C:\Users\Luca\Personal\` |
 | Stilizare (renderer) | CSS simplu, un fișier `.css` pe componentă, lângă ea; clasele poartă numele componentelor din DESIGN (`.title-bar`, `.zone-tab`), starea trece prin atribute (`[aria-selected]`, `[data-busy]`); valorile vin doar din `tokens.css` prin `var(--…)`, care ține toți tokenii DESIGN sub `[data-theme]`; fără CSS modules și fără CSS-in-JS (CSP fără stiluri inline în producție) |
+| Markdown (renderer) | Conținutul conceptelor trece doar prin `react-markdown` + `remark-gfm` (`markdown-content.tsx`), cu `skipHtml`, fără `rehype-raw` și fără `dangerouslySetInnerHTML`; `img` devine textul `alt`; un link e clicabil doar dacă `isExternalUrl` (`src/shared/ipc.ts`, aceeași verificare în main) îl acceptă, altfel e text simplu; se deschide prin `shell:openExternal`, al cărui handler reverifică URL-ul (AD-9); etichetele notelor de subsol vin din `strings.ro.ts` |
 | Granițe | oxlint `no-restricted-imports` pentru `src/core/**` și `src/desktop/renderer/**` |
 | Domenii interzise | `<workspace>/data/blocked-domains.txt`, o regulă pe linie, `#` comentariu, `libgen.*` = orice TLD, subdomeniile incluse; parsat de o singură funcție din `core` |
 
@@ -240,6 +241,8 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 | jsdom | 30.1.3 (mediul testelor renderer-ului) |
 | @testing-library/react | 16.3.3 |
 | @testing-library/dom | 10.4.2 |
+| react-markdown | 10.1.0 (conținutul conceptelor, AD-9) |
+| remark-gfm | 4.0.1 (tabelele GFM) |
 
 ## Structural Seed
 
@@ -320,5 +323,5 @@ whenkit/
 - **Restore din export:** `catalog.json` îl face posibil; nu e cerut în v1.
 - **Re-verificare, ecran Setări, câmp Status:** `post-v1-roadmap.md`; AD-7 permite deja verificarea unei fișe existente.
 - **Butoane Claude headless și terminal integrat** (xterm.js + node-pty): după v1; procesele se pornesc doar din `main`.
-- **Convenția renderer-ului rămasă** (biblioteca Markdown): o fixează primul tichet din epic-fereastra-whenkit care o folosește, iar tichetele următoare o refolosesc. O dependență nouă intră în Stack, cu versiune fixată, în sesiunea tichetului care o adaugă. Forma depozitului (AD-10), testarea componentelor și stilizarea (Consistency Conventions) sunt fixate.
+- **Dependențele noi ale renderer-ului:** o dependență nouă intră în Stack, cu versiune fixată, în sesiunea tichetului care o adaugă. Forma depozitului (AD-10), testarea componentelor, stilizarea și Markdown-ul (Consistency Conventions) sunt fixate.
 - **Numele exacte ale câmpurilor din lot:** urmează `entry-model.md`; le fixează primul tichet care scrie `batch-schema.ts`, sub AD-6.
