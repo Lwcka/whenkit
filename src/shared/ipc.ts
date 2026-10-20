@@ -1,6 +1,7 @@
 import type {
   CatalogSnapshotDto,
   EntryDto,
+  EntryPatchInput,
   ErrorDto,
   SearchResultDto,
 } from '../core/dto';
@@ -12,6 +13,8 @@ export type {
   CatalogSnapshotDto,
   CategoryDto,
   EntryDto,
+  EntryPatch,
+  EntryPatchInput,
   ErrorDto,
   SearchResultDto,
 } from '../core/dto';
@@ -22,6 +25,7 @@ export const IPC_CHANNELS = {
   entriesSearch: 'entries:search',
   entriesSetNotes: 'entries:setNotes',
   entriesDelete: 'entries:delete',
+  entriesPatch: 'entries:patch',
   windowSetTheme: 'window:setTheme',
   shellOpenExternal: 'shell:openExternal',
   /** Main to renderer: save the pending notes now (AD-20). */
@@ -102,6 +106,14 @@ export interface WhenkitApi {
    * holds the entries it was linked to, `removed` the deleted id (AD-10).
    */
   deleteEntry(id: string): Promise<IpcResult<WriteResult>>;
+  /**
+   * Edits the fields Claude writes (AD-16): checked against `expectedRevision`
+   * inside the write, with the links verified as in an import when `url` or
+   * `sources` change (AD-3, AD-7). Answers with the entry as stored, or an
+   * error: `CONFLICT`, `ENTRY_REJECTED` (with `reasons`), `OFFLINE`,
+   * `ARGUMENTS_INVALID` (with `issues`).
+   */
+  patchEntry(input: EntryPatchInput): Promise<IpcResult<WriteResult>>;
   /**
    * Registers what saves the notes still pending when the window closes
    * (AD-20). Main asks through `window:flushNotes`; preload awaits `flush`

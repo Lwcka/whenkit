@@ -2,6 +2,7 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron';
 import {
   IPC_CHANNELS,
   workspaceFromArgv,
+  type EntryPatchInput,
   type Theme,
   type WhenkitApi,
 } from '../../shared/ipc';
@@ -25,6 +26,8 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.entriesSetNotes, id, notes),
   deleteEntry: (id: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.entriesDelete, id),
+  patchEntry: (input: EntryPatchInput) =>
+    ipcRenderer.invoke(IPC_CHANNELS.entriesPatch, input),
   onFlushNotes: (flush: () => Promise<void>) => {
     // Main waits for the answer (with a time limit): it is sent whether the
     // flush worked or not.

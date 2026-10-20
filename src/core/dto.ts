@@ -9,6 +9,8 @@ import type {
 } from './ports';
 import { verdictReasonSchema } from './verification/reason-codes';
 
+export type { EntryPatch, EntryPatchInput } from './entry-patch';
+
 // The one set of DTOs (AD-18) that `--json`, IPC and the export share: plain
 // objects, dates as ISO strings. Links appear as id lists on the entry;
 // LinkDto arrives with the export.
@@ -94,9 +96,22 @@ export const searchResultDtoSchema = z.strictObject({
 
 export type SearchResultDto = z.infer<typeof searchResultDtoSchema>;
 
-/** An error as it crosses IPC: the code only; the interface owns the text (AD-18). */
+/**
+ * An error as it crosses IPC: the code, plus the data a form needs to explain
+ * it; the interface owns the text (AD-18). `reasons` (ENTRY_REJECTED) are
+ * the verdict's codes (AD-15); `issues` (ARGUMENTS_INVALID) name the fields.
+ */
 export const errorDtoSchema = z.strictObject({
   code: z.enum(ERROR_CODES),
+  reasons: z.array(verdictReasonSchema).optional(),
+  issues: z
+    .array(
+      z.strictObject({
+        path: z.array(z.union([z.string(), z.number()])),
+        message: z.string(),
+      }),
+    )
+    .optional(),
 });
 
 export type ErrorDto = z.infer<typeof errorDtoSchema>;

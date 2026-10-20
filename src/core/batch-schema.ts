@@ -14,6 +14,9 @@ import { BATCH_SCHEMA_VERSION } from './versions';
 
 const text = z.string().trim().min(1);
 
+/** The shape of every text field, shared with the edit schema (entry-patch.ts). */
+export const nonBlankText = text;
+
 /** True for the spelling of an entry id (the same check as `id`). */
 export function isEntryId(value: string): boolean {
   return z.uuid().safeParse(value).success;

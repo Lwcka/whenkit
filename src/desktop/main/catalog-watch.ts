@@ -1,6 +1,6 @@
 import type { CatalogStore } from '../../core/ports';
 import type { IpcResult, WriteResult } from '../../shared/ipc';
-import { codeOf, failure, type DesktopCatalog } from './catalog';
+import { errorDtoOf, failure, type DesktopCatalog } from './catalog';
 
 // How the window learns the catalog changed (AD-10), electron-free so tests
 // can drive it: a poll of SQLite's data_version for what other processes
@@ -97,7 +97,8 @@ export function watchCatalog({
  * Runs a write for a future IPC handler: `fn` gets the window's store and
  * answers what it changed. After a successful write it calls `emit`, so the
  * window reloads even though data_version cannot see its own connection's
- * writes. A failure becomes `{ ok: false, error: { code } }`; a failing emit
+ * writes. A failure becomes `{ ok: false, error }` with the `ErrorDto` of errorDtoOf:
+ * the code, plus the `reasons` and `issues` of a WhenkitError; a failing emit
  * is logged and does not turn the saved write into an error. Never throws.
  */
 export async function runWrite<T extends WriteResult>(
@@ -111,7 +112,7 @@ export async function runWrite<T extends WriteResult>(
   try {
     data = await fn(opened.store);
   } catch (error) {
-    return failure(codeOf(error, logError));
+    return { ok: false, error: errorDtoOf(error, logError) };
   }
   try {
     emit();
