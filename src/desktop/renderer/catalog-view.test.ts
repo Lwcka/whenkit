@@ -11,7 +11,11 @@ import {
   isNew,
   neighborCategoryId,
   nextGridIndex,
+  pulseParity,
   searchHits,
+  sheetCrumbs,
+  sheetLinks,
+  shortId,
   viewCategoryId,
 } from './catalog-view';
 
@@ -260,7 +264,7 @@ describe('arrivalToasts', () => {
         named(id, 'toolbox', imagini),
       ),
     ];
-    const toasts = arrivalToasts(arrived, vi.fn());
+    const toasts = arrivalToasts(arrived, vi.fn(), vi.fn());
 
     expect(toasts.map((toast) => [toast.kind, toast.message])).toEqual([
       ['arrival', [{ strong: '5 fișe noi' }, ' în Toolbox']],
@@ -276,19 +280,29 @@ describe('arrivalToasts', () => {
     const [many] = arrivalToasts(
       [named('a', 'learn', backend), named('b', 'learn', backend)],
       onSee,
+      vi.fn(),
     );
     expect(many?.action?.label).toBe('Vezi');
     many?.action?.run();
     expect(onSee).toHaveBeenCalledWith('learn');
   });
 
-  it('gives no action to a single entry', () => {
-    const [one] = arrivalToasts([named('a', 'toolbox', imagini)], vi.fn());
-    expect(one?.action).toBeUndefined();
+  it('gives „Deschide” to a single entry, which opens that entry', () => {
+    const onSee = vi.fn();
+    const onOpen = vi.fn();
+    const [one] = arrivalToasts(
+      [named('a', 'toolbox', imagini)],
+      onSee,
+      onOpen,
+    );
+    expect(one?.action?.label).toBe('Deschide');
+    one?.action?.run();
+    expect(onOpen).toHaveBeenCalledWith('a');
+    expect(onSee).not.toHaveBeenCalled();
   });
 
   it('names only the zone for an entry without categories', () => {
-    const [one] = arrivalToasts([named('Webhook', 'learn')], vi.fn());
+    const [one] = arrivalToasts([named('Webhook', 'learn')], vi.fn(), vi.fn());
     expect(one?.message).toEqual([
       'Fișă nouă: ',
       { strong: 'Webhook' },
@@ -297,7 +311,7 @@ describe('arrivalToasts', () => {
   });
 
   it('makes nothing for no arrivals', () => {
-    expect(arrivalToasts([], vi.fn())).toEqual([]);
+    expect(arrivalToasts([], vi.fn(), vi.fn())).toEqual([]);
   });
 });
 
@@ -328,5 +342,64 @@ describe('searchHits', () => {
       otherZone: 0,
     });
     expect(searchHits(all, [], 'learn')).toEqual({ inZone: [], otherZone: 0 });
+  });
+});
+
+describe('sheetCrumbs', () => {
+  it('names the zone, the first category and the entry', () => {
+    const imagini = category('c-img', 'Imagini & video');
+    const other = category('c-z', 'Zebre');
+    expect(
+      sheetCrumbs({
+        ...entry('r', 'toolbox', [imagini, other]),
+        name: 'remove.bg',
+      }),
+    ).toEqual(['Toolbox', 'Imagini & video', 'remove.bg']);
+  });
+
+  it('leaves the category out when the entry has none', () => {
+    expect(
+      sheetCrumbs({ ...entry('w', 'learn', []), name: 'Webhook' }),
+    ).toEqual(['Learn', 'Webhook']);
+  });
+});
+
+describe('shortId', () => {
+  it('keeps the first and last four characters', () => {
+    expect(shortId('7f3c9a10-4b2e-4c1d-8e55-0a1b2c3de21a')).toBe('7f3c…e21a');
+  });
+
+  it('leaves a short id alone', () => {
+    expect(shortId('abc')).toBe('abc');
+  });
+});
+
+describe('sheetLinks', () => {
+  it('resolves the children, parents and related entries, skipping unknown ids', () => {
+    const all = ['a', 'b', 'c', 'd'].map((id) => entry(id, 'learn', []));
+    const links = sheetLinks(
+      {
+        ...entry('x', 'learn', []),
+        childIds: ['b', 'ghost', 'a'],
+        parentIds: ['d'],
+        relatedIds: ['c', 'ghost'],
+      },
+      all,
+    );
+    expect(links.children.map((e) => e.id)).toEqual(['b', 'a']);
+    expect(links.parents.map((e) => e.id)).toEqual(['d']);
+    expect(links.related.map((e) => e.id)).toEqual(['c']);
+  });
+});
+
+describe('pulseParity', () => {
+  it('is quiet while the count is what the view mounted with', () => {
+    expect(pulseParity(2, 2)).toBeUndefined();
+  });
+
+  it('alternates with every update so the animation restarts', () => {
+    expect(pulseParity(1, 0)).toBe('a');
+    expect(pulseParity(2, 0)).toBe('b');
+    expect(pulseParity(3, 0)).toBe('a');
   });
 });

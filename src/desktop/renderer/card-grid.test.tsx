@@ -102,16 +102,72 @@ describe('CardGrid', () => {
     expect(document.activeElement).toBe(cards()[1]);
   });
 
-  it('leaves Enter alone: the card does not open anything yet', () => {
-    render(<CardGrid entries={entries} slots={slots} viewKey="v" />);
+  it('opens an entry on click and on Enter, with its id', () => {
+    const onOpen = vi.fn();
+    render(
+      <CardGrid entries={entries} slots={slots} viewKey="v" onOpen={onOpen} />,
+    );
+
+    fireEvent.click(cards()[2] as HTMLElement);
+    expect(onOpen).toHaveBeenLastCalledWith('c');
 
     cards()[1]?.focus();
-    const event = fireEvent.keyDown(cards()[1] as HTMLElement, {
+    const notPrevented = fireEvent.keyDown(cards()[1] as HTMLElement, {
       code: 'Enter',
     });
-    // Not prevented, and the focus has not moved.
-    expect(event).toBe(true);
-    expect(document.activeElement).toBe(cards()[1]);
+    expect(notPrevented).toBe(false);
+    expect(onOpen).toHaveBeenLastCalledWith('b');
+    expect(onOpen).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens on the numpad Enter too', () => {
+    const onOpen = vi.fn();
+    render(
+      <CardGrid entries={entries} slots={slots} viewKey="v" onOpen={onOpen} />,
+    );
+    fireEvent.keyDown(cards()[3] as HTMLElement, { code: 'NumpadEnter' });
+    expect(onOpen).toHaveBeenCalledWith('d');
+  });
+
+  it('does not open on Enter with a modifier, or on other keys', () => {
+    const onOpen = vi.fn();
+    render(
+      <CardGrid entries={entries} slots={slots} viewKey="v" onOpen={onOpen} />,
+    );
+    const card = cards()[0] as HTMLElement;
+
+    fireEvent.keyDown(card, { code: 'Enter', ctrlKey: true });
+    fireEvent.keyDown(card, { code: 'Enter', altKey: true });
+    fireEvent.keyDown(card, { code: 'Space' });
+    expect(onOpen).not.toHaveBeenCalled();
+  });
+
+  it('makes the initial card the Tab stop', () => {
+    render(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        initialActiveId="d"
+      />,
+    );
+    expect(stops().map((card) => card.getAttribute('aria-label'))).toEqual([
+      'd',
+    ]);
+  });
+
+  it('falls back to the first card when the initial one is not in the list', () => {
+    render(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        initialActiveId="gone"
+      />,
+    );
+    expect(stops().map((card) => card.getAttribute('aria-label'))).toEqual([
+      'a',
+    ]);
   });
 
   it('caps the cascade at eight cards', () => {

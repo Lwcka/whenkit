@@ -46,6 +46,22 @@ describe('StatusBar', () => {
     expect(screen.queryByText(/ultima adăugată/)).toBeNull();
   });
 
+  it('shows other key hints when given', () => {
+    const { container } = render(
+      <StatusBar
+        count={1}
+        lastAddedAt={null}
+        workspacePath={null}
+        keyHints={[{ keys: 'Esc', action: 'înapoi' }]}
+      />,
+    );
+    expect(
+      Array.from(container.querySelectorAll('kbd')).map((k) => k.textContent),
+    ).toEqual(['Esc']);
+    expect(container.textContent).toContain('înapoi');
+    expect(container.textContent).not.toContain('caută');
+  });
+
   it('leaves the path out when the workspace is unknown', () => {
     const { container } = render(
       <StatusBar count={1} lastAddedAt={null} workspacePath={null} />,

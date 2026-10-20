@@ -1,4 +1,5 @@
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -20,11 +21,13 @@ import {
   isNew,
   neighborCategoryId,
   searchHits,
+  sheetCrumbs,
   viewCategoryId,
   type Zone,
 } from './catalog-view';
 import { CategoryBar, type CategoryBarItem } from './category-bar';
 import { EmptyState } from './empty-state';
+import { EntrySheet } from './entry-sheet';
 import {
   ESCAPE_PRIORITY,
   createZoom,
@@ -34,6 +37,7 @@ import {
 } from './keyboard';
 import { useSearch } from './search';
 import { SectionHeader } from './section-header';
+import { SheetBar } from './sheet-bar';
 import { StatusBar } from './status-bar';
 import { TitleBar } from './title-bar';
 import { ToastHost } from './toast';
@@ -61,6 +65,14 @@ const NO_COUNTS: ReadonlyMap<string, number> = new Map();
 /** The category each zone showed last (kept while the app runs, not across restarts). */
 type CategoryByZone = Readonly<Record<Zone, string | null>>;
 
+/** Where the list stood when a sheet opened over it. */
+interface Origin {
+  /** The work area's scroll position. */
+  scrollTop: number;
+  /** The card the sheet was opened from. */
+  cardId: string | null;
+}
+
 /** True once `active` has been true for `ms` without a break. */
 function useElapsed(active: boolean, ms: number): boolean {
   const [elapsed, setElapsed] = useState(false);
@@ -80,6 +92,32 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     learn: null,
   });
   const slowStart = useElapsed(state.status === 'loading', SKELETON_DELAY_MS);
+
+  // The sheets on screen: a stack of entry ids whose top is shown in place of
+  // the list. The list view itself (zone, category, search text) is untouched
+  // while it shows, so only the scroll and the origin card need saving.
+  const [stack, setStack] = useState<readonly string[]>([]);
+  const [origin, setOrigin] = useState<Origin | null>(null);
+  const byId = useMemo(
+    () =>
+      new Map(
+        (state.status === 'ready' ? state.entries : NO_ENTRIES).map(
+          (candidate) => [candidate.id, candidate],
+        ),
+      ),
+    [state],
+  );
+  // An entry that left the catalog leaves the stack.
+  const liveStack =
+    state.status === 'ready' ? stack.filter((id) => byId.has(id)) : stack;
+  const shownEntry = byId.get(liveStack[liveStack.length - 1] ?? '');
+  const sheetOpen = shownEntry !== undefined;
+  const staleStack = liveStack.length !== stack.length;
+  useEffect(() => {
+    if (staleStack) setStack(liveStack);
+  });
+  // The zone tab follows the entry on screen; the list's own zone is kept.
+  const shownZone: Zone = shownEntry?.zone ?? zone;
 
   // One search text for both zones. The category each zone showed before is
   // kept untouched, so clearing the search returns to it.
@@ -139,19 +177,56 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     return () => clearInterval(timer);
   }, [tapeVisible]);
 
+  // Leaving the sheets for good: the origin is forgotten, so the list does not
+  // restore it.
+  const closeSheet = useCallback(() => {
+    setStack((previous) => (previous.length > 0 ? [] : previous));
+    setOrigin(null);
+  }, []);
+  // Opening an entry ends its arrival. From the list the stack starts and the
+  // origin is saved; from a sheet the entry is pushed.
+  const openEntry = (id: string) => {
+    if (!byId.has(id)) return;
+    store.dismissArrival(id);
+    if (!sheetOpen) {
+      const scroller = document.querySelector<HTMLElement>(
+        '.list-view .shell-scroll',
+      );
+      setOrigin({ scrollTop: scroller?.scrollTop ?? 0, cardId: id });
+      setStack([id]);
+    } else if (liveStack[liveStack.length - 1] !== id) {
+      setStack([...liveStack, id]);
+    }
+  };
+  // Back pops one sheet; popping the last one restores the list (below).
+  const goBack = () => setStack(liveStack.slice(0, -1));
+  // The long-lived listeners (toasts, Esc, keys, mouse) call through refs that
+  // always hold the current closures.
+  const openRef = useRef(openEntry);
+  const backRef = useRef(goBack);
+  const sheetOpenRef = useRef(sheetOpen);
+  useEffect(() => {
+    openRef.current = openEntry;
+    backRef.current = goBack;
+    sheetOpenRef.current = sheetOpen;
+  });
+
   // Every import that lands makes one toast per zone; „Vezi” opens that zone
-  // at Toate.
+  // at Toate, and a single arrival's „Deschide” opens its sheet.
   useEffect(
     () =>
       store.subscribeArrivals((arrived) => {
         const see = (target: Zone) => {
+          closeSheet();
           setSearchText('');
           setZone(target);
           setCategoryByZone((previous) => ({ ...previous, [target]: null }));
         };
-        for (const toast of arrivalToasts(arrived, see)) toasts.push(toast);
+        const open = (id: string) => openRef.current(id);
+        for (const toast of arrivalToasts(arrived, see, open))
+          toasts.push(toast);
       }),
-    [store],
+    [store, closeSheet],
   );
 
   // A new view remounts the grid (and, across zones, the bar), which would drop
@@ -192,7 +267,8 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const moveCategory = useRef<(delta: -1 | 1) => void>(() => {});
   useEffect(() => {
     moveCategory.current = (delta) => {
-      if (state.status !== 'ready') return;
+      // The category bar is not on screen while a sheet shows.
+      if (state.status !== 'ready' || sheetOpen) return;
       selectCategory(
         neighborCategoryId(
           barCategories(state.categories, zone),
@@ -220,11 +296,80 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         clear,
       ),
       registerEscape(ESCAPE_PRIORITY.activeSearch, hasText, clear),
+      registerEscape(
+        ESCAPE_PRIORITY.openSheet,
+        () => sheetOpenRef.current,
+        () => backRef.current(),
+      ),
     ];
     return () => {
       for (const off of unregister) off();
     };
   }, []);
+
+  // The mouse's back button goes back one sheet too.
+  useEffect(() => {
+    const MOUSE_BACK = 3;
+    const onMouseDown = (event: MouseEvent) => {
+      if (event.button === MOUSE_BACK && sheetOpenRef.current)
+        event.preventDefault();
+    };
+    const onMouseUp = (event: MouseEvent) => {
+      if (event.button !== MOUSE_BACK || !sheetOpenRef.current) return;
+      event.preventDefault();
+      backRef.current();
+    };
+    document.addEventListener('mousedown', onMouseDown);
+    document.addEventListener('mouseup', onMouseUp);
+    return () => {
+      document.removeEventListener('mousedown', onMouseDown);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+  }, []);
+
+  // The window title names the entry on screen (Electron follows it).
+  const shownName = shownEntry?.name ?? null;
+  useEffect(() => {
+    document.title =
+      shownName === null
+        ? appStrings.productName
+        : appStrings.sheetWindowTitle(shownName);
+  }, [shownName]);
+
+  // The last sheet closed: the list is back as it was left, with the same
+  // scroll and the card the sheet was opened from focused.
+  const wasOpen = useRef(false);
+  useLayoutEffect(() => {
+    const was = wasOpen.current;
+    wasOpen.current = sheetOpen;
+    if (!was || sheetOpen || origin === null) return;
+    const scroller = document.querySelector<HTMLElement>(
+      '.list-view .shell-scroll',
+    );
+    if (scroller !== null) scroller.scrollTop = origin.scrollTop;
+    const card = Array.from(
+      document.querySelectorAll<HTMLElement>('.card-grid .entry-card'),
+    ).find((candidate) => candidate.dataset.entryId === origin.cardId);
+    card?.focus({ preventScroll: true });
+    setOrigin(null);
+  }, [sheetOpen, origin]);
+
+  // Switching zones, from the tabs or Ctrl+1/2, leaves the sheets.
+  const changeZone = useCallback(
+    (target: Zone) => {
+      closeSheet();
+      setZone(target);
+    },
+    [closeSheet],
+  );
+  // Typing a search from a sheet goes back to the list, in the zone on screen.
+  const changeSearch = (text: string) => {
+    if (sheetOpen) {
+      setZone(shownZone);
+      closeSheet();
+    }
+    setSearchText(text);
+  };
 
   const { setZoomFactor } = api;
   const zoom = useMemo(() => createZoom(setZoomFactor), [setZoomFactor]);
@@ -232,16 +377,18 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     () =>
       installKeyboard(
         frameBindings({
-          selectZone: (index) => setZone(ZONE_ORDER[index] ?? 'toolbox'),
+          selectZone: (index) => changeZone(ZONE_ORDER[index] ?? 'toolbox'),
           zoom,
           moveCategory: (delta) => moveCategory.current(delta),
           focusSearch: () => {
             searchInput.current?.focus();
             searchInput.current?.select();
           },
+          back: () => backRef.current(),
+          sheetOpen: () => sheetOpenRef.current,
         }),
       ),
-    [zoom],
+    [zoom, changeZone],
   );
 
   if (state.status === 'loading') {
@@ -315,85 +462,116 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     <>
       <TitleBar setTheme={api.setTheme} />
       <Toolbar
-        zone={zone}
+        zone={shownZone}
         counts={tabCounts}
-        onZoneChange={setZone}
+        onZoneChange={changeZone}
         search={{
           text: searchText,
-          onChange: setSearchText,
+          onChange: changeSearch,
           inputRef: searchInput,
         }}
       />
-      <div className="list-view" role="tabpanel" aria-label={zoneLabels[zone]}>
-        <CategoryBar
-          key={zone}
-          items={items}
-          selectedId={selectedId}
-          searching={searching}
-          onSelect={selectCategory}
-        />
-        <main className="shell">
-          <div key={viewKey} className="shell-scroll">
-            <SectionHeader
-              name={
-                found !== null
-                  ? appStrings.searchResultsTitle(found.query)
-                  : (selected?.name ?? appStrings.allCategories)
-              }
-              slot={
-                selected === undefined || searching
-                  ? null
-                  : (slots.get(selected.id) ?? null)
-              }
-              count={entries.length}
-              fresh={freshInView}
-              action={entries.length > 0 ? otherZoneAction : undefined}
-            />
-            {entries.length > 0 ? (
-              <CardGrid
-                entries={entries}
+      {shownEntry !== undefined ? (
+        <div
+          className="sheet-view"
+          role="tabpanel"
+          aria-label={zoneLabels[shownZone]}
+        >
+          <SheetBar crumbs={sheetCrumbs(shownEntry)} onBack={goBack} />
+          <main className="shell">
+            <div key={shownEntry.id} className="shell-scroll">
+              <EntrySheet
+                entry={shownEntry}
+                entries={state.entries}
                 slots={slots}
-                viewKey={viewKey}
-                arrivals={arrivals}
-                pulses={pulses}
-                now={now}
+                pulses={pulses.get(shownEntry.id) ?? 0}
+                onOpen={openEntry}
               />
-            ) : found !== null ? (
-              <EmptyState
-                size="small"
-                title={appStrings.searchNothing(found.query, zoneLabels[zone])}
-                text={appStrings.searchedEverything}
-                command={{
-                  lead: appStrings.searchAskClaude,
-                  highlight: appStrings.searchAskClaudeCommand,
-                }}
-                action={otherZoneAction}
+            </div>
+          </main>
+        </div>
+      ) : (
+        <div
+          className="list-view"
+          role="tabpanel"
+          aria-label={zoneLabels[zone]}
+        >
+          <CategoryBar
+            key={zone}
+            items={items}
+            selectedId={selectedId}
+            searching={searching}
+            onSelect={selectCategory}
+          />
+          <main className="shell">
+            <div key={viewKey} className="shell-scroll">
+              <SectionHeader
+                name={
+                  found !== null
+                    ? appStrings.searchResultsTitle(found.query)
+                    : (selected?.name ?? appStrings.allCategories)
+                }
+                slot={
+                  selected === undefined || searching
+                    ? null
+                    : (slots.get(selected.id) ?? null)
+                }
+                count={entries.length}
+                fresh={freshInView}
+                action={entries.length > 0 ? otherZoneAction : undefined}
               />
-            ) : state.entries.length === 0 ? (
-              <EmptyState
-                size="big"
-                title={entryStrings.emptyCatalog}
-                text={appStrings.emptyCatalogText}
-                command={{
-                  highlight: appStrings.emptyCatalogCommand,
-                  rest: appStrings.emptyCatalogCommandRest,
-                }}
-              />
-            ) : (
-              <EmptyState
-                size="small"
-                title={appStrings.emptyViewTitle(
-                  selected?.name ?? zoneLabels[zone],
-                )}
-              />
-            )}
-          </div>
-        </main>
-      </div>
+              {entries.length > 0 ? (
+                <CardGrid
+                  entries={entries}
+                  slots={slots}
+                  viewKey={viewKey}
+                  arrivals={arrivals}
+                  pulses={pulses}
+                  now={now}
+                  onOpen={openEntry}
+                  initialActiveId={origin?.cardId ?? undefined}
+                />
+              ) : found !== null ? (
+                <EmptyState
+                  size="small"
+                  title={appStrings.searchNothing(
+                    found.query,
+                    zoneLabels[zone],
+                  )}
+                  text={appStrings.searchedEverything}
+                  command={{
+                    lead: appStrings.searchAskClaude,
+                    highlight: appStrings.searchAskClaudeCommand,
+                  }}
+                  action={otherZoneAction}
+                />
+              ) : state.entries.length === 0 ? (
+                <EmptyState
+                  size="big"
+                  title={entryStrings.emptyCatalog}
+                  text={appStrings.emptyCatalogText}
+                  command={{
+                    highlight: appStrings.emptyCatalogCommand,
+                    rest: appStrings.emptyCatalogCommandRest,
+                  }}
+                />
+              ) : (
+                <EmptyState
+                  size="small"
+                  title={appStrings.emptyViewTitle(
+                    selected?.name ?? zoneLabels[zone],
+                  )}
+                />
+              )}
+            </div>
+          </main>
+        </div>
+      )}
       <StatusBar
         count={state.entries.length}
         lastAddedAt={state.entries[0]?.addedAt ?? null}
         workspacePath={api.workspacePath}
+        keyHints={sheetOpen ? appStrings.sheetKeyHints : undefined}
       />
       <ToastHost />
     </>

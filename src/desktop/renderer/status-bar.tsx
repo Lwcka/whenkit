@@ -8,6 +8,8 @@ export interface StatusBarProps {
   /** `addedAt` of the newest entry (the snapshot comes newest first). */
   lastAddedAt: string | null;
   workspacePath: string | null;
+  /** The key hints on the right; those of the list when absent. */
+  keyHints?: readonly { keys: string; action: string }[];
 }
 
 /**
@@ -24,6 +26,7 @@ export function StatusBar({
   count,
   lastAddedAt,
   workspacePath,
+  keyHints = appStrings.listKeyHints,
 }: StatusBarProps) {
   const path = workspacePath === null ? null : splitPath(workspacePath);
   return (
@@ -42,7 +45,7 @@ export function StatusBar({
         </span>
       )}
       <span className="status-keys">
-        {appStrings.listKeyHints.map((hint) => (
+        {keyHints.map((hint) => (
           <span key={hint.keys}>
             <kbd className="kbd">{hint.keys}</kbd>
             {hint.action}

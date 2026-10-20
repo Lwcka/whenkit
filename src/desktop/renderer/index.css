@@ -44,8 +44,10 @@ button {
   font: inherit;
 }
 
-/* The list view: the category bar over the work area. */
-.list-view {
+/* The list view: the category bar over the work area; the sheet view: the
+   sheet bar over it. */
+.list-view,
+.sheet-view {
   display: flex;
   flex: 1;
   flex-direction: column;

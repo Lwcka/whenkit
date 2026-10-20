@@ -56,6 +56,11 @@ export interface CatalogStore {
   subscribeArrivals(
     listener: (arrived: readonly EntryDto[]) => void,
   ): () => void;
+  /**
+   * The entry was opened: its arrival (tape, ring, „· N nou” count) is over for
+   * good. A no-op when the entry is not a fresh arrival.
+   */
+  dismissArrival(id: string): void;
 }
 
 export interface CatalogStoreOptions {
@@ -244,6 +249,12 @@ export function createCatalogStore(
       return () => {
         arrivalListeners.delete(listener);
       };
+    },
+    dismissArrival(id) {
+      if (state.status !== 'ready' || !state.arrivals.has(id)) return;
+      const arrivals = new Map(state.arrivals);
+      arrivals.delete(id);
+      set({ ...state, arrivals });
     },
   };
 }

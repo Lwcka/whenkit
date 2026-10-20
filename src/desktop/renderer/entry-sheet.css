@@ -1,0 +1,446 @@
+/* entry-sheet and its parts (DESIGN, entry-sheet, situation-callout,
+   keyword-tag, my-notes, related-link, title-block, markdown-content). */
+
+.entry-sheet {
+  animation: entry-sheet-in var(--motion-slide) var(--motion-ease) both;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-sheet);
+  box-shadow: var(--elevation-1);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--spacing-sheet-side-width);
+  margin: var(--spacing-6) 0 var(--spacing-7);
+  position: relative;
+}
+
+/* The sheet takes the focus when it opens; it needs no ring of its own. */
+.entry-sheet:focus-visible {
+  outline: none;
+}
+
+/* The category tab sticking out of the top edge. */
+.entry-sheet::after {
+  background: var(--category, var(--ink-2));
+  border-radius: var(--rounded-md) var(--rounded-md) 0 0;
+  content: '';
+  height: var(--entry-sheet-tab-height);
+  left: var(--entry-sheet-tab-left);
+  position: absolute;
+  top: calc(-1 * var(--entry-sheet-tab-height) + 1px);
+  width: var(--entry-sheet-tab-width);
+}
+
+@keyframes entry-sheet-in {
+  from {
+    opacity: 0;
+    transform: scale(var(--motion-enter-scale));
+  }
+}
+
+/* An update from the terminal: one pulse of the accent outline. Two identical
+   keyframes, swapped by the parity in data-pulse, so every update restarts it. */
+@keyframes entry-sheet-pulse-a {
+  from {
+    box-shadow: var(--entry-sheet-pulse-ring), var(--elevation-1);
+  }
+}
+
+@keyframes entry-sheet-pulse-b {
+  from {
+    box-shadow: var(--entry-sheet-pulse-ring), var(--elevation-1);
+  }
+}
+
+.entry-sheet[data-pulse='a'] {
+  animation: entry-sheet-pulse-a var(--motion-pulse) var(--motion-ease);
+}
+
+.entry-sheet[data-pulse='b'] {
+  animation: entry-sheet-pulse-b var(--motion-pulse) var(--motion-ease);
+}
+
+/* ---------- main column ---------- */
+
+.sheet-main {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+  padding: var(--spacing-7) var(--spacing-8);
+}
+
+.sheet-head {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-5);
+}
+
+.sheet-head-text {
+  min-width: 0;
+}
+
+.sheet-mark {
+  background: color-mix(
+    in srgb,
+    var(--category, var(--ink-2)) 10%,
+    var(--surface)
+  );
+  border: 1px solid
+    color-mix(in srgb, var(--category, var(--ink-2)) 30%, transparent);
+  border-radius: var(--rounded-xl);
+  color: var(--ink-2);
+  display: grid;
+  flex: none;
+  font: var(--typography-headline);
+  height: var(--entry-sheet-mark-size);
+  place-items: center;
+  width: var(--entry-sheet-mark-size);
+}
+
+.sheet-title {
+  font: var(--typography-display);
+  letter-spacing: var(--ls-display);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.sheet-subline {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font: var(--typography-mono);
+  gap: var(--spacing-1) var(--spacing-3);
+  margin-top: var(--spacing-2);
+}
+
+/* The URL is text only: opening it is the browser button's job (entry 8). */
+.sheet-url {
+  color: var(--accent);
+  overflow-wrap: anywhere;
+}
+
+.sheet-subline > * + *::before {
+  color: var(--line-strong);
+  content: '·';
+  margin-right: var(--spacing-3);
+}
+
+.sheet-category {
+  align-items: center;
+  color: var(--ink-2);
+  display: inline-flex;
+  font: var(--typography-caption);
+  gap: var(--spacing-2);
+}
+
+.sheet-category-dot {
+  background: var(--category, var(--ink-2));
+  border-radius: 50%;
+  height: var(--entry-card-footer-dot-size);
+  width: var(--entry-card-footer-dot-size);
+}
+
+.sheet-lead {
+  font: var(--typography-body-lead);
+  margin: 0;
+  max-width: 45rem;
+  overflow-wrap: anywhere;
+}
+
+/* A section label with a fine rule after it. */
+.sheet-section-label {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--typography-label);
+  gap: var(--spacing-3);
+  letter-spacing: var(--ls-label);
+  margin: 0 0 var(--spacing-3);
+}
+
+.sheet-section-label::after {
+  border-top: 1px solid var(--line);
+  content: '';
+  flex: 1;
+}
+
+.situation-callouts {
+  display: grid;
+  gap: var(--spacing-3) var(--spacing-3);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.situation-callout {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-lg);
+  display: flex;
+  font: var(--typography-body);
+  gap: var(--spacing-3);
+  overflow-wrap: anywhere;
+  padding: var(--spacing-2) var(--spacing-4);
+}
+
+.situation-callout-number {
+  background: color-mix(
+    in srgb,
+    var(--category, var(--ink-2)) 10%,
+    var(--surface)
+  );
+  border-radius: 50%;
+  color: var(--ink-2);
+  display: grid;
+  flex: none;
+  font: var(--typography-mono-sm);
+  font-weight: 600;
+  height: var(--situation-callout-number-size);
+  place-items: center;
+  width: var(--situation-callout-number-size);
+}
+
+/* The content of a concept: plain text, line breaks kept (no Markdown yet). */
+.markdown-content {
+  font: var(--typography-body);
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.sheet-sources {
+  display: flex;
+  flex-direction: column;
+  font: var(--typography-mono);
+  gap: var(--spacing-1);
+  list-style: none;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 0;
+}
+
+.keyword-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.keyword-tag {
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-full);
+  color: var(--ink-2);
+  font: var(--typography-caption);
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+.my-notes {
+  background: color-mix(in srgb, var(--signal-bg) 50%, var(--surface));
+  border: 1.5px dashed color-mix(in srgb, var(--signal) 70%, transparent);
+  border-radius: var(--rounded-xl);
+  padding: var(--spacing-4) var(--spacing-5);
+}
+
+.my-notes-heading {
+  align-items: center;
+  color: var(--signal);
+  display: flex;
+  font: var(--typography-title-sm);
+  gap: var(--spacing-2);
+  letter-spacing: 0.03em;
+  margin: 0 0 var(--spacing-2);
+}
+
+.my-notes-text {
+  font: var(--typography-body);
+  margin: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.my-notes-text[data-empty] {
+  color: var(--muted);
+}
+
+/* ---------- side panel ---------- */
+
+.sheet-side {
+  background: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
+  border-left: 1px solid var(--line);
+  border-radius: 0 var(--rounded-sheet) var(--rounded-sheet) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-5);
+  min-width: 0;
+  padding: var(--spacing-7) var(--spacing-6) var(--spacing-5);
+}
+
+.related-links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.related-link {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-lg);
+  color: var(--ink);
+  cursor: pointer;
+  display: grid;
+  font: inherit;
+  gap: var(--spacing-3);
+  grid-template-columns: var(--entry-card-footer-dot-size) minmax(0, 1fr) auto;
+  padding: var(--spacing-3) var(--spacing-4);
+  text-align: left;
+  transition: border-color var(--motion-quick) var(--motion-ease);
+  width: 100%;
+}
+
+.related-link:hover {
+  border-color: var(--line-strong);
+}
+
+.related-link-dot {
+  background: var(--category, var(--ink-2));
+  border-radius: 50%;
+  height: var(--entry-card-footer-dot-size);
+  width: var(--entry-card-footer-dot-size);
+}
+
+.related-link-text {
+  min-width: 0;
+}
+
+.related-link-name,
+.related-link-context {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.related-link-name {
+  font: var(--typography-title-sm);
+  letter-spacing: var(--ls-title-sm);
+}
+
+.related-link-context {
+  color: var(--muted);
+  font: var(--typography-caption);
+  margin-top: var(--spacing-1);
+}
+
+.related-link-arrow {
+  color: var(--accent);
+  transition: transform var(--motion-quick) var(--motion-ease);
+}
+
+.related-link:hover .related-link-arrow {
+  transform: translateX(2px);
+}
+
+.verification-note .sheet-section-label {
+  color: var(--signal);
+}
+
+.verification-note-list {
+  display: flex;
+  flex-direction: column;
+  font: var(--typography-body-sm);
+  gap: var(--spacing-2);
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding-left: var(--spacing-5);
+}
+
+/* The hairlines are the 1px gap over the line color, so a missing rubric
+   never leaves a stray border. */
+.title-block {
+  background: var(--line);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--rounded-lg);
+  display: grid;
+  font: var(--typography-mono-sm);
+  gap: 1px;
+  grid-template-columns: 1fr 1fr;
+  margin-top: auto;
+  overflow: hidden;
+}
+
+.title-block > * {
+  background: var(--surface);
+  line-height: 1.2;
+  padding: var(--spacing-2) var(--spacing-3);
+}
+
+.title-block-head {
+  align-items: center;
+  background: var(--surface-2);
+  display: flex;
+  font: var(--typography-title-sm);
+  grid-column: span 2;
+  justify-content: space-between;
+  letter-spacing: 0.08em;
+}
+
+.title-block-head em {
+  color: var(--muted);
+  font: var(--typography-mono-sm);
+  font-style: normal;
+  letter-spacing: 0;
+}
+
+.title-block-rubric[data-wide] {
+  grid-column: span 2;
+}
+
+.title-block-label {
+  color: var(--muted);
+  display: block;
+  font: var(--typography-label-sm);
+  letter-spacing: var(--ls-label-sm);
+  margin-bottom: var(--spacing-1);
+}
+
+.title-block-check {
+  color: var(--ok);
+  margin-left: var(--spacing-2);
+  vertical-align: -2px;
+}
+
+/* ---------- responsive (window width, as the toolbar) ---------- */
+
+@media (max-width: 1199px) {
+  .entry-sheet {
+    grid-template-columns: minmax(0, 1fr) var(--spacing-sheet-side-width-narrow);
+  }
+}
+
+@media (max-width: 959px) {
+  .entry-sheet {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sheet-side {
+    border-left: 0;
+    border-radius: 0 0 var(--rounded-sheet) var(--rounded-sheet);
+    border-top: 1px solid var(--line);
+  }
+}
+
+@media (max-width: 719px) {
+  .sheet-main {
+    padding: var(--spacing-5) var(--spacing-4);
+  }
+
+  .situation-callouts {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
