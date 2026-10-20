@@ -385,6 +385,7 @@ describe('openDesktopCatalog and snapshotResult', () => {
       parentIdsOf: (id) => real.parentIdsOf(id),
       rejections: () => real.rejections(),
       writeTransaction: (fn) => real.writeTransaction(fn),
+      dataVersion: () => real.dataVersion(),
       close: () => real.close(),
       readTransaction: () => {
         throw new Error('torn read');

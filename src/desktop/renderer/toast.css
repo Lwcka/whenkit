@@ -47,6 +47,41 @@
     inset var(--toast-stripe-width) 0 0 var(--danger);
 }
 
+/* An arrival: the stripe is the tape color and a small tape sits above the
+   text, on the row of the ×. */
+.toast[data-kind='arrival'] {
+  align-items: start;
+  box-shadow:
+    var(--elevation-2),
+    inset var(--toast-stripe-width) 0 0 var(--tape);
+  display: grid;
+  gap: var(--spacing-2) var(--spacing-3);
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.toast-tape {
+  background: color-mix(in srgb, var(--tape) 92%, transparent);
+  clip-path: var(--arrival-tape-clip);
+  color: var(--tape-ink);
+  font: var(--typography-tape);
+  font-size: var(--toast-tape-font-size);
+  justify-self: start;
+  letter-spacing: var(--ls-tape);
+  margin: var(--spacing-1) 0;
+  padding: var(--toast-tape-padding);
+  text-transform: uppercase;
+  transform: rotate(var(--arrival-tape-rotate));
+}
+
+.toast[data-kind='arrival'] .toast-body {
+  grid-column: 1 / span 2;
+}
+
+.toast[data-kind='arrival'] .toast-close {
+  grid-column: 2;
+  grid-row: 1;
+}
+
 @keyframes toast-out {
   to {
     opacity: 0;
@@ -57,6 +92,15 @@
 .toast[data-leaving] {
   animation: toast-out var(--motion-fade) var(--motion-ease) both;
   pointer-events: none;
+}
+
+/* The text and its action share a row; the × stays beside them. */
+.toast-body {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: var(--spacing-3);
+  min-width: 0;
 }
 
 .toast-message {

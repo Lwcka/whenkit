@@ -251,6 +251,25 @@ export function plural(n: number, forms: PluralForms): string {
 export const entryCount = (n: number): string =>
   plural(n, { one: 'fișă', few: 'fișe', other: 'de fișe' });
 
+/** „1 nouă”, „2 noi”, „20 de noi”: the count of fresh entries in a header. */
+export const newCount = (n: number): string =>
+  plural(n, { one: 'nouă', few: 'noi', other: 'de noi' });
+
+/** Text with parts shown strong (a toast message, EXPERIENCE toast). */
+export type RichText = readonly (string | { strong: string })[];
+
+/**
+ * „acum 3 s”, „acum 2 min”, „acum 1 h”: only the arrival tape shows relative
+ * time (EXPERIENCE, Voice and Tone). A negative span counts as 0.
+ */
+export function relativeTime(elapsedMs: number): string {
+  const seconds = Math.max(0, Math.floor(elapsedMs / 1000));
+  if (seconds < 60) return `acum ${seconds} s`;
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `acum ${minutes} min`;
+  return `acum ${Math.floor(minutes / 60)} h`;
+}
+
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
 function asDate(value: Date | string): Date {
@@ -321,6 +340,33 @@ export const appStrings = {
   emptyCatalogCommand: '/importa',
   emptyCatalogCommandRest: 'în terminal.',
   emptyViewTitle: (name: string): string => `Nicio fișă în „${name}” încă.`,
+  /** The header's count: „8 fișe”, or „8 fișe · 1 nouă” after an arrival. */
+  sectionCount: (count: number, fresh: number): string =>
+    fresh > 0 ? `${entryCount(count)} · ${newCount(fresh)}` : entryCount(count),
+  /** The tape on a fresh card: „Adăugat · acum 3 s” (shown in capitals). */
+  arrivalTape: (elapsedMs: number): string =>
+    `Adăugat · ${relativeTime(elapsedMs)}`,
+  /** The small tape in an arrival toast. */
+  arrivalToastTape: 'Adăugat',
+  /** „Fișă nouă: Webhook · Learn / Backend & API-uri”; without category, „· Learn”. */
+  arrivalToastOne: (
+    name: string,
+    zone: string,
+    category: string | null,
+  ): RichText => [
+    'Fișă nouă: ',
+    { strong: name },
+    category === null ? ` · ${zone}` : ` · ${zone} / ${category}`,
+  ],
+  /** „5 fișe noi în Toolbox”. */
+  arrivalToastMany: (count: number, zone: string): RichText => [
+    {
+      strong: `${plural(count, { one: 'fișă', few: 'fișe', other: 'de fișe' })} noi`,
+    },
+    ` în ${zone}`,
+  ],
+  arrivalToastSee: 'Vezi',
+  reloadFailed: 'Nu am putut reîncărca catalogul.',
   toastsLabel: 'Notificări',
   toastClose: 'Închide',
   startupTitle: (code: ErrorCode): string =>

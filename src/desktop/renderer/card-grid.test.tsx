@@ -157,3 +157,194 @@ describe('CardGrid', () => {
     ]);
   });
 });
+
+describe('CardGrid: arrivals and pulses', () => {
+  const now = 1_000_000;
+
+  it('puts the tape only on live arrivals, with the time since they came', () => {
+    const { container } = render(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        arrivals={
+          new Map([
+            ['a', now - 3000],
+            ['b', now - 600_000],
+          ])
+        }
+        now={now}
+      />,
+    );
+    const tapes = [...container.querySelectorAll('.arrival-tape')];
+    expect(tapes.map((tape) => tape.textContent)).toEqual([
+      'Adăugat · acum 3 s',
+    ]);
+    expect(
+      [...container.querySelectorAll('.entry-card[data-new]')].map((card) =>
+        card.getAttribute('aria-label'),
+      ),
+    ).toEqual(['a']);
+  });
+
+  it('updates the time on the tape with the clock', () => {
+    const arrivals = new Map([['a', now]]);
+    const { container, rerender } = render(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        arrivals={arrivals}
+        now={now}
+      />,
+    );
+    expect(container.querySelector('.arrival-tape')?.textContent).toBe(
+      'Adăugat · acum 0 s',
+    );
+    rerender(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        arrivals={arrivals}
+        now={now + 125_000}
+      />,
+    );
+    expect(container.querySelector('.arrival-tape')?.textContent).toBe(
+      'Adăugat · acum 2 min',
+    );
+  });
+
+  it('pulses a card when its counter changes while mounted, not on mount', () => {
+    const { container, rerender } = render(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        pulses={new Map([['a', 1]])}
+      />,
+    );
+    // Counted before this grid mounted: no replay.
+    expect(container.querySelector('[data-pulse]')).toBeNull();
+
+    rerender(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        pulses={new Map([['a', 2]])}
+      />,
+    );
+    expect(
+      container.querySelector('[aria-label="a"]')?.getAttribute('data-pulse'),
+    ).toBe('b');
+    rerender(
+      <CardGrid
+        entries={entries}
+        slots={slots}
+        viewKey="v"
+        pulses={new Map([['a', 3]])}
+      />,
+    );
+    expect(
+      container.querySelector('[aria-label="a"]')?.getAttribute('data-pulse'),
+    ).toBe('a');
+  });
+
+  it('keeps the focus and the Tab stop on a card when another one arrives first', () => {
+    const { rerender } = render(
+      <CardGrid entries={entries} slots={slots} viewKey="v" />,
+    );
+    const c = cards().find((card) => card.getAttribute('aria-label') === 'c');
+    act(() => c?.focus());
+    expect(document.activeElement).toBe(c);
+
+    rerender(
+      <CardGrid
+        entries={[makeEntry('n'), ...entries]}
+        slots={slots}
+        viewKey="v"
+        arrivals={new Map([['n', now]])}
+        now={now}
+      />,
+    );
+    expect(document.activeElement).toBe(c);
+    expect(stops().map((card) => card.getAttribute('aria-label'))).toEqual([
+      'c',
+    ]);
+    expect(cards()[0]?.getAttribute('aria-label')).toBe('n');
+  });
+
+  describe('sliding', () => {
+    let shifted = false;
+    const original = HTMLElement.prototype.animate;
+
+    function mockLayout(slide: string) {
+      shifted = false;
+      // Old cards stand at row 0 first, 100px lower once the new one is first.
+      vi.spyOn(HTMLElement.prototype, 'offsetTop', 'get').mockImplementation(
+        function (this: HTMLElement) {
+          return shifted && this.querySelector('[aria-label="n"]') === null
+            ? 100
+            : 0;
+        },
+      );
+      vi.spyOn(window, 'getComputedStyle').mockImplementation(
+        () =>
+          ({
+            getPropertyValue: (name: string) =>
+              name === '--motion-slide' ? slide : '',
+            gridTemplateColumns: '300px 300px',
+          }) as unknown as CSSStyleDeclaration,
+      );
+    }
+
+    afterEach(() => {
+      HTMLElement.prototype.animate = original;
+    });
+
+    it('slides the cards that moved, from where they stood', () => {
+      const animate = vi.fn();
+      HTMLElement.prototype.animate = animate;
+      mockLayout('250ms');
+      const { rerender } = render(
+        <CardGrid entries={entries} slots={slots} viewKey="v" />,
+      );
+      expect(animate).not.toHaveBeenCalled();
+
+      shifted = true;
+      rerender(
+        <CardGrid
+          entries={[makeEntry('n'), ...entries]}
+          slots={slots}
+          viewKey="v"
+        />,
+      );
+      // The five old cards slid; the new one did not.
+      expect(animate).toHaveBeenCalledTimes(5);
+      expect(animate.mock.calls[0]?.[0]).toEqual([
+        { transform: 'translate(0px, -100px)' },
+        { transform: 'none' },
+      ]);
+      expect(animate.mock.calls[0]?.[1]).toMatchObject({ duration: 250 });
+    });
+
+    it('does not slide when animations are off (motion.slide is 0)', () => {
+      const animate = vi.fn();
+      HTMLElement.prototype.animate = animate;
+      mockLayout('0ms');
+      const { rerender } = render(
+        <CardGrid entries={entries} slots={slots} viewKey="v" />,
+      );
+      shifted = true;
+      rerender(
+        <CardGrid
+          entries={[makeEntry('n'), ...entries]}
+          slots={slots}
+          viewKey="v"
+        />,
+      );
+      expect(animate).not.toHaveBeenCalled();
+    });
+  });
+});

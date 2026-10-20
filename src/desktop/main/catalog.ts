@@ -26,7 +26,10 @@ export interface DesktopCatalogPorts {
 }
 
 /** The code of a failure; anything but a WhenkitError is logged and is INTERNAL. */
-function codeOf(error: unknown, logError: (error: unknown) => void): ErrorCode {
+export function codeOf(
+  error: unknown,
+  logError: (error: unknown) => void,
+): ErrorCode {
   if (isWhenkitError(error)) return error.code;
   try {
     logError(error);
@@ -57,15 +60,16 @@ export function openDesktopCatalog({
   }
 }
 
+/** The failure answer of a handler (AD-18). */
+export function failure(code: ErrorCode): { ok: false; error: ErrorDto } {
+  return { ok: false, error: { code } };
+}
+
 /** The `catalog:snapshot` answer for what startup opened. Never throws. */
 export function snapshotResult(
   opened: DesktopCatalog,
   logError: (error: unknown) => void = console.error,
 ): IpcResult<CatalogSnapshotDto> {
-  const failure = (code: ErrorCode): { ok: false; error: ErrorDto } => ({
-    ok: false,
-    error: { code },
-  });
   if (!opened.ok) return failure(opened.code);
   try {
     return { ok: true, data: catalogSnapshot(opened.store) };

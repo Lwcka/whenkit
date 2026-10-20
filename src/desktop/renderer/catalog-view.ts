@@ -1,4 +1,6 @@
 import type { CategoryDto, EntryDto } from '../../shared/ipc';
+import { appStrings, zoneLabels } from '../../shared/strings.ro';
+import type { ToastInput } from './toast-store';
 
 // The list view derived from the catalog snapshot (AD-10): which categories
 // the bar shows, how many entries each holds, which entries a view lists and
@@ -157,4 +159,52 @@ export function nextGridIndex(
           ? -step
           : step;
   return Math.min(Math.max(index + delta, 0), count - 1);
+}
+
+/** DESIGN motion.tape-lifetime (600 s), mirrored from tokens.css for the clock. */
+export const TAPE_LIFETIME_MS = 600_000;
+
+/** True while an arrival's tape, ring and „· N nouă” last (EXPERIENCE, arrival-tape). */
+export function isNew(arrivedAt: number, now: number): boolean {
+  return now - arrivedAt < TAPE_LIFETIME_MS;
+}
+
+const ZONE_ORDER: readonly Zone[] = ['toolbox', 'learn'];
+
+/**
+ * The toasts of an arrival, one per zone and Toolbox first (EXPERIENCE,
+ * toast): a single entry names itself and its category, several are counted
+ * and get „Vezi”, which calls `onSee` with their zone. Zones with no arrival
+ * get none.
+ */
+export function arrivalToasts(
+  arrived: readonly EntryDto[],
+  onSee: (zone: Zone) => void,
+): ToastInput[] {
+  const toasts: ToastInput[] = [];
+  for (const zone of ZONE_ORDER) {
+    const inZone = arrived.filter((entry) => entry.zone === zone);
+    const [first] = inZone;
+    if (first === undefined) continue;
+    if (inZone.length === 1) {
+      toasts.push({
+        kind: 'arrival',
+        message: appStrings.arrivalToastOne(
+          first.name,
+          zoneLabels[zone],
+          first.categories[0]?.name ?? null,
+        ),
+      });
+    } else {
+      toasts.push({
+        kind: 'arrival',
+        message: appStrings.arrivalToastMany(inZone.length, zoneLabels[zone]),
+        action: {
+          label: appStrings.arrivalToastSee,
+          run: () => onSee(zone),
+        },
+      });
+    }
+  }
+  return toasts;
 }
