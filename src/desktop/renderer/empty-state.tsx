@@ -1,3 +1,4 @@
+import { Button } from './button';
 import './empty-state.css';
 
 export interface EmptyStateProps {
@@ -6,11 +7,19 @@ export interface EmptyStateProps {
   title: string;
   text?: string;
   /** The suggested command; `highlight` is drawn in the accent color. */
-  command?: { highlight: string; rest?: string };
+  command?: { lead?: string; highlight: string; rest?: string };
+  /** A button under the words (the other zone's matches of a search). */
+  action?: { label: string; onClick: () => void };
 }
 
 /** Centered in the work area: a target drawn in fine lines, then the words. */
-export function EmptyState({ size, title, text, command }: EmptyStateProps) {
+export function EmptyState({
+  size,
+  title,
+  text,
+  command,
+  action,
+}: EmptyStateProps) {
   return (
     <div className="empty-state" data-size={size}>
       <svg
@@ -32,9 +41,15 @@ export function EmptyState({ size, title, text, command }: EmptyStateProps) {
       {text !== undefined && <p className="empty-state-text">{text}</p>}
       {command !== undefined && (
         <p className="empty-state-command">
+          {command.lead !== undefined && `${command.lead} `}
           <span className="empty-state-command-name">{command.highlight}</span>
           {command.rest !== undefined && ` ${command.rest}`}
         </p>
+      )}
+      {action !== undefined && (
+        <Button variant="ghost" onClick={action.onClick}>
+          {action.label}
+        </Button>
       )}
     </div>
   );

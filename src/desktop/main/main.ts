@@ -24,7 +24,7 @@ import {
   type Theme,
 } from '../../shared/ipc';
 import { appStrings, mainStrings } from '../../shared/strings.ro';
-import { openDesktopCatalog, snapshotResult } from './catalog';
+import { openDesktopCatalog, searchResult, snapshotResult } from './catalog';
 import { watchCatalog, type CatalogWatcher } from './catalog-watch';
 import { createErrorReporter } from './error-log';
 import { isAppNavigation } from './navigation';
@@ -205,6 +205,9 @@ function main(): void {
       });
       ipcMain.handle(IPC_CHANNELS.catalogSnapshot, () =>
         snapshotResult(catalog, reporter.log),
+      );
+      ipcMain.handle(IPC_CHANNELS.entriesSearch, (_event, text: unknown) =>
+        searchResult(catalog, text, reporter.log),
       );
       ipcMain.handle(
         IPC_CHANNELS.windowSetTheme,

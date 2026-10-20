@@ -1,5 +1,9 @@
 import { catalogSnapshot } from '../../core/catalog-snapshot';
-import type { CatalogSnapshotDto, ErrorDto } from '../../core/dto';
+import type {
+  CatalogSnapshotDto,
+  ErrorDto,
+  SearchResultDto,
+} from '../../core/dto';
 import { isWhenkitError, type ErrorCode } from '../../core/errors';
 import type {
   CatalogStore,
@@ -7,6 +11,7 @@ import type {
   FileSystem,
   OpenStoreOptions,
 } from '../../core/ports';
+import { searchEntries } from '../../core/search-entries';
 import { catalogPath, resolveWorkspace } from '../../core/workspace';
 import type { IpcResult } from '../../shared/ipc';
 
@@ -73,6 +78,24 @@ export function snapshotResult(
   if (!opened.ok) return failure(opened.code);
   try {
     return { ok: true, data: catalogSnapshot(opened.store) };
+  } catch (error) {
+    return failure(codeOf(error, logError));
+  }
+}
+
+/**
+ * The `entries:search` answer (AD-10, AD-18): the ids matching `text`. Text
+ * that is not a string is `ARGUMENTS_INVALID`. Never throws.
+ */
+export function searchResult(
+  opened: DesktopCatalog,
+  text: unknown,
+  logError: (error: unknown) => void = console.error,
+): IpcResult<SearchResultDto> {
+  if (typeof text !== 'string') return failure('ARGUMENTS_INVALID');
+  if (!opened.ok) return failure(opened.code);
+  try {
+    return { ok: true, data: searchEntries(opened.store, text) };
   } catch (error) {
     return failure(codeOf(error, logError));
   }

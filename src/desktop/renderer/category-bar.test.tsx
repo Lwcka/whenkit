@@ -178,3 +178,40 @@ describe('CategoryBar scrolling', () => {
     delete Element.prototype.scrollIntoView;
   });
 });
+
+describe('CategoryBar while a search is shown', () => {
+  it('checks no chip but keeps one Tab stop', () => {
+    render(
+      <CategoryBar
+        items={items}
+        selectedId="a"
+        searching
+        onSelect={() => {}}
+      />,
+    );
+    expect(chips().map((chip) => chip.getAttribute('aria-checked'))).toEqual([
+      'false',
+      'false',
+      'false',
+      'false',
+    ]);
+    expect(chips().map((chip) => chip.tabIndex)).toEqual([-1, 0, -1, -1]);
+  });
+
+  it('moves from the hidden selection, like [ and ], with → and ←', () => {
+    const onSelect = vi.fn();
+    render(
+      <CategoryBar
+        items={items}
+        selectedId="b"
+        searching
+        onSelect={onSelect}
+      />,
+    );
+    const group = screen.getByRole('radiogroup');
+
+    fireEvent.keyDown(group, { code: 'ArrowRight' });
+    fireEvent.keyDown(group, { code: 'ArrowLeft' });
+    expect(onSelect.mock.calls).toEqual([['c'], ['a']]);
+  });
+});

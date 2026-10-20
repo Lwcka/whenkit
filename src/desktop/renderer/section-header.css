@@ -19,10 +19,19 @@
   gap: var(--spacing-3);
   letter-spacing: var(--ls-headline);
   margin: 0;
+  min-width: 0;
   white-space: nowrap;
 }
 
+/* A long name (a search query) is cut with an ellipsis; the full text is the title. */
+.section-header-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .section-header-tab {
+  flex: none;
   background: var(--category);
   border-radius: var(--spacing-1) var(--spacing-1) 0 0;
   height: var(--section-header-tab-height);

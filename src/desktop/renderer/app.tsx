@@ -6,7 +6,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import type { WhenkitApi } from '../../shared/ipc';
+import type { EntryDto, WhenkitApi } from '../../shared/ipc';
 import { appStrings, entryStrings, zoneLabels } from '../../shared/strings.ro';
 import { AppError } from './app-error';
 import { CardGrid, SkeletonGrid } from './card-grid';
@@ -19,12 +19,20 @@ import {
   entriesInView,
   isNew,
   neighborCategoryId,
+  searchHits,
   viewCategoryId,
   type Zone,
 } from './catalog-view';
 import { CategoryBar, type CategoryBarItem } from './category-bar';
 import { EmptyState } from './empty-state';
-import { createZoom, frameBindings, installKeyboard } from './keyboard';
+import {
+  ESCAPE_PRIORITY,
+  createZoom,
+  frameBindings,
+  installKeyboard,
+  registerEscape,
+} from './keyboard';
+import { useSearch } from './search';
 import { SectionHeader } from './section-header';
 import { StatusBar } from './status-bar';
 import { TitleBar } from './title-bar';
@@ -35,7 +43,7 @@ import { Toolbar, ZONE_ORDER } from './toolbar';
 /** What the frame needs from the bridge. */
 export type FrameApi = Pick<
   WhenkitApi,
-  'setTheme' | 'setZoomFactor' | 'workspacePath'
+  'searchEntries' | 'setTheme' | 'setZoomFactor' | 'workspacePath'
 >;
 
 /** DESIGN motion.skeleton-delay (200 ms), mirrored from tokens.css for the timer. */
@@ -43,6 +51,9 @@ export const SKELETON_DELAY_MS = 200;
 
 /** The arrival tape's clock ticks once a second (EXPERIENCE: „acum 3 s” → „acum 4 s”). */
 const TAPE_TICK_MS = 1000;
+
+/** What the search is given before the snapshot is ready. */
+const NO_ENTRIES: readonly EntryDto[] = [];
 
 /** What the view shows when there are no arrivals. */
 const NO_COUNTS: ReadonlyMap<string, number> = new Map();
@@ -70,22 +81,45 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   });
   const slowStart = useElapsed(state.status === 'loading', SKELETON_DELAY_MS);
 
+  // One search text for both zones. The category each zone showed before is
+  // kept untouched, so clearing the search returns to it.
+  const [searchText, setSearchText] = useState('');
+  const searchInput = useRef<HTMLInputElement>(null);
+  const found = useSearch(
+    api,
+    searchText,
+    state.status === 'ready' ? state.entries : NO_ENTRIES,
+  );
+  const searching = found !== null;
+
   const selectedId =
     state.status === 'ready'
       ? viewCategoryId(state.categories, zone, categoryByZone[zone])
       : null;
-  const selectCategory = (id: string | null) =>
+  // Picking a category ends the search.
+  const selectCategory = (id: string | null) => {
+    setSearchText('');
     setCategoryByZone((previous) => ({ ...previous, [zone]: id }));
-  const viewKey = `${zone}:${selectedId ?? ''}`;
+  };
+  // The results are a view of their own: a new shown query cascades again.
+  const viewKey = searching
+    ? `${zone}:q:${found.query}`
+    : `${zone}:${selectedId ?? ''}`;
 
   // The entries the view lists, and which of them still wear their tape. The
   // clock runs only while one does: a second-by-second tick for nothing else.
   const arrivals = state.status === 'ready' ? state.arrivals : NO_COUNTS;
   const pulses = state.status === 'ready' ? state.pulses : NO_COUNTS;
+  const hits =
+    state.status === 'ready' && found !== null
+      ? searchHits(state.entries, found.ids, zone)
+      : null;
   const entries =
-    state.status === 'ready'
-      ? entriesInView(state.entries, zone, selectedId)
-      : [];
+    state.status !== 'ready'
+      ? []
+      : hits !== null
+        ? hits.inZone
+        : entriesInView(state.entries, zone, selectedId);
   const [now, setNow] = useState(() => Date.now());
   // The clock is stale while no tape is visible: bring it up to date before
   // paint whenever the view or the arrivals change, so an arrival older than
@@ -111,6 +145,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     () =>
       store.subscribeArrivals((arrived) => {
         const see = (target: Zone) => {
+          setSearchText('');
           setZone(target);
           setCategoryByZone((previous) => ({ ...previous, [target]: null }));
         };
@@ -168,6 +203,29 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     };
   });
 
+  // Esc clears the search: first from the box (priority 3), then from
+  // anywhere in the list (priority 1). The handlers read the text through a
+  // ref, so they are registered once.
+  const searchTextNow = useRef(searchText);
+  useEffect(() => {
+    searchTextNow.current = searchText;
+  });
+  useEffect(() => {
+    const clear = () => setSearchText('');
+    const hasText = () => searchTextNow.current !== '';
+    const unregister = [
+      registerEscape(
+        ESCAPE_PRIORITY.searchWithText,
+        () => hasText() && document.activeElement === searchInput.current,
+        clear,
+      ),
+      registerEscape(ESCAPE_PRIORITY.activeSearch, hasText, clear),
+    ];
+    return () => {
+      for (const off of unregister) off();
+    };
+  }, []);
+
   const { setZoomFactor } = api;
   const zoom = useMemo(() => createZoom(setZoomFactor), [setZoomFactor]);
   useEffect(
@@ -177,6 +235,10 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
           selectZone: (index) => setZone(ZONE_ORDER[index] ?? 'toolbox'),
           zoom,
           moveCategory: (delta) => moveCategory.current(delta),
+          focusSearch: () => {
+            searchInput.current?.focus();
+            searchInput.current?.select();
+          },
         }),
       ),
     [zoom],
@@ -228,6 +290,22 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
       slot: slots.get(category.id) ?? null,
     })),
   ];
+  // „+2 în Learn”: the same text, in the other zone.
+  const otherZone: Zone = zone === 'toolbox' ? 'learn' : 'toolbox';
+  const otherZoneAction =
+    hits !== null && hits.otherZone > 0
+      ? {
+          label: appStrings.searchOtherZone(
+            hits.otherZone,
+            zoneLabels[otherZone],
+          ),
+          onClick: () => {
+            // The view remounts: put the focus on the new zone's grid.
+            focusArea.current = 'grid';
+            setZone(otherZone);
+          },
+        }
+      : undefined;
   const tabCounts = {
     toolbox: state.entries.filter((entry) => entry.zone === 'toolbox').length,
     learn: state.entries.filter((entry) => entry.zone === 'learn').length,
@@ -236,23 +314,40 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   return (
     <>
       <TitleBar setTheme={api.setTheme} />
-      <Toolbar zone={zone} counts={tabCounts} onZoneChange={setZone} />
+      <Toolbar
+        zone={zone}
+        counts={tabCounts}
+        onZoneChange={setZone}
+        search={{
+          text: searchText,
+          onChange: setSearchText,
+          inputRef: searchInput,
+        }}
+      />
       <div className="list-view" role="tabpanel" aria-label={zoneLabels[zone]}>
         <CategoryBar
           key={zone}
           items={items}
           selectedId={selectedId}
+          searching={searching}
           onSelect={selectCategory}
         />
         <main className="shell">
           <div key={viewKey} className="shell-scroll">
             <SectionHeader
-              name={selected?.name ?? appStrings.allCategories}
+              name={
+                found !== null
+                  ? appStrings.searchResultsTitle(found.query)
+                  : (selected?.name ?? appStrings.allCategories)
+              }
               slot={
-                selected === undefined ? null : (slots.get(selected.id) ?? null)
+                selected === undefined || searching
+                  ? null
+                  : (slots.get(selected.id) ?? null)
               }
               count={entries.length}
               fresh={freshInView}
+              action={entries.length > 0 ? otherZoneAction : undefined}
             />
             {entries.length > 0 ? (
               <CardGrid
@@ -262,6 +357,17 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
                 arrivals={arrivals}
                 pulses={pulses}
                 now={now}
+              />
+            ) : found !== null ? (
+              <EmptyState
+                size="small"
+                title={appStrings.searchNothing(found.query, zoneLabels[zone])}
+                text={appStrings.searchedEverything}
+                command={{
+                  lead: appStrings.searchAskClaude,
+                  highlight: appStrings.searchAskClaudeCommand,
+                }}
+                action={otherZoneAction}
               />
             ) : state.entries.length === 0 ? (
               <EmptyState

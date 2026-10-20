@@ -64,6 +64,58 @@
   color: var(--accent);
 }
 
+/* search-box (DESIGN): grows up to its max width; the focus ring surrounds the
+   whole box, not the bare input. */
+.search-box {
+  align-items: center;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-xl);
+  color: var(--muted);
+  display: flex;
+  flex: 1;
+  gap: var(--spacing-3);
+  height: var(--search-box-height);
+  max-width: var(--search-box-max-width);
+  min-width: 0;
+  padding: 0 var(--spacing-2) 0 var(--spacing-4);
+}
+
+.search-box:focus-within {
+  border-color: var(--accent);
+  outline: var(--focus-ring-width) solid var(--accent);
+  outline-offset: var(--focus-ring-offset);
+}
+
+.search-box-input {
+  background: transparent;
+  border: 0;
+  color: var(--ink);
+  flex: 1;
+  font: var(--typography-body);
+  min-width: 0;
+  outline: 0;
+  padding: 0;
+  text-overflow: ellipsis;
+}
+
+.search-box-input::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}
+
+/* The box draws its own cancel gesture (Esc); the native one is not part of it. */
+.search-box-input::-webkit-search-cancel-button {
+  display: none;
+}
+
+/* Below spacing.bp-half (960px) the shortcut hint leaves the box. */
+@media (max-width: 959px) {
+  .search-box .kbd {
+    display: none;
+  }
+}
+
 /* Below spacing.bp-narrow (720px) the counters leave the tabs. */
 @media (max-width: 719px) {
   .zone-tab-count {

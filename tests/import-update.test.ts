@@ -109,6 +109,7 @@ function failingOnWrite(writes: number): CatalogStoreOpener {
       entryById: (id) => store.entryById(id),
       entrySummaries: () => store.entrySummaries(),
       allEntries: () => store.allEntries(),
+      searchEntryIds: (text) => store.searchEntryIds(text),
       allCategories: () => store.allCategories(),
       entryIdByDedupKey: (key) => store.entryIdByDedupKey(key),
       parentIdsOf: (id) => store.parentIdsOf(id),

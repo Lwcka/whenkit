@@ -24,6 +24,7 @@ afterEach(cleanup);
 function fakeApi(overrides: Partial<FrameApi> = {}): FrameApi {
   return {
     workspacePath: 'C:\\Users\\Luca\\Programe\\whenkit',
+    searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
     setTheme: () => Promise.resolve({ ok: true, data: null }),
     setZoomFactor: () => {},
     ...overrides,

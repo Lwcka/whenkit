@@ -1,4 +1,5 @@
 import { appStrings } from '../../shared/strings.ro';
+import { Button } from './button';
 import './section-header.css';
 
 export interface SectionHeaderProps {
@@ -10,6 +11,8 @@ export interface SectionHeaderProps {
   count: number;
   /** How many of them are fresh arrivals; „· N nouă” follows the count. */
   fresh?: number;
+  /** A link-like button at the end of the line („+2 în Learn”). */
+  action?: { label: string; onClick: () => void };
 }
 
 /** A small colored tab, the name of the view and a dimension line with the count. */
@@ -18,12 +21,13 @@ export function SectionHeader({
   slot,
   count,
   fresh = 0,
+  action,
 }: SectionHeaderProps) {
   return (
     <header className="section-header" data-slot={slot ?? undefined}>
-      <h2 className="section-header-name">
+      <h2 className="section-header-name" title={name}>
         <i className="section-header-tab" aria-hidden="true" />
-        {name}
+        <span className="section-header-title">{name}</span>
       </h2>
       <span className="section-header-dimension">
         <b className="section-header-cap" aria-hidden="true" />
@@ -32,6 +36,11 @@ export function SectionHeader({
           {appStrings.sectionCount(count, fresh)}
         </span>
       </span>
+      {action !== undefined && (
+        <Button variant="ghost" onClick={action.onClick}>
+          {action.label}
+        </Button>
+      )}
     </header>
   );
 }

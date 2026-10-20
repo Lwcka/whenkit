@@ -24,6 +24,7 @@ const categories = [imagini, securitate, backend];
 
 const api: FrameApi = {
   workspacePath: 'C:\\ws',
+  searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
 };

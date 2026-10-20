@@ -148,20 +148,24 @@ export function installKeyboard(
 }
 
 /**
- * The frame's bindings: Ctrl+1/2 switch zones, Ctrl+= / − / 0 zoom (also
- * numpad), [ and ] move to the previous / next category (single keys: they do
- * nothing in a text field).
+ * The frame's bindings: Ctrl+1/2 switch zones, Ctrl+K and Ctrl+F focus the
+ * search box (from anywhere, also from a text field), Ctrl+= / − / 0 zoom
+ * (also numpad), [ and ] move to the previous / next category (single keys:
+ * they do nothing in a text field).
  */
 export function frameBindings({
   selectZone,
   zoom,
   moveCategory,
+  focusSearch,
 }: {
   selectZone: (index: 0 | 1) => void;
   zoom: Zoom;
   moveCategory: (delta: -1 | 1) => void;
+  focusSearch: () => void;
 }): Binding[] {
   return [
+    { code: ['KeyK', 'KeyF'], ctrl: true, run: () => focusSearch() },
     { code: 'BracketLeft', shift: false, run: () => moveCategory(-1) },
     { code: 'BracketRight', shift: false, run: () => moveCategory(1) },
     { code: 'Digit1', ctrl: true, run: () => selectZone(0) },

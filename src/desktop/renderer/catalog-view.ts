@@ -76,6 +76,27 @@ export function entriesInView(
 }
 
 /**
+ * What a search found, split by the zone on screen: the matching entries of
+ * `zone`, in the order of the snapshot (nothing here sorts), and how many
+ * matches the other zone holds. Ids the snapshot does not know are ignored.
+ */
+export function searchHits(
+  entries: readonly EntryDto[],
+  ids: readonly string[],
+  zone: Zone,
+): { inZone: EntryDto[]; otherZone: number } {
+  const wanted = new Set(ids);
+  const inZone: EntryDto[] = [];
+  let otherZone = 0;
+  for (const entry of entries) {
+    if (!wanted.has(entry.id)) continue;
+    if (entry.zone === zone) inZone.push(entry);
+    else otherZone++;
+  }
+  return { inZone, otherZone };
+}
+
+/**
  * The category a zone shows: the remembered one while it is still in the
  * snapshot, otherwise `null` (Toate).
  */
