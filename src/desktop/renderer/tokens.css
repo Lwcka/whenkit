@@ -142,6 +142,8 @@
   --theme-switch-slot-height: 20px;
   --theme-switch-icon-size: 14px;
   --zone-tab-indicator-height: 3px;
+  --search-box-height: 42px;
+  --search-box-max-width: 560px;
   --status-bar-dot-size: 7px;
   --kbd-border-bottom-width: 2px;
   --toast-width: 360px;

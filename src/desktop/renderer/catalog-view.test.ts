@@ -11,6 +11,7 @@ import {
   isNew,
   neighborCategoryId,
   nextGridIndex,
+  searchHits,
   viewCategoryId,
 } from './catalog-view';
 
@@ -297,5 +298,35 @@ describe('arrivalToasts', () => {
 
   it('makes nothing for no arrivals', () => {
     expect(arrivalToasts([], vi.fn())).toEqual([]);
+  });
+});
+
+describe('searchHits', () => {
+  const all = [
+    entry('t1', 'toolbox', []),
+    entry('l1', 'learn', []),
+    entry('t2', 'toolbox', []),
+    entry('l2', 'learn', []),
+    entry('t3', 'toolbox', []),
+  ];
+
+  it('keeps the snapshot order, whatever the order of the ids', () => {
+    const { inZone } = searchHits(all, ['t3', 't1', 'l2'], 'toolbox');
+    expect(inZone.map((e) => e.id)).toEqual(['t1', 't3']);
+  });
+
+  it('counts the other zone instead of listing it', () => {
+    expect(searchHits(all, ['t1', 'l1', 'l2'], 'toolbox').otherZone).toBe(2);
+    const learn = searchHits(all, ['t1', 'l1', 'l2'], 'learn');
+    expect(learn.inZone.map((e) => e.id)).toEqual(['l1', 'l2']);
+    expect(learn.otherZone).toBe(1);
+  });
+
+  it('ignores ids the snapshot does not have and finds nothing for no ids', () => {
+    expect(searchHits(all, ['gone'], 'toolbox')).toEqual({
+      inZone: [],
+      otherZone: 0,
+    });
+    expect(searchHits(all, [], 'learn')).toEqual({ inZone: [], otherZone: 0 });
   });
 });

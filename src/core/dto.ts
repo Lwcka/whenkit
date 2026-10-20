@@ -87,6 +87,13 @@ export const catalogSnapshotDtoSchema = z.strictObject({
 
 export type CatalogSnapshotDto = z.infer<typeof catalogSnapshotDtoSchema>;
 
+/** What a search answers with (AD-10): the ids only, in display order, both zones. */
+export const searchResultDtoSchema = z.strictObject({
+  ids: z.array(z.string()),
+});
+
+export type SearchResultDto = z.infer<typeof searchResultDtoSchema>;
+
 /** An error as it crosses IPC: the code only; the interface owns the text (AD-18). */
 export const errorDtoSchema = z.strictObject({
   code: z.enum(ERROR_CODES),

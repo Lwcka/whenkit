@@ -1,4 +1,9 @@
-import type { CatalogSnapshotDto, EntryDto, ErrorDto } from '../core/dto';
+import type {
+  CatalogSnapshotDto,
+  EntryDto,
+  ErrorDto,
+  SearchResultDto,
+} from '../core/dto';
 
 // The contract between the window's processes (AD-9, AD-18). Only types come
 // from core, and only from core/dto.ts.
@@ -8,11 +13,13 @@ export type {
   CategoryDto,
   EntryDto,
   ErrorDto,
+  SearchResultDto,
 } from '../core/dto';
 
 export const IPC_CHANNELS = {
   catalogSnapshot: 'catalog:snapshot',
   catalogChanged: 'catalog:changed',
+  entriesSearch: 'entries:search',
   windowSetTheme: 'window:setTheme',
 } as const;
 
@@ -55,6 +62,11 @@ export interface WhenkitApi {
   /** The workspace main resolved at startup (AD-8); `null` when it could not. */
   workspacePath: string | null;
   catalogSnapshot(): Promise<IpcResult<CatalogSnapshotDto>>;
+  /**
+   * The ids of the entries (both zones) matching what the user typed, in
+   * the order of the snapshot (AD-10). The text is plain words (AD-5).
+   */
+  searchEntries(text: string): Promise<IpcResult<SearchResultDto>>;
   /**
    * Calls `listener` whenever main saw the catalog change (AD-10); returns
    * the function that stops listening. The event carries no data: the

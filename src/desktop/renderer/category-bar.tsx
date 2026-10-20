@@ -22,6 +22,8 @@ export interface CategoryBarItem {
 export interface CategoryBarProps {
   items: readonly CategoryBarItem[];
   selectedId: string | null;
+  /** A search is shown: no chip is checked, but the row stays reachable. */
+  searching?: boolean;
   onSelect: (id: string | null) => void;
 }
 
@@ -32,7 +34,12 @@ const PAGE_FRACTION = 0.8;
  * The category bar: single-selection chips in one horizontally scrolling row.
  * The fades and the ‹ › buttons show only on the side that has more to scroll.
  */
-export function CategoryBar({ items, selectedId, onSelect }: CategoryBarProps) {
+export function CategoryBar({
+  items,
+  selectedId,
+  searching = false,
+  onSelect,
+}: CategoryBarProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const [overflow, setOverflow] = useState({ start: false, end: false });
 
@@ -77,7 +84,7 @@ export function CategoryBar({ items, selectedId, onSelect }: CategoryBarProps) {
     if (typeof chip?.scrollIntoView === 'function') {
       chip.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
-  }, [selectedId]);
+  }, [selectedId, searching]);
 
   const page = (direction: -1 | 1) => {
     const element = scroller.current;
@@ -138,7 +145,7 @@ export function CategoryBar({ items, selectedId, onSelect }: CategoryBarProps) {
           onKeyDown={onKeyDown}
         >
           {items.map((item) => {
-            const checked = item.id === selectedId;
+            const checked = !searching && item.id === selectedId;
             return (
               <button
                 key={item.id ?? 'all'}

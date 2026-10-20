@@ -59,6 +59,22 @@ function toWhenkitError(error: unknown): unknown {
 }
 
 /**
+ * The FTS5 query for what the user typed (AD-5): every whitespace-separated
+ * token with a letter or a digit becomes the quoted prefix `"tok"*`, joined
+ * with AND. The user never writes FTS syntax: quotes are doubled, so
+ * operators, `*`, `:` and parentheses are plain words. A token with no letter
+ * or digit is dropped (FTS5 turns `"-"*` into an empty phrase that matches
+ * nothing, which would sink the whole AND); no token left gives `null`.
+ */
+export function ftsQuery(text: string): string | null {
+  const terms = text
+    .split(/\s+/)
+    .filter((token) => /[\p{L}\p{N}]/u.test(token))
+    .map((token) => `"${token.replaceAll('"', '""')}"*`);
+  return terms.length === 0 ? null : terms.join(' AND ');
+}
+
+/**
  * Hook of migration 0001: creates the single owner and seeds the start
  * categories, exactly once, in the migration's transaction (AD-5).
  */
@@ -321,6 +337,23 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
       ),
       content: row.content ?? null,
     }));
+  }
+
+  searchEntryIds(text: string): string[] {
+    const query = ftsQuery(text);
+    if (query === null) return [];
+    try {
+      return this.all<{ id: string }>(
+        `SELECT e.id FROM entries_fts
+         JOIN entries e ON e.seq = entries_fts.rowid
+         WHERE entries_fts MATCH ? AND e.owner_id = ?
+         ORDER BY e.added_at DESC, e.seq ASC`,
+        query,
+        this.owner,
+      ).map((row) => row.id);
+    } catch (error) {
+      throw toWhenkitError(error);
+    }
   }
 
   allCategories(): StoredCategory[] {

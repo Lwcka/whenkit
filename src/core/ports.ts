@@ -201,6 +201,13 @@ export interface CatalogReader {
    * `added_at` descending, then batch order (AD-10).
    */
   allEntries(): StoredEntry[];
+  /**
+   * The ids of the entries (both zones) whose indexed text holds every word
+   * the user typed, each as a prefix, in display order (AD-5, AD-10). The
+   * text is plain words: the adapter builds the full-text query. Blank text
+   * or text with no letter or digit finds nothing.
+   */
+  searchEntryIds(text: string): string[];
   /** Every category of both zones, by zone and then `name_key`. */
   allCategories(): StoredCategory[];
   entryIdByDedupKey(dedupKey: string): string | undefined;

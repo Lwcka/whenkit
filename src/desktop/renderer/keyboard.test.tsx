@@ -216,7 +216,12 @@ describe('zoom', () => {
     const applied: number[] = [];
     const zoom = createZoom((factor) => applied.push(factor));
     uninstall = installKeyboard(
-      frameBindings({ selectZone: () => {}, zoom, moveCategory: () => {} }),
+      frameBindings({
+        selectZone: () => {},
+        zoom,
+        moveCategory: () => {},
+        focusSearch: () => {},
+      }),
     );
 
     press('Equal', { ctrlKey: true });
@@ -240,6 +245,7 @@ describe('frame bindings', () => {
         selectZone: (index) => selected.push(index),
         zoom: createZoom(() => {}),
         moveCategory: () => {},
+        focusSearch: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -257,6 +263,7 @@ describe('frame bindings', () => {
         selectZone: () => {},
         zoom: createZoom(() => {}),
         moveCategory: (delta) => moves.push(delta),
+        focusSearch: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -269,5 +276,25 @@ describe('frame bindings', () => {
     press('BracketRight', { shiftKey: true });
     press('BracketLeft', { shiftKey: true });
     expect(moves).toEqual([1, -1]);
+  });
+
+  it('Ctrl+K and Ctrl+F focus the search, also from a text field', () => {
+    let focused = 0;
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => {},
+        zoom: createZoom(() => {}),
+        moveCategory: () => {},
+        focusSearch: () => focused++,
+      }),
+    );
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    press('KeyK', { ctrlKey: true });
+    press('KeyF', { ctrlKey: true }, input);
+    press('KeyK');
+    press('KeyF', { ctrlKey: true, altKey: true });
+    expect(focused).toBe(2);
   });
 });

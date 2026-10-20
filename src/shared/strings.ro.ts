@@ -299,6 +299,9 @@ export function formatCompact(n: number): string {
   return `${rounded}${suffix}`;
 }
 
+/** The key that focuses the search box (also Ctrl F). */
+const searchShortcut = 'Ctrl K';
+
 export const appStrings = {
   productName: 'WhenKit',
   tablistLabel: 'Zone',
@@ -313,9 +316,27 @@ export const appStrings = {
       : `${entryCount(count)} · ultima adăugată ${formatDateTime(lastAddedAt)}`,
   /** The key hints of the list view (EXPERIENCE, status-bar). */
   listKeyHints: [
-    { keys: 'Ctrl K', action: 'caută' },
+    { keys: searchShortcut, action: 'caută' },
     { keys: 'Enter', action: 'deschide' },
   ],
+  searchLabel: 'Caută în fișe',
+  searchShortcut,
+  /** The search box's placeholder per zone (EXPERIENCE, Voice and Tone). */
+  searchPlaceholder: {
+    toolbox: 'Ce vrei să faci? ex. „scot fundalul”',
+    learn: 'Ce vrei să înțelegi? ex. „aleg un API”',
+  } satisfies Record<Zone, string>,
+  /** The results header: „Rezultate pentru „fundal””. */
+  searchResultsTitle: (query: string): string => `Rezultate pentru „${query}”`,
+  /** The link to the matches of the other zone: „+2 în Learn”. */
+  searchOtherZone: (count: number, zone: string): string =>
+    `+${count} în ${zone}`,
+  searchNothing: (query: string, zone: string): string =>
+    `Nimic pentru „${query}” în ${zone}.`,
+  searchedEverything: 'Am căutat în tot textul fișelor.',
+  searchAskClaude: 'Sau cere-i lui Claude, în terminal:',
+  searchAskClaudeCommand: '/gaseste …',
+  searchFailed: 'Căutarea nu a reușit.',
   loadingLabel: 'Se încarcă catalogul…',
   categoryBarLabel: 'Categorii',
   allCategories: 'Toate',

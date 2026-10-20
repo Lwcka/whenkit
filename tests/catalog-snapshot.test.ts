@@ -380,6 +380,7 @@ describe('openDesktopCatalog and snapshotResult', () => {
       entryById: (id) => real.entryById(id),
       entrySummaries: () => real.entrySummaries(),
       allEntries: () => real.allEntries(),
+      searchEntryIds: (text) => real.searchEntryIds(text),
       allCategories: () => real.allCategories(),
       entryIdByDedupKey: (key) => real.entryIdByDedupKey(key),
       parentIdsOf: (id) => real.parentIdsOf(id),

@@ -10,6 +10,8 @@ import {
 const api = {
   workspacePath: workspaceFromArgv(process.argv),
   catalogSnapshot: () => ipcRenderer.invoke(IPC_CHANNELS.catalogSnapshot),
+  searchEntries: (text: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.entriesSearch, text),
   onCatalogChanged: (listener: () => void) => {
     // The event object is not handed on: the renderer learns only that
     // something changed.
