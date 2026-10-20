@@ -184,7 +184,7 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 - **Binds:** CAP-8, CAP-10, CAP-12, CAP-13
 - **Prevents:** trei forme diferite ale aceleiași fișe (CLI, IPC, export); erori care își pierd codul la trecerea prin IPC.
-- **Rule:** `src/core/dto.ts` definește `EntryDto`, `CategoryDto`, `LinkDto`, `RejectionDto` (date ca string ISO, fără clase) și maparea lor; `--json`, IPC și `catalog.json` le folosesc doar pe acestea. `src/shared/ipc.ts` importă doar tipuri din `core/dto.ts`. Handlerii IPC nu aruncă: întorc `{ ok: true, data } | { ok: false, error: { code } }`. `ErrorCode` e un enum închis în `src/core/errors.ts` (`SCREAMING_SNAKE_CASE`); `core` aruncă `WhenkitError { code }` doar pentru erori de program sau configurare.
+- **Rule:** `src/core/dto.ts` definește `EntryDto`, `CategoryDto`, `LinkDto`, `RejectionDto` (date ca string ISO, fără clase) și maparea lor; `--json`, IPC și `catalog.json` le folosesc doar pe acestea. `src/shared/ipc.ts` importă doar tipuri din `core/dto.ts`. Handlerii IPC nu aruncă: întorc `{ ok: true, data } | { ok: false, error: ErrorDto }`, cu `ErrorDto = { code, reasons?, issues? }` (`reasons` = `VerdictReason[]` ale unei scrieri respinse, AD-15; `issues` = câmpurile invalide, `{ path, message }`); main traduce un `WhenkitError` cu `errorDtoOf`, păstrându-i motivele. `ErrorCode` e un enum închis în `src/core/errors.ts` (`SCREAMING_SNAKE_CASE`; `CONFLICT` și `ENTRY_REJECTED` pentru `entries:patch`); `core` aruncă `WhenkitError { code, reasons?, issues? }` doar pentru erori de program, de configurare sau pentru o scriere din UI refuzată.
 
 ### AD-19 — Livrare și operare locală
 
