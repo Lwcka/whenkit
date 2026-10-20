@@ -395,6 +395,13 @@ export const appStrings = {
   sheetWindowTitle: (name: string): string =>
     `${name} — ${appStrings.productName}`,
   sheetBack: 'Înapoi',
+  /** Deleting an entry (EXPERIENCE, Flow 4): the sheet-bar button and its confirmation. */
+  deleteEntry: 'Șterge',
+  deleteEntryBusy: 'Se șterge…',
+  deleteEntryTitle: (name: string): string => `Ștergi fișa „${name}”?`,
+  deleteEntryBody: 'Se șterg și legăturile ei cu alte fișe. Nu se poate anula.',
+  /** The default button of a confirmation: the one that does not destroy. */
+  cancel: 'Renunță',
   sheetCrumbsLabel: 'Poziția fișei',
   sheetLabel: (name: string): string => `Fișa ${name}`,
   /** „Când o folosesc · 4”. */

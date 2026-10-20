@@ -458,6 +458,52 @@ describe('catalog store: own writes', () => {
     expect(names(h.store.getState())).toEqual(['z', 'a', 'b']);
   });
 
+  it('drops the removed ids with their pulses and arrivals, and applies the changed DTOs', async () => {
+    const h = harness();
+    h.next(snapshot(entry('a'), entry('b'), entry('c')));
+    await h.store.load();
+    // b arrives, a is updated from the terminal.
+    h.next(
+      snapshot(entry('n'), entry('a', { revision: 2 }), entry('b'), entry('c')),
+    );
+    await h.store.reload();
+    expect([...ready(h.store).arrivals.keys()]).toEqual(['n']);
+    expect([...ready(h.store).pulses.keys()]).toEqual(['a']);
+
+    const result = await h.store.write(() =>
+      Promise.resolve({
+        ok: true as const,
+        data: {
+          changed: [entry('c', { relatedIds: [] })],
+          removed: ['n', 'a'],
+        },
+      }),
+    );
+    expect(result.ok).toBe(true);
+    const state = ready(h.store);
+    expect(names(state)).toEqual(['b', 'c']);
+    expect(state.arrivals.size).toBe(0);
+    expect(state.pulses.size).toBe(0);
+
+    // catalog:changed arrives with the same catalog: nothing is new.
+    h.next(snapshot(entry('b'), entry('c')));
+    await h.store.reload();
+    expect(names(h.store.getState())).toEqual(['b', 'c']);
+    expect(ready(h.store).arrivals.size).toBe(0);
+  });
+
+  it('ignores a removed id it does not hold', async () => {
+    const h = await loaded();
+    const before = h.store.getState();
+    await h.store.write(() =>
+      Promise.resolve({
+        ok: true as const,
+        data: { changed: [], removed: ['ghost'] },
+      }),
+    );
+    expect(h.store.getState()).toBe(before);
+  });
+
   it('answers a failed write as it is and changes nothing', async () => {
     const h = await loaded();
     const before = h.store.getState();

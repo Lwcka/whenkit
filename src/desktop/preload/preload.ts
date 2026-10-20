@@ -23,6 +23,8 @@ const api = {
   },
   setNotes: (id: string, notes: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.entriesSetNotes, id, notes),
+  deleteEntry: (id: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.entriesDelete, id),
   onFlushNotes: (flush: () => Promise<void>) => {
     // Main waits for the answer (with a time limit): it is sent whether the
     // flush worked or not.

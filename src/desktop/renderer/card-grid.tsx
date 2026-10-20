@@ -1,4 +1,10 @@
-import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import type { EntryDto } from '../../shared/ipc';
 import { appStrings } from '../../shared/strings.ro';
 import {
@@ -39,12 +45,19 @@ export interface CardGridProps {
   onOpen?: (id: string) => void;
   /** The card that is the Tab stop at first (the one a sheet was opened from). */
   initialActiveId?: string;
+  /**
+   * An entry that was just deleted: its card stays at its old `index`, out of
+   * reach, and collapses (motion.slide); the others slide into the gap after.
+   */
+  leaving?: { entry: EntryDto; index: number };
+  /** The leaving card is gone (its animation ended, or animations are off). */
+  onLeft?: () => void;
 }
 
 const NONE: ReadonlyMap<string, number> = new Map();
 
 /** The duration of DESIGN motion.slide, read from the token (0 with animations off). */
-function slideDuration(): number {
+export function slideDuration(): number {
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue('--motion-slide')
     .trim();
@@ -75,12 +88,45 @@ function Cards({
   now = 0,
   onOpen,
   initialActiveId,
+  leaving,
+  onLeft,
 }: Omit<CardGridProps, 'viewKey'>) {
   const list = useRef<HTMLUListElement>(null);
   const layout = useRef<Layout | null>(null);
   // A pulse belongs to the moment of the update: what the grid already counted
   // when it mounted (a card shown again after a view change) does not replay.
   const mountedPulses = useRef(pulses);
+  // A grid that comes back with a card to collapse shows no entrance: the
+  // fade-in would hide the collapse. Decided at mount, so the cards do not
+  // replay it when the collapse ends.
+  const quiet = useRef(leaving !== undefined);
+
+  // The leaving card is drawn only while its collapse can be seen; with
+  // animations off it is gone at once.
+  const [leftId, setLeftId] = useState<string | null>(null);
+  const pending = leaving !== undefined && leftId !== leaving.entry.id;
+  const showLeaving =
+    pending &&
+    slideDuration() > 0 &&
+    !entries.some((entry) => entry.id === leaving.entry.id);
+  const leavingNow = pending && !showLeaving;
+  useEffect(() => {
+    if (leavingNow) onLeft?.();
+  }, [leavingNow, onLeft]);
+  // The card is gone when its own collapse ends (a native listener: it also
+  // works where the event is not wired through React, as in jsdom).
+  const leavingId = showLeaving ? leaving.entry.id : null;
+  useEffect(() => {
+    const item = list.current?.querySelector('[data-leaving]');
+    if (leavingId === null || !item) return undefined;
+    const onEnd = (event: Event) => {
+      if (event.target !== item) return;
+      setLeftId(leavingId);
+      onLeft?.();
+    };
+    item.addEventListener('animationend', onEnd);
+    return () => item.removeEventListener('animationend', onEnd);
+  }, [leavingId, onLeft]);
 
   // FLIP: when a card arrives the others move to their new places; each one
   // starts from where it stood and slides (Web Animations, so no inline
@@ -90,30 +136,33 @@ function Cards({
     if (grid === null) return;
     const items = Array.from(grid.children) as HTMLElement[];
     const offsets = new Map<string, { x: number; y: number }>();
-    entries.forEach((entry, index) => {
-      const item = items[index];
-      if (item !== undefined) {
-        offsets.set(entry.id, { x: item.offsetLeft, y: item.offsetTop });
+    for (const item of items) {
+      const id = item.dataset.entryId;
+      if (id !== undefined) {
+        offsets.set(id, { x: item.offsetLeft, y: item.offsetTop });
       }
-    });
+    }
     const before = layout.current;
     layout.current = { width: grid.offsetWidth, offsets };
     if (before === null || before.width !== grid.offsetWidth) return;
     const duration = slideDuration();
     if (duration <= 0) return;
-    entries.forEach((entry, index) => {
-      const item = items[index];
-      const from = before.offsets.get(entry.id);
-      const to = offsets.get(entry.id);
-      if (item === undefined || from === undefined || to === undefined) return;
+    for (const item of items) {
+      const id = item.dataset.entryId;
+      // The leaving card has its own animation.
+      if (id === undefined || item.hasAttribute('data-leaving')) continue;
+      const from = before.offsets.get(id);
+      const to = offsets.get(id);
+      if (from === undefined || to === undefined) continue;
       const dx = from.x - to.x;
       const dy = from.y - to.y;
-      if ((dx === 0 && dy === 0) || typeof item.animate !== 'function') return;
+      if ((dx === 0 && dy === 0) || typeof item.animate !== 'function')
+        continue;
       item.animate(
         [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
         { duration, easing: 'ease-out' },
       );
-    });
+    }
   });
 
   const [activeId, setActiveId] = useState<string | null>(
@@ -134,7 +183,9 @@ function Cards({
       entries.length,
     );
     list.current
-      .querySelectorAll<HTMLElement>('[role="button"]')
+      .querySelectorAll<HTMLElement>(
+        '.card-grid-item:not([data-leaving]) [role="button"]',
+      )
       [next]?.focus();
   };
 
@@ -142,32 +193,73 @@ function Cards({
     <ul
       ref={list}
       className="card-grid"
+      data-entrance={quiet.current ? 'off' : undefined}
       aria-label={appStrings.cardListLabel}
       onKeyDown={onKeyDown}
     >
-      {entries.map((entry, index) => (
-        <li
-          key={entry.id}
-          className="card-grid-item"
-          data-stagger={Math.min(index, STAGGER_MAX)}
-        >
-          <EntryCard
-            entry={entry}
-            slot={entrySlot(entry, slots)}
-            index={index}
-            tabIndex={index === active ? 0 : -1}
-            onFocus={() => setActiveId(entry.id)}
-            onOpen={() => onOpen?.(entry.id)}
-            tape={tapeOf(entry.id, arrivals, now)}
-            pulse={pulseParity(
-              pulses.get(entry.id) ?? 0,
-              mountedPulses.current.get(entry.id) ?? 0,
-            )}
-          />
-        </li>
-      ))}
+      {withLeaving(entries, showLeaving ? leaving : undefined).map(
+        ({ entry, index, gone }) =>
+          gone ? (
+            <li
+              key={entry.id}
+              className="card-grid-item"
+              data-entry-id={entry.id}
+              data-leaving=""
+              aria-hidden="true"
+              inert
+            >
+              <EntryCard
+                entry={entry}
+                slot={entrySlot(entry, slots)}
+                index={index}
+                tabIndex={-1}
+              />
+            </li>
+          ) : (
+            <li
+              key={entry.id}
+              className="card-grid-item"
+              data-entry-id={entry.id}
+              data-stagger={Math.min(index, STAGGER_MAX)}
+            >
+              <EntryCard
+                entry={entry}
+                slot={entrySlot(entry, slots)}
+                index={index}
+                tabIndex={index === active ? 0 : -1}
+                onFocus={() => setActiveId(entry.id)}
+                onOpen={() => onOpen?.(entry.id)}
+                tape={tapeOf(entry.id, arrivals, now)}
+                pulse={pulseParity(
+                  pulses.get(entry.id) ?? 0,
+                  mountedPulses.current.get(entry.id) ?? 0,
+                )}
+              />
+            </li>
+          ),
+      )}
     </ul>
   );
+}
+
+/**
+ * The cards to draw: `entries`, with the leaving card put back at its old
+ * place. `index` is the place among `entries` for the cards that stay (the
+ * tab stop and the category tab go by it) and the old place for the leaving one.
+ */
+function withLeaving(
+  entries: readonly EntryDto[],
+  leaving: { entry: EntryDto; index: number } | undefined,
+): { entry: EntryDto; index: number; gone: boolean }[] {
+  const drawn = entries.map((entry, index) => ({ entry, index, gone: false }));
+  if (leaving === undefined) return drawn;
+  const at = Math.min(Math.max(leaving.index, 0), drawn.length);
+  drawn.splice(at, 0, {
+    entry: leaving.entry,
+    index: leaving.index,
+    gone: true,
+  });
+  return drawn;
 }
 
 function tapeOf(

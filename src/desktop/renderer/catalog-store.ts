@@ -46,8 +46,9 @@ export interface CatalogStore {
    */
   reload(): Promise<void>;
   /**
-   * Runs a write (an IPC call that answers with `changed`) and applies the
-   * entries it changed before anything is compared again.
+   * Runs a write (an IPC call that answers with `changed`, and `removed` for
+   * a delete) and applies the entries it changed or removed before anything
+   * is compared again.
    */
   write<T extends WriteResult>(
     run: () => Promise<IpcResult<T>>,
@@ -157,8 +158,11 @@ export function createCatalogStore(
       ? Promise.resolve()
       : new Promise((resolve) => idleWaiters.push(resolve));
 
-  /** Applies the entries a write changed, so they are known before the next reload. */
-  const applyChanged = (changed: readonly EntryDto[]) => {
+  /**
+   * Applies what a write changed (the entries it rewrote, the ids it deleted),
+   * so it is known before the next reload.
+   */
+  const applyChanged = ({ changed, removed = [] }: WriteResult) => {
     if (state.status !== 'ready') return;
     let entries = state.entries;
     for (const dto of changed) {
@@ -169,6 +173,16 @@ export function createCatalogStore(
       if (before !== undefined && dto.revision >= before.revision) {
         entries = entries.map((entry, at) => (at === index ? dto : entry));
       }
+    }
+    const gone = new Set(removed);
+    if (gone.size > 0 && entries.some((entry) => gone.has(entry.id))) {
+      entries = entries.filter((entry) => !gone.has(entry.id));
+      const arrivals = new Map(
+        [...state.arrivals].filter(([id]) => !gone.has(id)),
+      );
+      const pulses = new Map([...state.pulses].filter(([id]) => !gone.has(id)));
+      set({ ...state, entries, arrivals, pulses });
+      return;
     }
     if (entries !== state.entries) set({ ...state, entries });
   };
@@ -231,7 +245,7 @@ export function createCatalogStore(
       pendingWrites++;
       try {
         const result = await run();
-        if (result.ok) applyChanged(result.data.changed);
+        if (result.ok) applyChanged(result.data);
         return result;
       } catch {
         return INTERNAL;

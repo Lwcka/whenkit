@@ -403,4 +403,114 @@ describe('CardGrid: arrivals and pulses', () => {
       expect(animate).not.toHaveBeenCalled();
     });
   });
+
+  describe('a leaving card', () => {
+    const gone = makeEntry('x', { name: 'Gone' });
+    const staying = ['a', 'b', 'c'].map((id) => makeEntry(id));
+
+    function mockSlide(slide: string) {
+      vi.spyOn(window, 'getComputedStyle').mockImplementation(
+        () =>
+          ({
+            getPropertyValue: (name: string) =>
+              name === '--motion-slide' ? slide : '',
+            gridTemplateColumns: '300px 300px',
+          }) as unknown as CSSStyleDeclaration,
+      );
+    }
+
+    const leavingItem = () => document.querySelector('[data-leaving]');
+    const order = () =>
+      [...document.querySelectorAll('.card-grid-item')].map(
+        (item) => (item as HTMLElement).dataset.entryId,
+      );
+
+    it('stays at its old place, out of reach, until its animation ends', () => {
+      mockSlide('250ms');
+      const onLeft = vi.fn();
+      render(
+        <CardGrid
+          entries={staying}
+          slots={slots}
+          viewKey="v"
+          leaving={{ entry: gone, index: 1 }}
+          onLeft={onLeft}
+        />,
+      );
+
+      expect(order()).toEqual(['a', 'x', 'b', 'c']);
+      const item = leavingItem();
+      expect(item?.getAttribute('aria-hidden')).toBe('true');
+      expect(item?.hasAttribute('inert')).toBe(true);
+      // Out of reach: not a Tab stop, not in the accessibility tree.
+      expect(cards().map((card) => card.getAttribute('aria-label'))).toEqual([
+        'a',
+        'b',
+        'c',
+      ]);
+      expect(stops().map((card) => card.getAttribute('aria-label'))).toEqual([
+        'a',
+      ]);
+      expect(onLeft).not.toHaveBeenCalled();
+
+      fireEvent.animationEnd(item as Element);
+      expect(leavingItem()).toBeNull();
+      expect(order()).toEqual(['a', 'b', 'c']);
+      expect(onLeft).toHaveBeenCalledTimes(1);
+    });
+
+    it('mounts without the entrance animation, so the collapse shows', () => {
+      mockSlide('250ms');
+      const { rerender } = render(
+        <CardGrid
+          entries={staying}
+          slots={slots}
+          viewKey="v"
+          leaving={{ entry: gone, index: 1 }}
+        />,
+      );
+      const grid = () => document.querySelector('.card-grid');
+      expect(grid()?.getAttribute('data-entrance')).toBe('off');
+      // It stays off when the collapse ends: the cards do not fade in then.
+      rerender(<CardGrid entries={staying} slots={slots} viewKey="v" />);
+      expect(grid()?.getAttribute('data-entrance')).toBe('off');
+      cleanup();
+      render(<CardGrid entries={staying} slots={slots} viewKey="v" />);
+      expect(grid()?.hasAttribute('data-entrance')).toBe(false);
+    });
+
+    it('moves with the arrows over the cards that stay only', () => {
+      mockSlide('250ms');
+      render(
+        <CardGrid
+          entries={staying}
+          slots={slots}
+          viewKey="v"
+          leaving={{ entry: gone, index: 1 }}
+        />,
+      );
+      cards()[0]?.focus();
+      fireEvent.keyDown(document.activeElement ?? document.body, {
+        code: 'ArrowRight',
+      });
+      expect(document.activeElement?.getAttribute('aria-label')).toBe('b');
+    });
+
+    it('is not drawn when animations are off (motion.slide is 0): it is gone at once', () => {
+      mockSlide('0ms');
+      const onLeft = vi.fn();
+      render(
+        <CardGrid
+          entries={staying}
+          slots={slots}
+          viewKey="v"
+          leaving={{ entry: gone, index: 1 }}
+          onLeft={onLeft}
+        />,
+      );
+      expect(leavingItem()).toBeNull();
+      expect(order()).toEqual(['a', 'b', 'c']);
+      expect(onLeft).toHaveBeenCalledTimes(1);
+    });
+  });
 });

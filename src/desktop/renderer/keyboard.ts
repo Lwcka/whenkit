@@ -46,6 +46,8 @@ export interface Binding {
   run: (event: KeyboardEvent) => void;
   /** The binding applies only while this is true (the context). */
   when?: () => boolean;
+  /** Keeps working while a dialog is open (zoom); the others are muted. */
+  allowInDialog?: boolean;
 }
 
 /** Esc priorities, highest first: the first active one is the only one that runs. */
@@ -107,6 +109,11 @@ function isTextField(target: EventTarget | null): boolean {
   );
 }
 
+/** True while a modal dialog is on screen: the keys behind it must stay quiet. */
+export function isDialogOpen(target: Document): boolean {
+  return target.querySelector('[role="dialog"][aria-modal="true"]') !== null;
+}
+
 function matches(binding: Binding, event: KeyboardEvent): boolean {
   const codes =
     typeof binding.code === 'string' ? [binding.code] : binding.code;
@@ -122,7 +129,8 @@ function matches(binding: Binding, event: KeyboardEvent): boolean {
 /**
  * Installs the single `keydown` listener. Esc goes to the priority dispatcher
  * (it fires in text fields too); a binding without Ctrl or Alt is a single key
- * and does not fire while focus is in a text field. Returns the uninstaller.
+ * and does not fire while focus is in a text field. While a dialog is open only
+ * the bindings marked `allowInDialog` fire. Returns the uninstaller.
  */
 export function installKeyboard(
   bindings: readonly Binding[],
@@ -135,6 +143,7 @@ export function installKeyboard(
     }
     for (const binding of bindings) {
       if (!matches(binding, event)) continue;
+      if (binding.allowInDialog !== true && isDialogOpen(target)) continue;
       const singleKey = binding.ctrl !== true && binding.alt !== true;
       if (singleKey && isTextField(event.target)) continue;
       if (binding.when !== undefined && !binding.when()) continue;
@@ -152,7 +161,8 @@ export function installKeyboard(
  * search box (from anywhere, also from a text field), Ctrl+= / − / 0 zoom
  * (also numpad), [ and ] move to the previous / next category (single keys:
  * they do nothing in a text field), Alt+← goes back one sheet while one is
- * open (it also works in a text field).
+ * open (it also works in a text field), Delete asks to delete the sheet on
+ * screen (a single key too).
  */
 export function frameBindings({
   selectZone,
@@ -161,6 +171,7 @@ export function frameBindings({
   focusSearch,
   back,
   sheetOpen,
+  requestDelete,
 }: {
   selectZone: (index: 0 | 1) => void;
   zoom: Zoom;
@@ -168,24 +179,38 @@ export function frameBindings({
   focusSearch: () => void;
   back: () => void;
   sheetOpen: () => boolean;
+  requestDelete: () => void;
 }): Binding[] {
   return [
     { code: ['KeyK', 'KeyF'], ctrl: true, run: () => focusSearch() },
     { code: 'BracketLeft', shift: false, run: () => moveCategory(-1) },
     { code: 'BracketRight', shift: false, run: () => moveCategory(1) },
     { code: 'ArrowLeft', alt: true, when: sheetOpen, run: () => back() },
+    {
+      code: 'Delete',
+      shift: false,
+      when: sheetOpen,
+      run: () => requestDelete(),
+    },
     { code: 'Digit1', ctrl: true, run: () => selectZone(0) },
     { code: 'Digit2', ctrl: true, run: () => selectZone(1) },
     {
       code: ['Equal', 'NumpadAdd'],
       ctrl: true,
+      allowInDialog: true,
       run: () => zoom.zoomIn(),
     },
     {
       code: ['Minus', 'NumpadSubtract'],
       ctrl: true,
+      allowInDialog: true,
       run: () => zoom.zoomOut(),
     },
-    { code: ['Digit0', 'Numpad0'], ctrl: true, run: () => zoom.reset() },
+    {
+      code: ['Digit0', 'Numpad0'],
+      ctrl: true,
+      allowInDialog: true,
+      run: () => zoom.reset(),
+    },
   ];
 }

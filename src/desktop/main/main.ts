@@ -30,6 +30,7 @@ import {
   openDesktopCatalog,
   searchResult,
   setNotesResult,
+  deleteEntryResult,
   snapshotResult,
 } from './catalog';
 import { watchCatalog, type CatalogWatcher } from './catalog-watch';
@@ -270,6 +271,9 @@ function main(): void {
             notifyCatalogChanged,
             reporter.log,
           ),
+      );
+      ipcMain.handle(IPC_CHANNELS.entriesDelete, (_event, id: unknown) =>
+        deleteEntryResult(catalog, id, notifyCatalogChanged, reporter.log),
       );
       ipcMain.handle(IPC_CHANNELS.shellOpenExternal, (_event, url: unknown) =>
         openExternalResult(url, (u) => shell.openExternal(u), reporter.log),

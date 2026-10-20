@@ -206,6 +206,8 @@ class FakeStore implements CatalogStore {
       },
       // Notes are not part of this fake: no import writes them (AD-16).
       setEntryNotes: () => false,
+      // Deleting is not part of this fake: no import deletes (AD-3).
+      deleteEntry: () => false,
       replaceEntryCategories: (entryId, categoryIds) => {
         const index = indexOf(entryId);
         this.entries[index] = {

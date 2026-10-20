@@ -267,6 +267,11 @@ export interface CatalogWriter extends CatalogReader {
    * owner has no such row.
    */
   deleteRejectionById(id: string): boolean;
+  /**
+   * Deletes the entry row; its category rows and links go by cascade and the
+   * search index by trigger (AD-5). False when the owner has no such entry.
+   */
+  deleteEntry(id: string): boolean;
 }
 
 /** The catalog database. Grows with the use cases that need it. */

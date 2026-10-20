@@ -1,0 +1,74 @@
+/* dialog (DESIGN, dialog): the scrim starts under the title bar, which stays
+   alive (it can be dragged with a dialog open). */
+.dialog-scrim {
+  align-items: center;
+  animation: dialog-scrim-in var(--motion-fade) var(--motion-ease) both;
+  background: var(--dialog-scrim);
+  display: flex;
+  inset: var(--spacing-titlebar-height) 0 0 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 30;
+}
+
+@keyframes dialog-scrim-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes dialog-in {
+  from {
+    opacity: 0;
+    transform: scale(var(--motion-enter-scale));
+  }
+}
+
+.dialog {
+  animation: dialog-in var(--motion-fade) var(--motion-ease) both;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-sheet);
+  box-shadow: var(--elevation-2);
+  display: flex;
+  flex-direction: column;
+  gap: var(--dialog-gap);
+  max-height: calc(100% - 2 * var(--dialog-margin));
+  max-width: calc(100% - 2 * var(--dialog-margin));
+  padding: var(--dialog-padding);
+}
+
+.dialog[data-size='confirm'] {
+  width: var(--dialog-confirm-width);
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  gap: var(--dialog-gap);
+  min-height: 0;
+}
+
+.dialog:focus {
+  outline: none;
+}
+
+.dialog-title {
+  font: var(--typography-headline);
+  letter-spacing: var(--ls-headline);
+  line-height: 1.2;
+  margin: 0;
+}
+
+.dialog-body {
+  color: var(--ink-2);
+  font: var(--typography-body);
+  margin: 0;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: var(--spacing-3);
+  justify-content: flex-end;
+  margin-top: var(--spacing-1);
+}
