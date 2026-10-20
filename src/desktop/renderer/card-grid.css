@@ -58,6 +58,26 @@
   }
 }
 
+/* Back from a deleted sheet: no entrance, so the collapse shows at full opacity. */
+.card-grid[data-entrance='off'],
+.card-grid[data-entrance='off'] .card-grid-item:not([data-leaving]) {
+  animation: none;
+}
+
+/* A deleted entry's card collapses where it stood, out of reach; when it is
+   gone the others slide into the gap (FLIP, in card-grid.tsx). */
+.card-grid-item[data-leaving] {
+  animation: card-grid-item-out var(--motion-slide) var(--motion-ease) both;
+  pointer-events: none;
+}
+
+@keyframes card-grid-item-out {
+  to {
+    opacity: 0;
+    transform: scale(var(--motion-enter-scale));
+  }
+}
+
 /* The skeleton does not animate. */
 .card-grid[data-skeleton],
 .card-grid[data-skeleton] .card-grid-item {

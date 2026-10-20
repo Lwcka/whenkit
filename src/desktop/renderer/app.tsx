@@ -1,3 +1,4 @@
+import { Trash2 } from 'lucide-react';
 import {
   useCallback,
   useEffect,
@@ -8,8 +9,14 @@ import {
   useSyncExternalStore,
 } from 'react';
 import type { EntryDto, WhenkitApi } from '../../shared/ipc';
-import { appStrings, entryStrings, zoneLabels } from '../../shared/strings.ro';
+import {
+  appStrings,
+  entryStrings,
+  errorMessages,
+  zoneLabels,
+} from '../../shared/strings.ro';
 import { AppError } from './app-error';
+import { Button } from './button';
 import { CardGrid, SkeletonGrid } from './card-grid';
 import type { CatalogStore } from './catalog-store';
 import {
@@ -26,6 +33,7 @@ import {
   type Zone,
 } from './catalog-view';
 import { CategoryBar, type CategoryBarItem } from './category-bar';
+import { Dialog } from './dialog';
 import { EmptyState } from './empty-state';
 import { EntrySheet } from './entry-sheet';
 import {
@@ -33,8 +41,10 @@ import {
   createZoom,
   frameBindings,
   installKeyboard,
+  isDialogOpen,
   registerEscape,
 } from './keyboard';
+import './kbd.css';
 import { useSearch } from './search';
 import { SectionHeader } from './section-header';
 import { SheetBar } from './sheet-bar';
@@ -47,6 +57,7 @@ import { Toolbar, ZONE_ORDER } from './toolbar';
 /** What the frame needs from the bridge. */
 export type FrameApi = Pick<
   WhenkitApi,
+  | 'deleteEntry'
   | 'openExternal'
   | 'searchEntries'
   | 'setNotes'
@@ -76,6 +87,15 @@ interface Origin {
   scrollTop: number;
   /** The card the sheet was opened from. */
   cardId: string | null;
+}
+
+/** An entry just deleted from the view of the list: its card collapses where it stood. */
+interface Leaving {
+  entry: EntryDto;
+  /** Its place among the entries the list showed. */
+  index: number;
+  /** The list view it belongs to (the grid remounts on a new one). */
+  viewKey: string;
 }
 
 /** True once `active` has been true for `ms` without a break. */
@@ -121,6 +141,13 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   useEffect(() => {
     if (staleStack) setStack(liveStack);
   });
+  // Deleting (CAP-10, Flow 4): the sheet asks for a confirmation, only the
+  // dialog's solid button deletes. The id keeps the dialog on its own entry.
+  const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [leaving, setLeaving] = useState<Leaving | null>(null);
+  const deleteButton = useRef<HTMLButtonElement>(null);
+  const cancelButton = useRef<HTMLButtonElement>(null);
   // The zone tab follows the entry on screen; the list's own zone is kept.
   const shownZone: Zone = shownEntry?.zone ?? zone;
 
@@ -188,11 +215,16 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     setStack((previous) => (previous.length > 0 ? [] : previous));
     setOrigin(null);
   }, []);
+  // A collapsing card belongs to the view it left; another view forgets it.
+  useEffect(() => {
+    if (leaving !== null && leaving.viewKey !== viewKey) setLeaving(null);
+  });
   // Opening an entry ends its arrival. From the list the stack starts and the
   // origin is saved; from a sheet the entry is pushed.
   const openEntry = (id: string) => {
     if (!byId.has(id)) return;
     store.dismissArrival(id);
+    setLeaving(null);
     if (!sheetOpen) {
       const scroller = document.querySelector<HTMLElement>(
         '.list-view .shell-scroll',
@@ -210,11 +242,57 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const openRef = useRef(openEntry);
   const backRef = useRef(goBack);
   const sheetOpenRef = useRef(sheetOpen);
+  const requestDeleteRef = useRef(() => {});
   useEffect(() => {
     openRef.current = openEntry;
     backRef.current = goBack;
     sheetOpenRef.current = sheetOpen;
+    requestDeleteRef.current = requestDelete;
   });
+
+  // „Șterge” in the sheet-bar and the Delete key only open the confirmation. The
+  // focus goes to the button first, so Esc and „Renunță” bring it back there.
+  const requestDelete = () => {
+    if (shownEntry === undefined || confirmingDelete !== null) return;
+    deleteButton.current?.focus();
+    setConfirmingDelete(shownEntry.id);
+  };
+  // The confirmation belongs to the entry on screen: when that changes under
+  // it (deleted from the terminal, stack popped) it is forgotten, unless the
+  // delete of that entry is running.
+  useEffect(() => {
+    if (
+      confirmingDelete !== null &&
+      !deleting &&
+      confirmingDelete !== shownEntry?.id
+    )
+      setConfirmingDelete(null);
+  });
+  const cancelDelete = () => {
+    if (!deleting) setConfirmingDelete(null);
+  };
+  const confirmDelete = async () => {
+    if (shownEntry === undefined || deleting) return;
+    const { id } = shownEntry;
+    // Deleting the only sheet brings the list back: its card collapses there,
+    // unless it was the last card of the view (an empty state follows).
+    const index = entries.findIndex((candidate) => candidate.id === id);
+    if (liveStack.length === 1 && index >= 0 && entries.length > 1) {
+      setLeaving({ entry: shownEntry, index, viewKey });
+    }
+    setDeleting(true);
+    const result = await store.write(() => api.deleteEntry(id));
+    setDeleting(false);
+    setConfirmingDelete(null);
+    if (!result.ok) {
+      // The sheet stays; the toast says why.
+      setLeaving(null);
+      toasts.push({ kind: 'error', message: errorMessages[result.error.code] });
+      return;
+    }
+    // The entry left the store, so it left the stack: back from it lands on the
+    // sheet below, or on the list (above).
+  };
 
   // Every import that lands makes one toast per zone; „Vezi” opens that zone
   // at Toate, and a single arrival's „Deschide” opens its sheet.
@@ -315,12 +393,13 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   // The mouse's back button goes back one sheet too.
   useEffect(() => {
     const MOUSE_BACK = 3;
+    // Behind a modal dialog the sheet stays, as with Alt+Left.
+    const backOpen = () => sheetOpenRef.current && !isDialogOpen(document);
     const onMouseDown = (event: MouseEvent) => {
-      if (event.button === MOUSE_BACK && sheetOpenRef.current)
-        event.preventDefault();
+      if (event.button === MOUSE_BACK && backOpen()) event.preventDefault();
     };
     const onMouseUp = (event: MouseEvent) => {
-      if (event.button !== MOUSE_BACK || !sheetOpenRef.current) return;
+      if (event.button !== MOUSE_BACK || !backOpen()) return;
       event.preventDefault();
       backRef.current();
     };
@@ -344,6 +423,10 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   // The last sheet closed: the list is back as it was left, with the same
   // scroll and the card the sheet was opened from focused.
   const wasOpen = useRef(false);
+  const leavingRef = useRef(leaving);
+  useEffect(() => {
+    leavingRef.current = leaving;
+  });
   useLayoutEffect(() => {
     const was = wasOpen.current;
     wasOpen.current = sheetOpen;
@@ -352,9 +435,18 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
       '.list-view .shell-scroll',
     );
     if (scroller !== null) scroller.scrollTop = origin.scrollTop;
-    const card = Array.from(
-      document.querySelectorAll<HTMLElement>('.card-grid .entry-card'),
-    ).find((candidate) => candidate.dataset.entryId === origin.cardId);
+    const cards = Array.from(
+      document.querySelectorAll<HTMLElement>(
+        '.card-grid-item:not([data-leaving]) .entry-card',
+      ),
+    );
+    const gone = leavingRef.current;
+    const card =
+      cards.find((candidate) => candidate.dataset.entryId === origin.cardId) ??
+      // The card was deleted: its place goes to the card that took it.
+      (gone?.entry.id === origin.cardId
+        ? cards[Math.min(gone.index, cards.length - 1)]
+        : undefined);
     card?.focus({ preventScroll: true });
     setOrigin(null);
   }, [sheetOpen, origin]);
@@ -391,6 +483,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
           },
           back: () => backRef.current(),
           sheetOpen: () => sheetOpenRef.current,
+          requestDelete: () => requestDeleteRef.current(),
         }),
       ),
     [zoom, changeZone],
@@ -482,7 +575,12 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
           role="tabpanel"
           aria-label={zoneLabels[shownZone]}
         >
-          <SheetBar crumbs={sheetCrumbs(shownEntry)} onBack={goBack} />
+          <SheetBar
+            crumbs={sheetCrumbs(shownEntry)}
+            onBack={goBack}
+            onDelete={requestDelete}
+            deleteRef={deleteButton}
+          />
           <main className="shell">
             <div key={shownEntry.id} className="shell-scroll">
               <EntrySheet
@@ -539,6 +637,8 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
                   now={now}
                   onOpen={openEntry}
                   initialActiveId={origin?.cardId ?? undefined}
+                  leaving={leaving?.viewKey === viewKey ? leaving : undefined}
+                  onLeft={() => setLeaving(null)}
                 />
               ) : found !== null ? (
                 <EmptyState
@@ -582,6 +682,31 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         workspacePath={api.workspacePath}
         keyHints={sheetOpen ? appStrings.sheetKeyHints : undefined}
       />
+      {shownEntry !== undefined && confirmingDelete === shownEntry.id && (
+        <Dialog
+          title={appStrings.deleteEntryTitle(shownEntry.name)}
+          actions={
+            <>
+              <Button ref={cancelButton} onClick={cancelDelete}>
+                {appStrings.cancel}
+                <kbd className="kbd">Esc</kbd>
+              </Button>
+              <Button
+                variant="danger-solid"
+                icon={Trash2}
+                busy={deleting}
+                onClick={() => void confirmDelete()}
+              >
+                {deleting ? appStrings.deleteEntryBusy : appStrings.deleteEntry}
+              </Button>
+            </>
+          }
+          onCancel={cancelDelete}
+          initialFocusRef={cancelButton}
+        >
+          <p className="dialog-body">{appStrings.deleteEntryBody}</p>
+        </Dialog>
+      )}
       <ToastHost />
     </>
   );

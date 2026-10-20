@@ -76,6 +76,7 @@ const api: FrameApi = {
       },
     }),
   setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
+  deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
 };

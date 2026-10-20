@@ -10,6 +10,7 @@ describe('SheetBar', () => {
       <SheetBar
         crumbs={['Toolbox', 'Imagini & video', 'remove.bg']}
         onBack={() => {}}
+        onDelete={() => {}}
       />,
     );
 
@@ -32,15 +33,30 @@ describe('SheetBar', () => {
 
   it('calls onBack on click', () => {
     const onBack = vi.fn();
-    render(<SheetBar crumbs={['Learn', 'Webhook']} onBack={onBack} />);
+    render(
+      <SheetBar
+        crumbs={['Learn', 'Webhook']}
+        onBack={onBack}
+        onDelete={() => {}}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: /Înapoi/ }));
     expect(onBack).toHaveBeenCalledTimes(1);
   });
 
-  it('has no edit or delete actions yet', () => {
-    render(<SheetBar crumbs={['Learn', 'Webhook']} onBack={() => {}} />);
-    expect(
-      screen.queryByRole('button', { name: /Editează|Șterge/ }),
-    ).toBeNull();
+  it('has „Șterge” on the right, which only asks, and no „Editează” yet', () => {
+    const onDelete = vi.fn();
+    render(
+      <SheetBar
+        crumbs={['Learn', 'Webhook']}
+        onBack={() => {}}
+        onDelete={onDelete}
+      />,
+    );
+    const button = screen.getByRole('button', { name: 'Șterge' });
+    expect(button.getAttribute('data-variant')).toBe('danger');
+    fireEvent.click(button);
+    expect(onDelete).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('button', { name: /Editează/ })).toBeNull();
   });
 });

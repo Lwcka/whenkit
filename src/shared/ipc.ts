@@ -21,6 +21,7 @@ export const IPC_CHANNELS = {
   catalogChanged: 'catalog:changed',
   entriesSearch: 'entries:search',
   entriesSetNotes: 'entries:setNotes',
+  entriesDelete: 'entries:delete',
   windowSetTheme: 'window:setTheme',
   shellOpenExternal: 'shell:openExternal',
   /** Main to renderer: save the pending notes now (AD-20). */
@@ -77,6 +78,8 @@ export type IpcResult<T> =
  */
 export interface WriteResult {
   changed: readonly EntryDto[];
+  /** Ids of entries the write removed from the database (a delete). */
+  removed?: readonly string[];
 }
 
 /** The bridge preload exposes as `window.whenkit`. */
@@ -94,6 +97,11 @@ export interface WhenkitApi {
    * `revision` unchanged. Answers with the entry as stored (AD-10).
    */
   setNotes(id: string, notes: string): Promise<IpcResult<WriteResult>>;
+  /**
+   * Deletes an entry (AD-3): its links and categories go with it. `changed`
+   * holds the entries it was linked to, `removed` the deleted id (AD-10).
+   */
+  deleteEntry(id: string): Promise<IpcResult<WriteResult>>;
   /**
    * Registers what saves the notes still pending when the window closes
    * (AD-20). Main asks through `window:flushNotes`; preload awaits `flush`

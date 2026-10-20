@@ -587,6 +587,13 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     return Number(result.changes) > 0;
   }
 
+  deleteEntry(id: string): boolean {
+    const result = this.db
+      .prepare('DELETE FROM entries WHERE owner_id = ? AND id = ?')
+      .run(this.owner, id);
+    return Number(result.changes) > 0;
+  }
+
   deleteUpdateRejections(entryId: string): void {
     this.db
       .prepare(

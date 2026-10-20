@@ -217,6 +217,11 @@
   --my-notes-error: var(--danger);
   --my-notes-caret: var(--signal);
   --my-notes-radius: var(--rounded-xl);
+  --dialog-scrim: color-mix(in srgb, var(--scrim) 40%, transparent);
+  --dialog-confirm-width: 480px;
+  --dialog-padding: 26px 28px 22px;
+  --dialog-gap: 14px;
+  --dialog-margin: 24px;
 }
 
 :root[data-theme='light'] {

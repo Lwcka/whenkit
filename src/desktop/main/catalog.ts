@@ -1,4 +1,5 @@
 import { catalogSnapshot } from '../../core/catalog-snapshot';
+import { deleteEntry } from '../../core/delete-entry';
 import type {
   CatalogSnapshotDto,
   ErrorDto,
@@ -122,6 +123,32 @@ export function setNotesResult(
   return runWrite(
     opened,
     (store) => ({ changed: [setNotes(store, id, notes)] }),
+    emit,
+    logError,
+  );
+}
+
+/**
+ * The `entries:delete` answer (AD-3, AD-10, AD-18): deletes an entry with its
+ * links and answers with the entries it was linked to (`changed`) and the
+ * deleted id (`removed`). An id that is not a string is `ARGUMENTS_INVALID`.
+ * After the write `emit` tells the window. Never throws.
+ */
+export function deleteEntryResult(
+  opened: DesktopCatalog,
+  id: unknown,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<WriteResult>> {
+  if (typeof id !== 'string') {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  return runWrite(
+    opened,
+    (store) => {
+      const { removed, changed } = deleteEntry(store, id);
+      return { changed, removed: [removed] };
+    },
     emit,
     logError,
   );

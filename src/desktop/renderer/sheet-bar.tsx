@@ -1,4 +1,5 @@
-import { ChevronLeft } from 'lucide-react';
+import { ChevronLeft, Trash2 } from 'lucide-react';
+import type { Ref } from 'react';
 import { appStrings } from '../../shared/strings.ro';
 import { Button } from './button';
 import './kbd.css';
@@ -9,14 +10,23 @@ export interface SheetBarProps {
   crumbs: readonly string[];
   /** One step down the stack. */
   onBack: () => void;
+  /** „Șterge”: asks for the confirmation, never deletes by itself. */
+  onDelete: () => void;
+  /** The delete button, so the focus can return to it when the dialog closes. */
+  deleteRef?: Ref<HTMLButtonElement>;
 }
 
 /**
  * The bar of an open sheet (DESIGN, sheet-bar): „Înapoi” with its key, and the
- * breadcrumbs „Toolbox / Imagini & video / remove.bg”. The edit and delete
- * actions come with their own tickets.
+ * breadcrumbs „Toolbox / Imagini & video / remove.bg”, and „Șterge” on the
+ * right (it opens a confirmation). „Editează” comes with its own ticket.
  */
-export function SheetBar({ crumbs, onBack }: SheetBarProps) {
+export function SheetBar({
+  crumbs,
+  onBack,
+  onDelete,
+  deleteRef,
+}: SheetBarProps) {
   return (
     <div className="sheet-bar">
       <Button variant="ghost" icon={ChevronLeft} onClick={onBack}>
@@ -40,6 +50,16 @@ export function SheetBar({ crumbs, onBack }: SheetBarProps) {
           })}
         </ol>
       </nav>
+      <div className="sheet-bar-actions">
+        <Button
+          ref={deleteRef}
+          variant="danger"
+          icon={Trash2}
+          onClick={onDelete}
+        >
+          {appStrings.deleteEntry}
+        </Button>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import { LoaderCircle, type LucideIcon } from 'lucide-react';
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode, Ref } from 'react';
 import './button.css';
 
 export type ButtonVariant =
@@ -14,6 +14,7 @@ export interface ButtonProps extends Omit<
   'children'
 > {
   variant?: ButtonVariant;
+  ref?: Ref<HTMLButtonElement>;
   /** Lucide icon, at the left of the text (DESIGN, Buttons). */
   icon?: LucideIcon;
   /** Square, icon only; `title` is the tooltip and the accessible name. */

@@ -7,6 +7,7 @@ import type {
   StoredEntry,
 } from '../../core/ports';
 import {
+  deleteEntryResult,
   openDesktopCatalog,
   searchResult,
   setNotesResult,
@@ -273,6 +274,111 @@ describe('setNotesResult', () => {
         'x',
         vi.fn(),
       ),
+    ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
+  });
+});
+
+describe('deleteEntryResult', () => {
+  const row = (id: string, links: Partial<StoredEntry> = {}) =>
+    ({
+      id,
+      ownerId: 'o',
+      kind: 'tool',
+      name: id,
+      url: null,
+      resourceType: null,
+      categories: [],
+      relatedIds: [],
+      parentIds: [],
+      childIds: [],
+      whatItDoes: '',
+      situations: [],
+      keywords: [],
+      sources: [],
+      content: null,
+      myNotes: '',
+      githubStars: null,
+      githubPushedAt: null,
+      githubArchived: null,
+      verificationNotes: [],
+      forced: false,
+      dedupKey: id,
+      revision: 1,
+      addedAt: '2026-10-13T12:00:00.000Z',
+      verifiedAt: null,
+      ...links,
+    }) satisfies StoredEntry;
+
+  /** Entry a is linked to b; deleting a leaves b without the link. */
+  const linked = () => {
+    const rows = new Map([
+      ['a', row('a', { relatedIds: ['b'] })],
+      ['b', row('b', { relatedIds: ['a'] })],
+    ]);
+    return {
+      writeTransaction: (fn: (writer: unknown) => unknown) =>
+        fn({
+          entryById: (id: string) => rows.get(id),
+          deleteUpdateRejections: () => {},
+          deleteEntry: (id: string) => {
+            const gone = rows.delete(id);
+            for (const [key, value] of rows) {
+              rows.set(key, {
+                ...value,
+                relatedIds: value.relatedIds.filter((other) => other !== id),
+              });
+            }
+            return gone;
+          },
+        }),
+    } as unknown as CatalogStore;
+  };
+  const opened = (store: CatalogStore) =>
+    ({ ok: true, store, workspace: 'D:ws' }) as const;
+
+  it('answers the linked entries as changed and the id as removed, and emits', async () => {
+    const emit = vi.fn();
+    const result = await deleteEntryResult(opened(linked()), 'a', emit);
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        changed: [expect.objectContaining({ id: 'b', relatedIds: [] })],
+        removed: ['a'],
+      },
+    });
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([[undefined], [42], [null], [{}]])(
+    'refuses the id %j as ARGUMENTS_INVALID without touching the store',
+    async (id) => {
+      const emit = vi.fn();
+      const store = {
+        writeTransaction: () => {
+          throw new Error('must not be asked');
+        },
+      } as unknown as CatalogStore;
+      await expect(deleteEntryResult(opened(store), id, emit)).resolves.toEqual(
+        {
+          ok: false,
+          error: { code: 'ARGUMENTS_INVALID' },
+        },
+      );
+      expect(emit).not.toHaveBeenCalled();
+    },
+  );
+
+  it('answers ENTRY_NOT_FOUND for an unknown id and does not emit', async () => {
+    const emit = vi.fn();
+    await expect(
+      deleteEntryResult(opened(linked()), 'ghost', emit),
+    ).resolves.toEqual({ ok: false, error: { code: 'ENTRY_NOT_FOUND' } });
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('keeps the startup code when the catalog is not open', async () => {
+    await expect(
+      deleteEntryResult({ ok: false, code: 'DATABASE_TOO_NEW' }, 'a', vi.fn()),
     ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
   });
 });

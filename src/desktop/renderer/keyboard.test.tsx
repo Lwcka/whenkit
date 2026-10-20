@@ -223,6 +223,7 @@ describe('zoom', () => {
         focusSearch: () => {},
         back: () => {},
         sheetOpen: () => false,
+        requestDelete: () => {},
       }),
     );
 
@@ -250,6 +251,7 @@ describe('frame bindings', () => {
         focusSearch: () => {},
         back: () => {},
         sheetOpen: () => false,
+        requestDelete: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -270,6 +272,7 @@ describe('frame bindings', () => {
         focusSearch: () => {},
         back: () => {},
         sheetOpen: () => false,
+        requestDelete: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -294,6 +297,7 @@ describe('frame bindings', () => {
         focusSearch: () => focused++,
         back: () => {},
         sheetOpen: () => false,
+        requestDelete: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -317,6 +321,7 @@ describe('frame bindings', () => {
         focusSearch: () => {},
         back: () => backs++,
         sheetOpen: () => open,
+        requestDelete: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -332,5 +337,66 @@ describe('frame bindings', () => {
     press('ArrowLeft', { altKey: true, ctrlKey: true });
     expect(backs).toBe(2);
     expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('Delete asks to delete only while a sheet is open and not in a text field', () => {
+    let open = false;
+    let asked = 0;
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => {},
+        zoom: createZoom(() => {}),
+        moveCategory: () => {},
+        focusSearch: () => {},
+        back: () => {},
+        sheetOpen: () => open,
+        requestDelete: () => asked++,
+      }),
+    );
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    press('Delete');
+    expect(asked).toBe(0);
+
+    open = true;
+    const event = press('Delete');
+    press('Delete', {}, input);
+    press('Delete', { ctrlKey: true });
+    press('Delete', { shiftKey: true });
+    expect(asked).toBe(1);
+    expect(event.defaultPrevented).toBe(true);
+  });
+
+  it('mutes every binding but the zoom while a dialog is open', () => {
+    const calls: string[] = [];
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => calls.push('zone'),
+        zoom: createZoom(() => calls.push('zoom')),
+        moveCategory: () => calls.push('category'),
+        focusSearch: () => calls.push('search'),
+        back: () => calls.push('back'),
+        sheetOpen: () => true,
+        requestDelete: () => calls.push('delete'),
+      }),
+    );
+    const dialog = document.createElement('div');
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+    document.body.append(dialog);
+
+    press('Delete');
+    press('BracketRight');
+    press('Digit1', { ctrlKey: true });
+    press('KeyK', { ctrlKey: true });
+    press('ArrowLeft', { altKey: true });
+    expect(calls).toEqual([]);
+    press('Equal', { ctrlKey: true });
+    expect(calls).toEqual(['zoom']);
+
+    dialog.remove();
+    press('Delete');
+    expect(calls).toEqual(['zoom', 'delete']);
   });
 });
