@@ -1,0 +1,335 @@
+/* The card of an entry (DESIGN, entry-card). The category color arrives as
+   --category from data-slot (tokens.css); the tab position from data-tab. */
+
+.entry-card {
+  --tab-x: var(--category-tab-position-1);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-card);
+  box-shadow: var(--elevation-1);
+  cursor: pointer;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-width: 0;
+  padding: var(--entry-card-padding);
+  position: relative;
+  transition:
+    border-color var(--motion-quick) var(--motion-ease),
+    box-shadow var(--motion-quick) var(--motion-ease),
+    transform var(--motion-quick) var(--motion-ease);
+}
+
+.entry-card[data-tab='1'] {
+  --tab-x: var(--category-tab-position-2);
+}
+
+.entry-card[data-tab='2'] {
+  --tab-x: var(--category-tab-position-3);
+}
+
+.entry-card[data-zone='learn'] {
+  min-height: var(--entry-card-learn-min-height);
+}
+
+/* The category tab sticks out above the top edge, like the tab of a file. */
+.entry-card::after {
+  background: var(--category, var(--ink-2));
+  border-radius: var(--rounded-tab) var(--rounded-tab) 0 0;
+  content: '';
+  height: var(--category-tab-height);
+  left: var(--tab-x);
+  pointer-events: none;
+  position: absolute;
+  top: var(--category-tab-offset-top);
+  width: var(--category-tab-width);
+}
+
+.entry-card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--elevation-2);
+  transform: translateY(var(--entry-card-hover-lift));
+}
+
+/* Selected: the card the keyboard is on. The mouse only focuses it. */
+.entry-card:focus-visible {
+  border-color: var(--accent);
+  box-shadow:
+    0 0 0 1px var(--accent),
+    var(--elevation-2);
+  outline: none;
+}
+
+/* The crop corners and the Enter hint exist on every card and show only on
+   the selected one (the keyboard is on it). */
+.entry-card-crop,
+.entry-card-hint {
+  display: none;
+  position: absolute;
+  z-index: 2;
+}
+
+.entry-card:focus-visible .entry-card-crop {
+  display: block;
+}
+
+.entry-card:focus-visible .entry-card-hint {
+  display: inline-flex;
+}
+
+.entry-card-crop {
+  border: var(--entry-card-crop-stroke) solid var(--accent);
+  height: var(--entry-card-crop-size);
+  pointer-events: none;
+  width: var(--entry-card-crop-size);
+}
+
+.entry-card-crop[data-corner='start'] {
+  border-bottom: 0;
+  border-right: 0;
+  border-top-left-radius: var(--spacing-1);
+  left: var(--entry-card-crop-offset);
+  top: var(--entry-card-crop-offset);
+}
+
+.entry-card-crop[data-corner='end'] {
+  border-left: 0;
+  border-top: 0;
+  border-bottom-right-radius: var(--spacing-1);
+  bottom: var(--entry-card-crop-offset);
+  right: var(--entry-card-crop-offset);
+}
+
+.entry-card-hint {
+  align-items: center;
+  background: var(--accent);
+  border-radius: var(--rounded-full);
+  color: var(--accent-ink);
+  font: var(--typography-mono-sm);
+  font-weight: 600;
+  gap: var(--spacing-1);
+  padding: var(--spacing-1) var(--spacing-3);
+  right: var(--spacing-4);
+  top: calc(-1 * var(--spacing-3));
+}
+
+.entry-card-meta {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--typography-mono);
+  gap: var(--spacing-2);
+  min-height: var(--spacing-5);
+}
+
+.entry-card[data-zone='learn'] .entry-card-meta {
+  padding-right: var(--kind-stamp-room);
+}
+
+.entry-card-host {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.entry-card-type {
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-full);
+  color: var(--ink-2);
+  flex: none;
+  font: var(--typography-mono-sm);
+  padding: var(--spacing-1) var(--spacing-2);
+}
+
+.entry-card-title {
+  color: var(--ink);
+  font: var(--typography-card-title);
+  letter-spacing: var(--ls-card-title);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.entry-card-body {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: var(--entry-card-body-lines);
+  color: var(--ink-2);
+  display: -webkit-box;
+  font: var(--typography-body-sm);
+  margin: 0;
+  overflow: hidden;
+}
+
+.entry-card-situations-label {
+  color: var(--muted);
+  font: var(--typography-label-sm);
+  letter-spacing: var(--ls-label-sm);
+}
+
+.entry-card-situations {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The marker on the left carries the category color (DESIGN, situation-item). */
+.situation-item {
+  background: var(--surface-2);
+  border-radius: var(--rounded-md);
+  box-shadow: inset 3px 0 0 var(--category, var(--ink-2));
+  color: var(--ink);
+  font: var(--typography-situation);
+  padding: var(--spacing-2) var(--spacing-3) var(--spacing-2) var(--spacing-4);
+}
+
+.entry-card-footer {
+  align-items: center;
+  border-top: 1px dashed var(--line);
+  color: var(--ink-2);
+  display: flex;
+  font: var(--typography-caption);
+  gap: var(--spacing-2);
+  margin-top: auto;
+  min-width: 0;
+  padding-top: var(--spacing-3);
+}
+
+.entry-card-footer-dot {
+  background: var(--category, var(--ink-2));
+  border-radius: 50%;
+  flex: none;
+  height: var(--entry-card-footer-dot-size);
+  width: var(--entry-card-footer-dot-size);
+}
+
+.entry-card-category {
+  flex: none;
+  white-space: nowrap;
+}
+
+.entry-card-more-categories {
+  color: var(--muted);
+}
+
+/* Right side, in order of priority. The row is one line tall and wraps: an
+   item that does not fit moves to a hidden second line, last item first. */
+.entry-card-footer-meta {
+  align-content: flex-start;
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  flex-wrap: wrap;
+  font: var(--typography-mono-sm);
+  gap: var(--spacing-4) var(--spacing-3);
+  height: var(--spacing-4);
+  justify-content: flex-end;
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.entry-card-footer-meta > span {
+  align-items: center;
+  display: inline-flex;
+  gap: var(--spacing-1);
+}
+
+.verification-flag {
+  color: var(--signal);
+}
+
+/* Below spacing.bp-half (960px) the cards get narrow: when the footer has a
+   flag or stars, „+N situații” gives way. */
+@media (max-width: 959px) {
+  .entry-card-footer-meta:has(.verification-flag, .entry-card-stars)
+    .entry-card-more-situations {
+    display: none;
+  }
+}
+
+/* Learn: the rubber stamp in the top right corner. */
+.kind-stamp {
+  border: 2px solid currentColor;
+  border-radius: var(--rounded-sm);
+  box-shadow:
+    inset 0 0 0 1.5px var(--surface),
+    inset 0 0 0 2.5px currentColor;
+  font: var(--typography-stamp);
+  letter-spacing: var(--ls-stamp);
+  mask-image: radial-gradient(
+    circle at 30% 40%,
+    #000 0 60%,
+    rgb(0 0 0 / 0.75) 61% 63%,
+    #000 64%
+  );
+  mix-blend-mode: multiply;
+  opacity: var(--kind-stamp-opacity);
+  padding: var(--spacing-1) var(--spacing-2);
+  position: absolute;
+  right: var(--spacing-4);
+  top: var(--spacing-4);
+  transform: rotate(var(--kind-stamp-rotate));
+  text-transform: uppercase;
+}
+
+:root[data-theme='dark'] .kind-stamp {
+  mix-blend-mode: normal;
+}
+
+.kind-stamp[data-kind='concept'] {
+  color: var(--signal);
+}
+
+.kind-stamp[data-kind='material'] {
+  color: var(--accent);
+}
+
+/* The card's shape with bars in place of text; it does not animate. */
+.entry-card-skeleton {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-card);
+  box-shadow: var(--elevation-1);
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-height: var(--entry-card-learn-min-height);
+  padding: var(--entry-card-padding);
+}
+
+.entry-card-skeleton-bar {
+  background: var(--surface-2);
+  border-radius: var(--rounded-sm);
+  display: block;
+  height: var(--spacing-3);
+}
+
+.entry-card-skeleton-bar[data-bar='meta'] {
+  width: 40%;
+}
+
+.entry-card-skeleton-bar[data-bar='title'] {
+  height: var(--spacing-5);
+  width: 70%;
+}
+
+.entry-card-skeleton-bar[data-bar='line'] {
+  width: 100%;
+}
+
+.entry-card-skeleton-bar[data-bar='short'] {
+  width: 60%;
+}
+
+.entry-card-skeleton-bar[data-bar='situation'] {
+  border-radius: var(--rounded-md);
+  height: var(--spacing-8);
+  margin-top: auto;
+  width: 100%;
+}

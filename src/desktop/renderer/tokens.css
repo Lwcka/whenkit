@@ -153,6 +153,33 @@
   /* The room the native window buttons take when the browser does not report
      titlebar-area-* (the overlay's own rectangle). */
   --title-bar-controls-fallback: 150px;
+  --work-area-grid-center-opacity: 0.42;
+  --category-bar-scroll-button-size: 34px;
+  --category-bar-fade-width: 130px;
+  --category-bar-gap: 10px;
+  --category-chip-height: 34px;
+  --category-chip-dot-size: 10px;
+  --section-header-tab-width: 16px;
+  --section-header-tab-height: 9px;
+  --entry-card-padding: 20px 22px 16px;
+  --entry-card-learn-min-height: 220px;
+  --entry-card-hover-lift: -2px;
+  --entry-card-footer-dot-size: 8px;
+  --entry-card-crop-size: 16px;
+  --entry-card-crop-stroke: 2px;
+  --entry-card-crop-offset: -9px;
+  --category-tab-width: 50px;
+  --category-tab-height: 9px;
+  --category-tab-offset-top: -8px;
+  --category-tab-position-1: 26px;
+  --category-tab-position-2: 94px;
+  --category-tab-position-3: 162px;
+  --kind-stamp-rotate: -7deg;
+  --kind-stamp-opacity: 0.9;
+  --kind-stamp-room: 112px;
+  --entry-card-body-lines: 2;
+  --empty-state-target-size: 120px;
+  --empty-state-target-size-small: 72px;
 }
 
 :root[data-theme='light'] {
@@ -270,4 +297,34 @@
 .lucide.icon-sm {
   height: var(--icon-size-sm);
   width: var(--icon-size-sm);
+}
+
+/* The color slot of a category (DESIGN, Colors): the renderer puts data-slot
+   on the element that carries a category and this hands it --category. */
+[data-slot='1'] {
+  --category: var(--category-1);
+}
+[data-slot='2'] {
+  --category: var(--category-2);
+}
+[data-slot='3'] {
+  --category: var(--category-3);
+}
+[data-slot='4'] {
+  --category: var(--category-4);
+}
+[data-slot='5'] {
+  --category: var(--category-5);
+}
+[data-slot='6'] {
+  --category: var(--category-6);
+}
+[data-slot='7'] {
+  --category: var(--category-7);
+}
+[data-slot='8'] {
+  --category: var(--category-8);
+}
+[data-slot='9'] {
+  --category: var(--category-9);
 }

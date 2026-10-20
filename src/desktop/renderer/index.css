@@ -44,12 +44,51 @@ button {
   font: inherit;
 }
 
-/* The work area: it scrolls, the bars around it do not. */
+/* The list view: the category bar over the work area. */
+.list-view {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* The work area (DESIGN, work-area): the millimetre grid is fixed to the
+   area while the content scrolls over it, and it fades toward the center. */
 .shell {
+  background: var(--canvas);
   flex: 1;
   min-height: 0;
+  position: relative;
+}
+
+.shell::before {
+  background-image:
+    linear-gradient(var(--grid-major) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid-major) 1px, transparent 1px),
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-position: -1px -1px;
+  background-size:
+    var(--spacing-grid-major) var(--spacing-grid-major),
+    var(--spacing-grid-major) var(--spacing-grid-major),
+    var(--spacing-grid-minor) var(--spacing-grid-minor),
+    var(--spacing-grid-minor) var(--spacing-grid-minor);
+  content: '';
+  inset: 0;
+  mask-image: radial-gradient(
+    130% 120% at 50% 40%,
+    rgb(0 0 0 / var(--work-area-grid-center-opacity)) 40%,
+    #000 100%
+  );
+  pointer-events: none;
+  position: absolute;
+}
+
+.shell-scroll {
+  inset: 0;
   overflow: auto;
-  padding: var(--spacing-6) var(--spacing-work-x);
+  padding: 0 var(--spacing-work-x);
+  position: absolute;
 }
 
 .app-error {
@@ -75,33 +114,4 @@ button {
 .app-error-code {
   color: var(--muted);
   font: var(--typography-mono);
-}
-
-.card-grid {
-  display: grid;
-  gap: var(--spacing-card-gap-y) var(--spacing-card-gap-x);
-  grid-template-columns: repeat(
-    auto-fill,
-    minmax(var(--spacing-card-min-width), 1fr)
-  );
-}
-
-.card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--rounded-card);
-  box-shadow: var(--elevation-1);
-  padding: var(--spacing-3) var(--spacing-4);
-}
-
-.card h2 {
-  font: var(--typography-card-title);
-  letter-spacing: var(--ls-card-title);
-  margin: 0 0 var(--spacing-2);
-}
-
-.card p {
-  color: var(--ink-2);
-  font: var(--typography-body-sm);
-  margin: 0;
 }

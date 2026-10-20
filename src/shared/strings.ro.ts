@@ -297,6 +297,30 @@ export const appStrings = {
     { keys: 'Ctrl K', action: 'caută' },
     { keys: 'Enter', action: 'deschide' },
   ],
+  loadingLabel: 'Se încarcă catalogul…',
+  categoryBarLabel: 'Categorii',
+  allCategories: 'Toate',
+  scrollCategoriesBack: 'Categoriile anterioare',
+  scrollCategoriesForward: 'Categoriile următoare',
+  cardListLabel: 'Fișe',
+  /** The meta row of a concept that has children. */
+  umbrella: (children: number): string =>
+    `umbrelă · ${plural(children, { one: 'copil', few: 'copii', other: 'de copii' })}`,
+  verificationFlag: 'notă de verificare',
+  /** The stars item of a repo card: „137,7k · 15.10.2026”. */
+  githubStats: (stars: number, pushedAt: string | null): string =>
+    pushedAt === null
+      ? formatCompact(stars)
+      : `${formatCompact(stars)} · ${formatDate(pushedAt)}`,
+  cardHintKey: 'Enter',
+  cardHintAction: 'fișa',
+  moreCategories: (count: number): string => `+${count}`,
+  moreSituations: (count: number): string =>
+    `+${plural(count, { one: 'situație', few: 'situații', other: 'de situații' })}`,
+  emptyCatalogText: 'Spune-i lui Claude ce ai găsit:',
+  emptyCatalogCommand: '/importa',
+  emptyCatalogCommandRest: 'în terminal.',
+  emptyViewTitle: (name: string): string => `Nicio fișă în „${name}” încă.`,
   toastsLabel: 'Notificări',
   toastClose: 'Închide',
   startupTitle: (code: ErrorCode): string =>

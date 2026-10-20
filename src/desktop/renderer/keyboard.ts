@@ -147,15 +147,23 @@ export function installKeyboard(
   return () => target.removeEventListener('keydown', onKeyDown);
 }
 
-/** The frame's bindings: Ctrl+1/2 switch zones, Ctrl+= / − / 0 zoom (also numpad). */
+/**
+ * The frame's bindings: Ctrl+1/2 switch zones, Ctrl+= / − / 0 zoom (also
+ * numpad), [ and ] move to the previous / next category (single keys: they do
+ * nothing in a text field).
+ */
 export function frameBindings({
   selectZone,
   zoom,
+  moveCategory,
 }: {
   selectZone: (index: 0 | 1) => void;
   zoom: Zoom;
+  moveCategory: (delta: -1 | 1) => void;
 }): Binding[] {
   return [
+    { code: 'BracketLeft', shift: false, run: () => moveCategory(-1) },
+    { code: 'BracketRight', shift: false, run: () => moveCategory(1) },
     { code: 'Digit1', ctrl: true, run: () => selectZone(0) },
     { code: 'Digit2', ctrl: true, run: () => selectZone(1) },
     {

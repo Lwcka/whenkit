@@ -1,0 +1,170 @@
+.category-bar {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex: none;
+  gap: var(--category-bar-gap);
+  height: var(--spacing-category-bar-height);
+  padding-left: var(--spacing-bar-x);
+}
+
+.category-bar-label {
+  align-items: center;
+  border-right: 1px solid var(--line);
+  color: var(--muted);
+  display: flex;
+  flex: none;
+  font: var(--typography-label);
+  gap: var(--spacing-2);
+  height: var(--spacing-6);
+  letter-spacing: var(--ls-label);
+  padding-right: var(--spacing-3);
+}
+
+.category-bar-viewport {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  height: 100%;
+  min-width: 0;
+  position: relative;
+}
+
+/* One row that never wraps: it scrolls sideways with the scrollbar hidden.
+   The scroll padding keeps a chip brought into view clear of the fades. */
+.category-bar-chips {
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-2);
+  height: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 var(--spacing-bar-x) 0 var(--spacing-1);
+  scroll-behavior: smooth;
+  scroll-padding-inline: var(--category-bar-fade-width);
+  scrollbar-width: none;
+  width: 100%;
+}
+
+.category-bar-chips::-webkit-scrollbar {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .category-bar-chips {
+    scroll-behavior: auto;
+  }
+}
+
+.category-chip {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--rounded-full);
+  color: var(--ink-2);
+  cursor: pointer;
+  display: flex;
+  flex: none;
+  font: var(--typography-button);
+  gap: var(--spacing-2);
+  height: var(--category-chip-height);
+  padding: 0 var(--spacing-3);
+  transition:
+    background-color var(--motion-quick) var(--motion-ease),
+    border-color var(--motion-quick) var(--motion-ease);
+  white-space: nowrap;
+}
+
+.category-chip[data-all] {
+  --category: var(--ink-2);
+}
+
+.category-chip:hover {
+  background-image: linear-gradient(var(--hover-overlay), var(--hover-overlay));
+  border-color: var(--line-strong);
+}
+
+.category-chip:active {
+  background-image: linear-gradient(
+    var(--pressed-overlay),
+    var(--pressed-overlay)
+  );
+  transform: translateY(var(--pressed-offset));
+}
+
+.category-chip[aria-checked='true'] {
+  background: color-mix(in srgb, var(--category) 11%, var(--surface));
+  border-color: color-mix(in srgb, var(--category) 55%, var(--surface));
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.category-chip-dot {
+  background: var(--category);
+  border-radius: 50%;
+  flex: none;
+  height: var(--category-chip-dot-size);
+  width: var(--category-chip-dot-size);
+}
+
+.category-chip[aria-checked='true'] .category-chip-dot {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--category) 28%, transparent);
+}
+
+.category-chip-count {
+  color: var(--muted);
+  font: var(--typography-mono-sm);
+}
+
+.category-chip[aria-checked='true'] .category-chip-count {
+  color: var(--ink-2);
+}
+
+.category-bar-fade {
+  bottom: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: var(--category-bar-fade-width);
+}
+
+.category-bar-fade[data-side='start'] {
+  background: linear-gradient(270deg, transparent, var(--surface) 55%);
+  left: 0;
+}
+
+.category-bar-fade[data-side='end'] {
+  background: linear-gradient(90deg, transparent, var(--surface) 55%);
+  right: 0;
+}
+
+.category-bar-scroll {
+  align-items: center;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--ink-2);
+  cursor: pointer;
+  display: grid;
+  height: var(--category-bar-scroll-button-size);
+  padding: 0;
+  place-items: center;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: var(--category-bar-scroll-button-size);
+}
+
+.category-bar-scroll:hover {
+  background-image: linear-gradient(var(--hover-overlay), var(--hover-overlay));
+  border-color: var(--line-strong);
+}
+
+.category-bar-scroll[data-side='start'] {
+  left: var(--spacing-2);
+}
+
+.category-bar-scroll[data-side='end'] {
+  right: var(--spacing-4);
+}
