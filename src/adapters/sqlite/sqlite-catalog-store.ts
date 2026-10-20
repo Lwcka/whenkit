@@ -494,6 +494,15 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     }
   }
 
+  setEntryNotes(id: string, notes: string): boolean {
+    // Only my_notes: revision stays, so no terminal update looks like a
+    // conflict with a note (AD-16).
+    const result = this.db
+      .prepare('UPDATE entries SET my_notes = ? WHERE owner_id = ? AND id = ?')
+      .run(notes, this.owner, id);
+    return Number(result.changes) > 0;
+  }
+
   replaceEntryCategories(
     entryId: string,
     categoryIds: readonly string[],

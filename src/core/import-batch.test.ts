@@ -204,6 +204,8 @@ class FakeStore implements CatalogStore {
         };
         this.revisions.set(entry.id, (this.revisions.get(entry.id) ?? 1) + 1);
       },
+      // Notes are not part of this fake: no import writes them (AD-16).
+      setEntryNotes: () => false,
       replaceEntryCategories: (entryId, categoryIds) => {
         const index = indexOf(entryId);
         this.entries[index] = {

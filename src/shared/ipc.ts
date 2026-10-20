@@ -20,8 +20,13 @@ export const IPC_CHANNELS = {
   catalogSnapshot: 'catalog:snapshot',
   catalogChanged: 'catalog:changed',
   entriesSearch: 'entries:search',
+  entriesSetNotes: 'entries:setNotes',
   windowSetTheme: 'window:setTheme',
   shellOpenExternal: 'shell:openExternal',
+  /** Main to renderer: save the pending notes now (AD-20). */
+  windowFlushNotes: 'window:flushNotes',
+  /** Renderer to main: the pending notes are saved (AD-20). */
+  windowNotesFlushed: 'window:notesFlushed',
 } as const;
 
 /** The two themes of the window (AD-20). */
@@ -84,6 +89,18 @@ export interface WhenkitApi {
    * the order of the snapshot (AD-10). The text is plain words (AD-5).
    */
   searchEntries(text: string): Promise<IpcResult<SearchResultDto>>;
+  /**
+   * Replaces the author's notes of an entry (AD-16): no `expectedRevision`,
+   * `revision` unchanged. Answers with the entry as stored (AD-10).
+   */
+  setNotes(id: string, notes: string): Promise<IpcResult<WriteResult>>;
+  /**
+   * Registers what saves the notes still pending when the window closes
+   * (AD-20). Main asks through `window:flushNotes`; preload awaits `flush`
+   * and then answers with `window:notesFlushed`. Returns the function that
+   * stops listening.
+   */
+  onFlushNotes(flush: () => Promise<void>): () => void;
   /**
    * Calls `listener` whenever main saw the catalog change (AD-10); returns
    * the function that stops listening. The event carries no data: the

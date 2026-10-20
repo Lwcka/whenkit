@@ -1,0 +1,71 @@
+/* „Notițele mele” (DESIGN, my-notes): a dashed box with an editable text area. */
+.my-notes {
+  background: var(--my-notes-background);
+  border: var(--my-notes-border);
+  border-radius: var(--my-notes-radius);
+  padding: var(--spacing-4) var(--spacing-5);
+}
+
+.my-notes-head {
+  align-items: baseline;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2) var(--spacing-4);
+  justify-content: space-between;
+  margin: 0 0 var(--spacing-2);
+}
+
+.my-notes-heading {
+  align-items: center;
+  color: var(--my-notes-heading);
+  display: flex;
+  font: var(--typography-title-sm);
+  gap: var(--spacing-2);
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+/* The hint, replaced in turn by the save state; the error takes its own color. */
+.my-notes-status {
+  color: var(--my-notes-hint);
+  font: var(--typography-caption);
+}
+
+.my-notes[data-status='error'] .my-notes-status {
+  color: var(--my-notes-error);
+}
+
+/* „Salvat” fades in (DESIGN motion.quick; 0 ms with animations off). */
+.my-notes[data-status='saved'] .my-notes-status-text {
+  animation: my-notes-fade-in var(--motion-quick) var(--motion-ease);
+}
+
+@keyframes my-notes-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+/* The field is the text itself: no box of its own, it grows with the text. */
+.my-notes-field {
+  background: transparent;
+  border: 0;
+  box-sizing: border-box;
+  caret-color: var(--my-notes-caret);
+  color: var(--ink);
+  display: block;
+  field-sizing: content;
+  font: var(--typography-body);
+  margin: 0;
+  min-height: 4.5em;
+  overflow-wrap: anywhere;
+  padding: 0;
+  resize: none;
+  white-space: pre-wrap;
+  width: 100%;
+}
+
+.my-notes-field::placeholder {
+  color: var(--muted);
+  opacity: 1;
+}

@@ -1,7 +1,17 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { WhenkitError } from '../../core/errors';
-import type { CatalogStore, Environment, FileSystem } from '../../core/ports';
-import { openDesktopCatalog, searchResult, snapshotResult } from './catalog';
+import type {
+  CatalogStore,
+  Environment,
+  FileSystem,
+  StoredEntry,
+} from '../../core/ports';
+import {
+  openDesktopCatalog,
+  searchResult,
+  setNotesResult,
+  snapshotResult,
+} from './catalog';
 
 const env: Environment = {
   get: (name) => (name === 'WHENKIT_WORKSPACE' ? 'D:\\ws' : undefined),
@@ -149,5 +159,120 @@ describe('searchResult', () => {
       ok: false,
       error: { code: 'DATABASE_TOO_NEW' },
     });
+  });
+});
+
+describe('setNotesResult', () => {
+  const stored = {
+    id: 'e1',
+    ownerId: 'o',
+    kind: 'tool',
+    name: 'Tool',
+    url: 'https://tool.dev',
+    resourceType: 'site',
+    categories: [],
+    relatedIds: [],
+    parentIds: [],
+    childIds: [],
+    whatItDoes: '',
+    situations: [],
+    keywords: [],
+    sources: [],
+    content: null,
+    myNotes: '',
+    githubStars: null,
+    githubPushedAt: null,
+    githubArchived: null,
+    verificationNotes: [],
+    forced: false,
+    dedupKey: 'url:tool.dev',
+    revision: 3,
+    addedAt: '2026-10-13T12:00:00.000Z',
+    verifiedAt: null,
+  } satisfies StoredEntry;
+
+  /** A store whose one entry is `stored`; the notes it is given are kept. */
+  const storing = () => {
+    let notes = stored.myNotes;
+    return {
+      writeTransaction: (fn: (writer: unknown) => unknown) =>
+        fn({
+          setEntryNotes: (id: string, text: string) => {
+            if (id !== stored.id) return false;
+            notes = text;
+            return true;
+          },
+          entryById: () => ({ ...stored, myNotes: notes }),
+        }),
+    } as unknown as CatalogStore;
+  };
+  const opened = (store: CatalogStore) =>
+    ({ ok: true, store, workspace: 'D:ws' }) as const;
+
+  it('answers the changed entry and emits', async () => {
+    const emit = vi.fn();
+    const result = await setNotesResult(
+      opened(storing()),
+      'e1',
+      ' ce notez\n',
+      emit,
+    );
+    expect(result).toEqual({
+      ok: true,
+      data: {
+        changed: [
+          expect.objectContaining({
+            id: 'e1',
+            myNotes: ' ce notez\n',
+            revision: 3,
+          }),
+        ],
+      },
+    });
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it.each([
+    [undefined, 'x'],
+    [42, 'x'],
+    ['e1', undefined],
+    ['e1', null],
+    ['e1', 7],
+  ])(
+    'refuses (%j, %j) as ARGUMENTS_INVALID without touching the store',
+    async (id, notes) => {
+      const emit = vi.fn();
+      const store = {
+        writeTransaction: () => {
+          throw new Error('must not be asked');
+        },
+      } as unknown as CatalogStore;
+      await expect(
+        setNotesResult(opened(store), id, notes, emit),
+      ).resolves.toEqual({
+        ok: false,
+        error: { code: 'ARGUMENTS_INVALID' },
+      });
+      expect(emit).not.toHaveBeenCalled();
+    },
+  );
+
+  it('answers ENTRY_NOT_FOUND for an unknown id and does not emit', async () => {
+    const emit = vi.fn();
+    await expect(
+      setNotesResult(opened(storing()), 'ghost', 'x', emit),
+    ).resolves.toEqual({ ok: false, error: { code: 'ENTRY_NOT_FOUND' } });
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('keeps the startup code when the catalog is not open', async () => {
+    await expect(
+      setNotesResult(
+        { ok: false, code: 'DATABASE_TOO_NEW' },
+        'e1',
+        'x',
+        vi.fn(),
+      ),
+    ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
   });
 });

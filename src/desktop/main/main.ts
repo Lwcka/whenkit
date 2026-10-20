@@ -2,6 +2,7 @@ import {
   app,
   BrowserWindow,
   dialog,
+  type IpcMainEvent,
   ipcMain,
   Menu,
   nativeTheme,
@@ -25,8 +26,14 @@ import {
   type Theme,
 } from '../../shared/ipc';
 import { appStrings, mainStrings } from '../../shared/strings.ro';
-import { openDesktopCatalog, searchResult, snapshotResult } from './catalog';
+import {
+  openDesktopCatalog,
+  searchResult,
+  setNotesResult,
+  snapshotResult,
+} from './catalog';
 import { watchCatalog, type CatalogWatcher } from './catalog-watch';
+import { waitForNotesFlush } from './close-flush';
 import { createErrorReporter } from './error-log';
 import { openExternalResult } from './external-link';
 import { isAppNavigation } from './navigation';
@@ -45,6 +52,11 @@ import {
 const DESKTOP_BUSY_TIMEOUT_MS = 2000;
 /** How often main looks for writes of other processes (AD-10). */
 const CATALOG_POLL_INTERVAL_MS = 2000;
+/**
+ * How long closing waits for the renderer to save its pending notes (AD-20).
+ * The store's busy timeout is 2 s, so one save blocked by a lock still fits.
+ */
+const NOTES_FLUSH_TIMEOUT_MS = 3000;
 const DEFAULT_WIDTH = 1200;
 const DEFAULT_HEIGHT = 800;
 const STATE_FILE = 'window-state.json';
@@ -170,7 +182,35 @@ function main(): void {
       },
     });
     mainWindow = window;
-    window.on('close', () => {
+    // AD-20: the first `close` is held back until the renderer has saved its
+    // pending notes (or the wait ran out); the second one saves the window
+    // state and lets the window go.
+    let notesFlushed = false;
+    let flushing = false;
+    window.on('close', (event) => {
+      if (!notesFlushed && !window.webContents.isDestroyed()) {
+        event.preventDefault();
+        if (flushing) return;
+        flushing = true;
+        const { webContents } = window;
+        void waitForNotesFlush({
+          request: () => webContents.send(IPC_CHANNELS.windowFlushNotes),
+          onReply: (callback) => {
+            const listener = (reply: IpcMainEvent) => {
+              if (reply.sender === webContents) callback();
+            };
+            ipcMain.on(IPC_CHANNELS.windowNotesFlushed, listener);
+            return () => {
+              ipcMain.removeListener(IPC_CHANNELS.windowNotesFlushed, listener);
+            };
+          },
+          timeoutMs: NOTES_FLUSH_TIMEOUT_MS,
+        }).then(() => {
+          notesFlushed = true;
+          if (!window.isDestroyed()) window.close();
+        });
+        return;
+      }
       saveState(window);
     });
 
@@ -205,11 +245,31 @@ function main(): void {
           }),
         logError: reporter.log,
       });
+      // Tells the window the catalog changed (AD-10): from the poll below and
+      // from the handlers that write.
+      const notifyCatalogChanged = () => {
+        if (mainWindow === undefined || mainWindow.isDestroyed()) return;
+        const { webContents } = mainWindow;
+        if (!webContents.isDestroyed()) {
+          webContents.send(IPC_CHANNELS.catalogChanged);
+        }
+      };
       ipcMain.handle(IPC_CHANNELS.catalogSnapshot, () =>
         snapshotResult(catalog, reporter.log),
       );
       ipcMain.handle(IPC_CHANNELS.entriesSearch, (_event, text: unknown) =>
         searchResult(catalog, text, reporter.log),
+      );
+      ipcMain.handle(
+        IPC_CHANNELS.entriesSetNotes,
+        (_event, id: unknown, notes: unknown) =>
+          setNotesResult(
+            catalog,
+            id,
+            notes,
+            notifyCatalogChanged,
+            reporter.log,
+          ),
       );
       ipcMain.handle(IPC_CHANNELS.shellOpenExternal, (_event, url: unknown) =>
         openExternalResult(url, (u) => shell.openExternal(u), reporter.log),
@@ -245,15 +305,6 @@ function main(): void {
           }
         },
       );
-      // Tells the window the catalog changed (AD-10): from the poll below and,
-      // later, from the handlers that write.
-      const notifyCatalogChanged = () => {
-        if (mainWindow === undefined || mainWindow.isDestroyed()) return;
-        const { webContents } = mainWindow;
-        if (!webContents.isDestroyed()) {
-          webContents.send(IPC_CHANNELS.catalogChanged);
-        }
-      };
       let watcher: CatalogWatcher | undefined;
       app.on('will-quit', () => {
         // Stop polling first: it reads through the store that closes next.

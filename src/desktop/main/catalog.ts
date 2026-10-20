@@ -12,8 +12,10 @@ import type {
   OpenStoreOptions,
 } from '../../core/ports';
 import { searchEntries } from '../../core/search-entries';
+import { setNotes } from '../../core/set-notes';
 import { catalogPath, resolveWorkspace } from '../../core/workspace';
-import type { IpcResult } from '../../shared/ipc';
+import type { IpcResult, WriteResult } from '../../shared/ipc';
+import { runWrite } from './catalog-watch';
 
 // The window's catalog (AD-10): opened once by main, for writing but without
 // migrating, and read through core. Electron-free so tests can drive it.
@@ -99,4 +101,28 @@ export function searchResult(
   } catch (error) {
     return failure(codeOf(error, logError));
   }
+}
+
+/**
+ * The `entries:setNotes` answer (AD-16, AD-18): replaces the notes of an
+ * entry and answers with the entry as stored. An id or text that is not a
+ * string is `ARGUMENTS_INVALID`. After the write `emit` tells the window
+ * (AD-10). Never throws.
+ */
+export function setNotesResult(
+  opened: DesktopCatalog,
+  id: unknown,
+  notes: unknown,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<WriteResult>> {
+  if (typeof id !== 'string' || typeof notes !== 'string') {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  return runWrite(
+    opened,
+    (store) => ({ changed: [setNotes(store, id, notes)] }),
+    emit,
+    logError,
+  );
 }

@@ -3,10 +3,14 @@ import {
   Check,
   ExternalLink as ExternalLinkIcon,
   Flag,
-  Pencil,
 } from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { isExternalUrl, type EntryDto } from '../../shared/ipc';
+import {
+  isExternalUrl,
+  type EntryDto,
+  type IpcResult,
+  type WriteResult,
+} from '../../shared/ipc';
 import {
   appStrings,
   entryStrings,
@@ -19,6 +23,7 @@ import {
 import { entrySlot, pulseParity, sheetLinks, shortId } from './catalog-view';
 import { ExternalLink } from './external-link';
 import { MarkdownContent } from './markdown-content';
+import { MyNotes } from './my-notes';
 import './entry-sheet.css';
 
 export interface EntrySheetProps {
@@ -34,6 +39,8 @@ export interface EntrySheetProps {
   onOpen: (id: string) => void;
   /** Opens a link in the default browser (AD-9); main checks it again. */
   onOpenExternal: (url: string) => void;
+  /** Saves the author's notes of an entry (AD-16); the store applies the answer. */
+  onSaveNotes: (id: string, notes: string) => Promise<IpcResult<WriteResult>>;
 }
 
 /**
@@ -208,8 +215,9 @@ function TitleBlock({ entry }: { entry: EntryDto }) {
 }
 
 /**
- * The full entry, read-only (DESIGN, entry-sheet): everything of the entry
- * model in the main column, the links and the title block in the side panel.
+ * The full entry (DESIGN, entry-sheet): everything of the entry model in the
+ * main column, the links and the title block in the side panel. Only
+ * „Notițele mele” can be edited here, directly (`MyNotes`).
  * Links open in the default browser through `onOpenExternal`, only when they
  * are http(s); the window itself never navigates (AD-9).
  */
@@ -220,6 +228,7 @@ export function EntrySheet({
   pulses,
   onOpen,
   onOpenExternal,
+  onSaveNotes,
 }: EntrySheetProps) {
   const root = useRef<HTMLElement>(null);
   // What the entry had counted when the sheet opened does not pulse.
@@ -232,7 +241,6 @@ export function EntrySheet({
   const links = sheetLinks(entry, entries);
   const [firstCategory] = entry.categories;
   const mark = (firstCategory?.name ?? entry.name).trim().charAt(0);
-  const notes = entry.myNotes.trim() === '' ? null : entry.myNotes;
 
   return (
     <article
@@ -336,18 +344,12 @@ export function EntrySheet({
           </section>
         )}
 
-        <section className="my-notes">
-          <h2 className="my-notes-heading">
-            <Pencil aria-hidden="true" />
-            {entryStrings.myNotes}
-          </h2>
-          <p
-            className="my-notes-text"
-            data-empty={notes === null ? '' : undefined}
-          >
-            {notes ?? appStrings.notesPlaceholder}
-          </p>
-        </section>
+        <MyNotes
+          key={entry.id}
+          entryId={entry.id}
+          notes={entry.myNotes}
+          onSave={onSaveNotes}
+        />
       </div>
 
       <aside className="sheet-side">

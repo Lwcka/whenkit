@@ -5,6 +5,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './app';
 import { createCatalogStore } from './catalog-store';
+import { flushAllNotes } from './notes-flush';
 import { followSystemTheme } from './theme';
 import './whenkit-api';
 
@@ -24,6 +25,8 @@ const store = createCatalogStore(window.whenkit);
 window.whenkit.onCatalogChanged(() => {
   void store.reload();
 });
+// Closing the window asks for the pending notes to be saved first (AD-20).
+window.whenkit.onFlushNotes(flushAllNotes);
 void store.load();
 
 createRoot(container).render(

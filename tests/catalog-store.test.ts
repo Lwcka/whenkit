@@ -499,10 +499,11 @@ describe('SqliteCatalogStore reads and writes', () => {
       tx.insertEntry(entryRow());
       tx.addEntryCategory('e1', design);
     });
+    expect(
+      store.writeTransaction((tx) => tx.setEntryNotes('e1', 'Notițele mele')),
+    ).toBe(true);
     withRawDb(dbPath, (db) => {
-      db.prepare(
-        "UPDATE entries SET my_notes = 'Notițele mele', forced = 1 WHERE id = 'e1'",
-      ).run();
+      db.prepare("UPDATE entries SET forced = 1 WHERE id = 'e1'").run();
     });
 
     store.writeTransaction((tx) => {
@@ -549,6 +550,23 @@ describe('SqliteCatalogStore reads and writes', () => {
         "INSERT INTO entries_fts (entries_fts, rank) VALUES ('integrity-check', 1)",
       );
     });
+  });
+
+  it('setEntryNotes writes the notes without touching the revision, and reports a missing row', () => {
+    const store = open(newDbPath());
+    store.writeTransaction((tx) => tx.insertEntry(entryRow()));
+    const written = store.writeTransaction((tx) =>
+      tx.setEntryNotes('e1', ' ca la tastatură\n'),
+    );
+    expect(written).toBe(true);
+    expect(store.entryById('e1')).toMatchObject({
+      myNotes: ' ca la tastatură\n',
+      revision: 1,
+    });
+    expect(store.writeTransaction((tx) => tx.setEntryNotes('nope', 'x'))).toBe(
+      false,
+    );
+    store.close();
   });
 
   it('stores the GitHub fields on insert and replaces or clears them on update', () => {

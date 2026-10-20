@@ -1,6 +1,6 @@
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { EntryDto } from '../../shared/ipc';
+import type { EntryDto, IpcResult, WriteResult } from '../../shared/ipc';
 import { EntrySheet } from './entry-sheet';
 import { makeCategory, makeEntry } from './test-fixtures';
 
@@ -15,6 +15,14 @@ const slots = new Map([
   ['c-be', 2],
 ]);
 
+/** An `onSaveNotes` that always succeeds. */
+const savedNotes = () =>
+  Promise.resolve<IpcResult<WriteResult>>({ ok: true, data: { changed: [] } });
+
+function notesField(view: { container: HTMLElement }) {
+  return view.container.querySelector('textarea') as HTMLTextAreaElement;
+}
+
 function sheet(
   entry: EntryDto,
   entries: readonly EntryDto[] = [entry],
@@ -22,6 +30,10 @@ function sheet(
     pulses?: number;
     onOpen?: (id: string) => void;
     onOpenExternal?: (url: string) => void;
+    onSaveNotes?: (
+      id: string,
+      notes: string,
+    ) => Promise<IpcResult<WriteResult>>;
   } = {},
 ) {
   const view = render(
@@ -32,6 +44,7 @@ function sheet(
       pulses={props.pulses ?? 0}
       onOpen={props.onOpen ?? (() => {})}
       onOpenExternal={props.onOpenExternal ?? (() => {})}
+      onSaveNotes={props.onSaveNotes ?? savedNotes}
     />,
   );
   return {
@@ -104,12 +117,11 @@ describe('EntrySheet: a tool with everything', () => {
     ]);
     expect(labels(view)).toContain('Cuvinte-cheie');
     expect(view.texts('.keyword-tag')).toEqual(['fundal', 'background']);
-    expect(view.text('.my-notes-text')).toBe('Gratuit doar la rezoluție mică.');
-    expect(
-      view.container.querySelector('.my-notes-text[data-empty]'),
-    ).toBeNull();
-    // Read-only: nothing to edit or save.
-    expect(view.container.querySelector('textarea, input')).toBeNull();
+    // The notes are the one editable thing: a text area, no input, no button.
+    expect(notesField(view).value).toBe('Gratuit doar la rezoluție mică.');
+    expect(view.container.querySelectorAll('textarea')).toHaveLength(1);
+    expect(view.container.querySelector('input')).toBeNull();
+    expect(view.container.querySelector('.my-notes button')).toBeNull();
   });
 
   it('lists the related entries, skipping unknown ids', () => {
@@ -251,16 +263,12 @@ describe('EntrySheet: the gaps', () => {
     expect(view.container.querySelector('.open-in-browser')).toBeNull();
   });
 
-  it('shows the placeholder when the notes are empty or blank', () => {
-    const view = sheet({ ...bare, myNotes: '  \n ' });
-    expect(view.text('.my-notes-text')).toBe(
+  it('shows the placeholder when the notes are empty', () => {
+    const view = sheet({ ...bare, myNotes: '' });
+    expect(notesField(view).value).toBe('');
+    expect(notesField(view).placeholder).toBe(
       'Scrie aici ce vrei să-ți amintești.',
     );
-    expect(
-      view.container
-        .querySelector('.my-notes-text')
-        ?.hasAttribute('data-empty'),
-    ).toBe(true);
   });
 
   it('lets the last rubric of an odd group span the row', () => {
@@ -365,6 +373,7 @@ describe('EntrySheet: live updates', () => {
         pulses={3}
         onOpen={() => {}}
         onOpenExternal={() => {}}
+        onSaveNotes={savedNotes}
       />,
     );
     expect(view.root().getAttribute('data-pulse')).toBe('a');
@@ -378,6 +387,7 @@ describe('EntrySheet: live updates', () => {
         pulses={4}
         onOpen={() => {}}
         onOpenExternal={() => {}}
+        onSaveNotes={savedNotes}
       />,
     );
     expect(view.root().getAttribute('data-pulse')).toBe('b');
