@@ -63,6 +63,9 @@ export const errorMessages: Record<ErrorCode, string> = {
   BATCH_SCHEMA_OUTDATED:
     'Lotul folosește o versiune a schemei diferită de cea a aplicației. Nu s-a scris nimic. Rulează „whenkit init” ca să actualizezi workspace-ul, apoi refă lotul.',
   ENTRY_NOT_FOUND: 'Nu există nicio fișă cu acest id.',
+  ENTRY_REJECTED: 'Modificarea nu a trecut verificarea.',
+  CONFLICT:
+    'Fișa s-a schimbat din terminal între timp. Modificarea nu s-a salvat.',
   REJECTION_NOT_FOUND:
     'Nu există niciun rând în jurnalul de respinse cu acest id. Nu s-a șters nimic.',
   MIGRATION_MISMATCH:

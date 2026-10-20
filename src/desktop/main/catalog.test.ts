@@ -6,8 +6,10 @@ import type {
   FileSystem,
   StoredEntry,
 } from '../../core/ports';
+import { runWrite } from './catalog-watch';
 import {
   deleteEntryResult,
+  errorDtoOf,
   openDesktopCatalog,
   searchResult,
   setNotesResult,
@@ -380,5 +382,53 @@ describe('deleteEntryResult', () => {
     await expect(
       deleteEntryResult({ ok: false, code: 'DATABASE_TOO_NEW' }, 'a', vi.fn()),
     ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
+  });
+});
+
+describe('errorDtoOf', () => {
+  it('keeps the reasons and issues of a WhenkitError', () => {
+    const error = new WhenkitError('ENTRY_REJECTED', {
+      reasons: [{ code: 'http_error', params: { status: '404' } }],
+      issues: [{ path: ['url', 0], message: 'bad' }],
+    });
+    expect(errorDtoOf(error, () => {})).toEqual({
+      code: 'ENTRY_REJECTED',
+      reasons: [{ code: 'http_error', params: { status: '404' } }],
+      issues: [{ path: ['url', 0], message: 'bad' }],
+    });
+  });
+
+  it('answers the code alone when there is nothing to carry', () => {
+    expect(errorDtoOf(new WhenkitError('CONFLICT'), () => {})).toEqual({
+      code: 'CONFLICT',
+    });
+  });
+
+  it('logs and hides an unexpected error', () => {
+    const logged: unknown[] = [];
+    const failure = new Error('boom');
+    expect(errorDtoOf(failure, (e) => logged.push(e))).toEqual({
+      code: 'INTERNAL',
+    });
+    expect(logged).toEqual([failure]);
+  });
+
+  it('reaches the window through runWrite', async () => {
+    const result = await runWrite(
+      { ok: true, store: {} as CatalogStore, workspace: 'D:ws' },
+      () => {
+        throw new WhenkitError('ENTRY_REJECTED', {
+          reasons: [{ code: 'blocked_domain', params: { domain: 'x.dev' } }],
+        });
+      },
+      vi.fn(),
+    );
+    expect(result).toEqual({
+      ok: false,
+      error: {
+        code: 'ENTRY_REJECTED',
+        reasons: [{ code: 'blocked_domain', params: { domain: 'x.dev' } }],
+      },
+    });
   });
 });

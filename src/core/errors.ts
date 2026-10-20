@@ -1,6 +1,8 @@
 // Closed set of error codes (AD-18). Texts live in src/shared/strings.ro.ts;
 // exit codes in src/cli/exit-codes.ts.
 
+import type { VerdictReason } from './verification/reason-codes';
+
 export const ERROR_CODES = [
   'WORKSPACE_NOT_CONFIGURED',
   'WORKSPACE_INSIDE_REPO',
@@ -10,6 +12,8 @@ export const ERROR_CODES = [
   'BATCH_INVALID',
   'BATCH_SCHEMA_OUTDATED',
   'ENTRY_NOT_FOUND',
+  'ENTRY_REJECTED',
+  'CONFLICT',
   'REJECTION_NOT_FOUND',
   'MIGRATION_MISMATCH',
   'DATABASE_TOO_NEW',
@@ -37,10 +41,17 @@ export interface ErrorIssue {
 export class WhenkitError extends Error {
   readonly code: ErrorCode;
   readonly issues: readonly ErrorIssue[] | undefined;
+  /** Why an edit was rejected (ENTRY_REJECTED): the verdict's reasons (AD-15). */
+  readonly reasons: readonly VerdictReason[] | undefined;
 
   constructor(
     code: ErrorCode,
-    options?: { cause?: unknown; detail?: string; issues?: ErrorIssue[] },
+    options?: {
+      cause?: unknown;
+      detail?: string;
+      issues?: ErrorIssue[];
+      reasons?: VerdictReason[];
+    },
   ) {
     super(options?.detail ? `${code}: ${options.detail}` : code, {
       cause: options?.cause,
@@ -48,6 +59,7 @@ export class WhenkitError extends Error {
     this.name = 'WhenkitError';
     this.code = code;
     this.issues = options?.issues;
+    this.reasons = options?.reasons;
   }
 }
 

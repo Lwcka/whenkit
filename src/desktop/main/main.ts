@@ -15,9 +15,15 @@ import { pathToFileURL } from 'node:url';
 import started from 'electron-squirrel-startup';
 import { createProcessEnvironment } from '../../adapters/env/process-environment';
 import { nodeFileSystem } from '../../adapters/fs/node-file-system';
+import { createGitHubClient } from '../../adapters/github/node-github-client';
+import { createHttpClient } from '../../adapters/http/node-http-client';
 import { openCatalogStore } from '../../adapters/sqlite/sqlite-catalog-store';
 import { randomIdGenerator, systemClock } from '../../adapters/system';
-import { desktopDataDir, resolveWorkspace } from '../../core/workspace';
+import {
+  desktopDataDir,
+  readBlockedDomains,
+  resolveWorkspace,
+} from '../../core/workspace';
 import {
   IPC_CHANNELS,
   isTheme,
@@ -28,6 +34,7 @@ import {
 import { appStrings, mainStrings } from '../../shared/strings.ro';
 import {
   openDesktopCatalog,
+  patchEntryResult,
   searchResult,
   setNotesResult,
   deleteEntryResult,
@@ -274,6 +281,23 @@ function main(): void {
       );
       ipcMain.handle(IPC_CHANNELS.entriesDelete, (_event, id: unknown) =>
         deleteEntryResult(catalog, id, notifyCatalogChanged, reporter.log),
+      );
+      // The same link checks as the CLI's import (AD-3), created once.
+      const patchDeps = {
+        http: createHttpClient(),
+        github: createGitHubClient(),
+        clock: systemClock,
+        readBlockedDomains: (workspace: string) =>
+          readBlockedDomains(workspace, { env, fs: nodeFileSystem }),
+      };
+      ipcMain.handle(IPC_CHANNELS.entriesPatch, (_event, input: unknown) =>
+        patchEntryResult(
+          catalog,
+          input,
+          patchDeps,
+          notifyCatalogChanged,
+          reporter.log,
+        ),
       );
       ipcMain.handle(IPC_CHANNELS.shellOpenExternal, (_event, url: unknown) =>
         openExternalResult(url, (u) => shell.openExternal(u), reporter.log),

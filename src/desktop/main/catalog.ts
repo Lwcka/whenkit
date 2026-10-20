@@ -2,14 +2,19 @@ import { catalogSnapshot } from '../../core/catalog-snapshot';
 import { deleteEntry } from '../../core/delete-entry';
 import type {
   CatalogSnapshotDto,
+  EntryPatch,
   ErrorDto,
   SearchResultDto,
 } from '../../core/dto';
 import { isWhenkitError, type ErrorCode } from '../../core/errors';
+import { patchEntry } from '../../core/patch-entry';
 import type {
   CatalogStore,
+  Clock,
   Environment,
   FileSystem,
+  GitHubClient,
+  HttpClient,
   OpenStoreOptions,
 } from '../../core/ports';
 import { searchEntries } from '../../core/search-entries';
@@ -66,6 +71,32 @@ export function openDesktopCatalog({
   } catch (error) {
     return { ok: false, code: codeOf(error, logError) };
   }
+}
+
+/**
+ * The error a handler answers with: the code, plus the reasons and issues a
+ * WhenkitError carries, so the window can explain an edit that was refused.
+ */
+export function errorDtoOf(
+  error: unknown,
+  logError: (error: unknown) => void,
+): ErrorDto {
+  const code = codeOf(error, logError);
+  if (!isWhenkitError(error)) return { code };
+  return {
+    code,
+    ...(error.reasons === undefined || error.reasons.length === 0
+      ? {}
+      : { reasons: error.reasons.map((reason) => ({ ...reason })) }),
+    ...(error.issues === undefined || error.issues.length === 0
+      ? {}
+      : {
+          issues: error.issues.map(({ path, message }) => ({
+            path: [...path],
+            message,
+          })),
+        }),
+  };
 }
 
 /** The failure answer of a handler (AD-18). */
@@ -149,6 +180,76 @@ export function deleteEntryResult(
       const { removed, changed } = deleteEntry(store, id);
       return { changed, removed: [removed] };
     },
+    emit,
+    logError,
+  );
+}
+
+/** What `entries:patch` needs besides the store: the real adapters (AD-2). */
+export interface PatchEntryDeps {
+  http: HttpClient;
+  github: GitHubClient;
+  clock: Clock;
+  /** The workspace's blocked-domain rules, read on every patch. */
+  readBlockedDomains: (workspace: string) => string[];
+  /** Pause before a link check is retried; the verification default when unset. */
+  retryDelayMs?: number;
+}
+
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+/**
+ * The `entries:patch` answer (AD-3, AD-16, AD-18): edits the fields of an
+ * entry through core's patchEntry and answers with the entry as stored. A
+ * payload that is not `{ id: string, expectedRevision: integer, changes }` is
+ * `ARGUMENTS_INVALID`; core validates `changes`. A refused edit keeps its
+ * reasons or issues in the error. After the write `emit` tells the window
+ * (AD-10). Never throws.
+ */
+export function patchEntryResult(
+  opened: DesktopCatalog,
+  input: unknown,
+  deps: PatchEntryDeps,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<WriteResult>> {
+  if (
+    !isPlainObject(input) ||
+    typeof input.id !== 'string' ||
+    typeof input.expectedRevision !== 'number' ||
+    !Number.isInteger(input.expectedRevision)
+  ) {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  const { id, expectedRevision, changes } = input as {
+    id: string;
+    expectedRevision: number;
+    changes: unknown;
+  };
+  if (!opened.ok) return Promise.resolve(failure(opened.code));
+  const { workspace } = opened;
+  return runWrite(
+    opened,
+    async (store) => ({
+      changed: [
+        await patchEntry(
+          store,
+          {
+            verification: () => ({
+              http: deps.http,
+              github: deps.github,
+              blockedDomains: deps.readBlockedDomains(workspace),
+              retryDelayMs: deps.retryDelayMs,
+              now: deps.clock.now(),
+            }),
+            clock: deps.clock,
+          },
+          { id, expectedRevision, changes: changes as EntryPatch },
+        ),
+      ],
+    }),
     emit,
     logError,
   );
