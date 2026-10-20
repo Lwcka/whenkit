@@ -1,0 +1,70 @@
+.empty-state {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  justify-content: center;
+  margin: var(--spacing-8) auto;
+  max-width: 28rem;
+  padding: var(--spacing-6);
+  text-align: center;
+}
+
+.empty-state-target {
+  height: var(--empty-state-target-size);
+  width: var(--empty-state-target-size);
+}
+
+.empty-state[data-size='small'] .empty-state-target {
+  height: var(--empty-state-target-size-small);
+  width: var(--empty-state-target-size-small);
+}
+
+.empty-state-ring {
+  fill: none;
+  stroke: var(--line-strong);
+  stroke-dasharray: 2 4;
+  stroke-linecap: round;
+}
+
+.empty-state-cross {
+  fill: none;
+  stroke: var(--accent);
+  stroke-linecap: round;
+  stroke-width: var(--icon-stroke);
+}
+
+.empty-state-center {
+  fill: var(--signal);
+}
+
+.empty-state-title {
+  color: var(--ink);
+  font: var(--typography-headline);
+  letter-spacing: var(--ls-headline);
+  margin: 0;
+}
+
+.empty-state[data-size='small'] .empty-state-title {
+  font: var(--typography-tab);
+  letter-spacing: var(--ls-tab);
+}
+
+.empty-state-text {
+  color: var(--ink-2);
+  font: var(--typography-body);
+  margin: 0;
+}
+
+.empty-state-command {
+  background: var(--surface-2);
+  border-radius: var(--rounded-sm);
+  color: var(--ink-2);
+  font: var(--typography-mono);
+  margin: 0;
+  padding: var(--spacing-1) var(--spacing-2);
+}
+
+.empty-state-command-name {
+  color: var(--accent);
+}

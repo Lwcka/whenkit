@@ -1,0 +1,88 @@
+.section-header {
+  --dimension-line: color-mix(in srgb, var(--accent) 45%, var(--canvas));
+  align-items: center;
+  display: flex;
+  gap: var(--spacing-4);
+  padding: var(--spacing-6) 0 var(--spacing-5);
+}
+
+/* „Toate” has no slot. */
+.section-header:not([data-slot]) {
+  --category: var(--ink-2);
+}
+
+.section-header-name {
+  align-items: center;
+  color: var(--ink);
+  display: flex;
+  font: var(--typography-headline);
+  gap: var(--spacing-3);
+  letter-spacing: var(--ls-headline);
+  margin: 0;
+  white-space: nowrap;
+}
+
+.section-header-tab {
+  background: var(--category);
+  border-radius: var(--spacing-1) var(--spacing-1) 0 0;
+  height: var(--section-header-tab-height);
+  width: var(--section-header-tab-width);
+}
+
+/* The dimension line: a hairline with a tick at each end, slanted caps and the
+   label centered on a canvas-colored patch that interrupts the line. */
+.section-header-dimension {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  height: var(--spacing-4);
+  justify-content: center;
+  min-width: var(--spacing-8);
+  position: relative;
+}
+
+.section-header-dimension::before {
+  border-top: 1px solid var(--dimension-line);
+  content: '';
+  left: 0;
+  position: absolute;
+  right: 0;
+  top: 50%;
+}
+
+.section-header-dimension::after {
+  background:
+    linear-gradient(var(--dimension-line), var(--dimension-line)) left / 1px
+      100% no-repeat,
+    linear-gradient(var(--dimension-line), var(--dimension-line)) right / 1px
+      100% no-repeat;
+  content: '';
+  inset: 2px 0;
+  position: absolute;
+}
+
+.section-header-cap {
+  background: var(--accent);
+  height: 1.5px;
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%) rotate(-45deg);
+  width: var(--spacing-2);
+}
+
+.section-header-cap:first-child {
+  left: 0;
+}
+
+.section-header-cap:nth-child(2) {
+  left: 100%;
+}
+
+.section-header-label {
+  background: var(--canvas);
+  color: var(--muted);
+  font: var(--typography-mono);
+  padding: 0 var(--spacing-3);
+  position: relative;
+  white-space: nowrap;
+}

@@ -215,7 +215,9 @@ describe('zoom', () => {
   it('is driven by Ctrl+=, Ctrl+-, Ctrl+0 and the numpad', () => {
     const applied: number[] = [];
     const zoom = createZoom((factor) => applied.push(factor));
-    uninstall = installKeyboard(frameBindings({ selectZone: () => {}, zoom }));
+    uninstall = installKeyboard(
+      frameBindings({ selectZone: () => {}, zoom, moveCategory: () => {} }),
+    );
 
     press('Equal', { ctrlKey: true });
     press('NumpadAdd', { ctrlKey: true });
@@ -237,6 +239,7 @@ describe('frame bindings', () => {
       frameBindings({
         selectZone: (index) => selected.push(index),
         zoom: createZoom(() => {}),
+        moveCategory: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -245,5 +248,26 @@ describe('frame bindings', () => {
     press('Digit2', { ctrlKey: true }, input);
     press('Digit1', { ctrlKey: true }, input);
     expect(selected).toEqual([1, 0]);
+  });
+
+  it('[ and ] move the category, but not from a text field', () => {
+    const moves: number[] = [];
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => {},
+        zoom: createZoom(() => {}),
+        moveCategory: (delta) => moves.push(delta),
+      }),
+    );
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    press('BracketRight');
+    press('BracketLeft');
+    press('BracketRight', {}, input);
+    press('BracketLeft', { ctrlKey: true });
+    press('BracketRight', { shiftKey: true });
+    press('BracketLeft', { shiftKey: true });
+    expect(moves).toEqual([1, -1]);
   });
 });
