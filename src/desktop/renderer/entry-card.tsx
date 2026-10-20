@@ -20,6 +20,8 @@ export interface EntryCardProps {
   index: number;
   tabIndex: 0 | -1;
   onFocus?: () => void;
+  /** Click, or Enter on the focused card: open the entry's sheet. */
+  onOpen?: () => void;
   /**
    * The text of the arrival tape („Adăugat · acum 3 s”); present only while
    * the entry is a fresh arrival, which also gives the card its ring.
@@ -99,8 +101,8 @@ function Footer({ entry, hidden }: { entry: EntryDto; hidden: number }) {
 
 /**
  * The card of an entry (DESIGN, entry-card). It is a button named by the
- * entry; opening the sheet comes later, so for now it only takes focus, and
- * the selected look shows when the focus came from the keyboard.
+ * entry: a click or Enter opens the sheet. The selected look shows when the
+ * focus came from the keyboard.
  */
 export function EntryCard({
   entry,
@@ -108,6 +110,7 @@ export function EntryCard({
   index,
   tabIndex,
   onFocus,
+  onOpen,
   tape,
   pulse,
 }: EntryCardProps) {
@@ -124,7 +127,24 @@ export function EntryCard({
       data-slot={slot ?? undefined}
       data-new={tape === undefined ? undefined : ''}
       data-pulse={pulse}
+      data-entry-id={entry.id}
       onFocus={onFocus}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        // Only Enter on the card itself, with no modifier (the arrows belong
+        // to the grid).
+        if (
+          (event.code !== 'Enter' && event.code !== 'NumpadEnter') ||
+          event.target !== event.currentTarget ||
+          event.ctrlKey ||
+          event.altKey ||
+          event.metaKey ||
+          event.shiftKey
+        )
+          return;
+        event.preventDefault();
+        onOpen?.();
+      }}
     >
       {tape !== undefined && (
         <span className="arrival-tape" aria-hidden="true">

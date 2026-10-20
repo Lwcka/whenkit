@@ -492,3 +492,55 @@ describe('catalog store: subscribers', () => {
     expect(listener).toHaveBeenCalledTimes(1);
   });
 });
+
+describe('catalog store: dismissArrival', () => {
+  async function withArrival() {
+    const h = harness();
+    h.next(snapshot(entry('a')));
+    await h.store.load();
+    h.next(snapshot(entry('n'), entry('a')));
+    await h.store.reload();
+    return h;
+  }
+
+  it('drops the arrival and tells the subscribers', async () => {
+    const h = await withArrival();
+    expect(ready(h.store).arrivals.has('n')).toBe(true);
+    const listener = vi.fn();
+    h.store.subscribe(listener);
+
+    h.store.dismissArrival('n');
+
+    const state = ready(h.store);
+    expect(state.arrivals.has('n')).toBe(false);
+    expect(names(state)).toEqual(['n', 'a']);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('stays gone after the next reload', async () => {
+    const h = await withArrival();
+    h.store.dismissArrival('n');
+    h.next(snapshot(entry('n'), entry('a')));
+    await h.store.reload();
+    expect(ready(h.store).arrivals.size).toBe(0);
+  });
+
+  it('is a no-op for an entry that is not an arrival', async () => {
+    const h = await withArrival();
+    const listener = vi.fn();
+    h.store.subscribe(listener);
+    const before = h.store.getState();
+
+    h.store.dismissArrival('a');
+    h.store.dismissArrival('unknown');
+
+    expect(h.store.getState()).toBe(before);
+    expect(listener).not.toHaveBeenCalled();
+  });
+
+  it('is a no-op before the catalog is ready', () => {
+    const h = harness();
+    h.store.dismissArrival('n');
+    expect(h.store.getState()).toEqual({ status: 'loading' });
+  });
+});

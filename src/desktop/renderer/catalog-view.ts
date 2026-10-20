@@ -194,13 +194,14 @@ const ZONE_ORDER: readonly Zone[] = ['toolbox', 'learn'];
 
 /**
  * The toasts of an arrival, one per zone and Toolbox first (EXPERIENCE,
- * toast): a single entry names itself and its category, several are counted
- * and get „Vezi”, which calls `onSee` with their zone. Zones with no arrival
- * get none.
+ * toast): a single entry names itself and its category and gets „Deschide”,
+ * which calls `onOpen` with its id; several are counted and get „Vezi”, which
+ * calls `onSee` with their zone. Zones with no arrival get none.
  */
 export function arrivalToasts(
   arrived: readonly EntryDto[],
   onSee: (zone: Zone) => void,
+  onOpen: (id: string) => void,
 ): ToastInput[] {
   const toasts: ToastInput[] = [];
   for (const zone of ZONE_ORDER) {
@@ -215,6 +216,10 @@ export function arrivalToasts(
           zoneLabels[zone],
           first.categories[0]?.name ?? null,
         ),
+        action: {
+          label: appStrings.arrivalToastOpen,
+          run: () => onOpen(first.id),
+        },
       });
     } else {
       toasts.push({
@@ -228,4 +233,67 @@ export function arrivalToasts(
     }
   }
   return toasts;
+}
+
+/** The color slot of an entry: the one of its first category, if it has any. */
+export function entrySlot(
+  entry: EntryDto,
+  slots: ReadonlyMap<string, number>,
+): number | null {
+  // Categories arrive sorted by name_key: the first one colors the entry.
+  const first = entry.categories[0];
+  return first === undefined ? null : (slots.get(first.id) ?? null);
+}
+
+/**
+ * The pulse of an update from the terminal: the parity of the store's counter
+ * for the entry, once it differs from what was counted when the view mounted.
+ * A change of value restarts the animation.
+ */
+export function pulseParity(
+  count: number,
+  atMount: number,
+): 'a' | 'b' | undefined {
+  if (count === atMount) return undefined;
+  return count % 2 === 0 ? 'b' : 'a';
+}
+
+/** The breadcrumbs of a sheet: „Toolbox / Imagini & video / remove.bg”. */
+export function sheetCrumbs(entry: EntryDto): string[] {
+  const [first] = entry.categories;
+  return [
+    zoneLabels[entry.zone],
+    ...(first === undefined ? [] : [first.name]),
+    entry.name,
+  ];
+}
+
+/** An id shortened to its first and last four characters: `7f3c…e21a`. */
+export function shortId(id: string): string {
+  return id.length <= 9 ? id : `${id.slice(0, 4)}…${id.slice(-4)}`;
+}
+
+/** The entries a sheet links to, in the order of the entry's own lists. */
+export interface SheetLinks {
+  children: EntryDto[];
+  parents: EntryDto[];
+  related: EntryDto[];
+}
+
+/** The linked entries of `entry`; ids the snapshot does not know are skipped. */
+export function sheetLinks(
+  entry: EntryDto,
+  entries: readonly EntryDto[],
+): SheetLinks {
+  const byId = new Map(entries.map((candidate) => [candidate.id, candidate]));
+  const pick = (ids: readonly string[]): EntryDto[] =>
+    ids.flatMap((id) => {
+      const found = byId.get(id);
+      return found === undefined ? [] : [found];
+    });
+  return {
+    children: pick(entry.childIds),
+    parents: pick(entry.parentIds),
+    related: pick(entry.relatedIds),
+  };
 }

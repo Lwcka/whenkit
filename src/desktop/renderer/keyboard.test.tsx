@@ -221,6 +221,8 @@ describe('zoom', () => {
         zoom,
         moveCategory: () => {},
         focusSearch: () => {},
+        back: () => {},
+        sheetOpen: () => false,
       }),
     );
 
@@ -246,6 +248,8 @@ describe('frame bindings', () => {
         zoom: createZoom(() => {}),
         moveCategory: () => {},
         focusSearch: () => {},
+        back: () => {},
+        sheetOpen: () => false,
       }),
     );
     const input = document.createElement('input');
@@ -264,6 +268,8 @@ describe('frame bindings', () => {
         zoom: createZoom(() => {}),
         moveCategory: (delta) => moves.push(delta),
         focusSearch: () => {},
+        back: () => {},
+        sheetOpen: () => false,
       }),
     );
     const input = document.createElement('input');
@@ -286,6 +292,8 @@ describe('frame bindings', () => {
         zoom: createZoom(() => {}),
         moveCategory: () => {},
         focusSearch: () => focused++,
+        back: () => {},
+        sheetOpen: () => false,
       }),
     );
     const input = document.createElement('input');
@@ -296,5 +304,33 @@ describe('frame bindings', () => {
     press('KeyK');
     press('KeyF', { ctrlKey: true, altKey: true });
     expect(focused).toBe(2);
+  });
+
+  it('Alt+Left goes back only while a sheet is open, also from a text field', () => {
+    let open = false;
+    let backs = 0;
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => {},
+        zoom: createZoom(() => {}),
+        moveCategory: () => {},
+        focusSearch: () => {},
+        back: () => backs++,
+        sheetOpen: () => open,
+      }),
+    );
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    press('ArrowLeft', { altKey: true });
+    expect(backs).toBe(0);
+
+    open = true;
+    const event = press('ArrowLeft', { altKey: true });
+    press('ArrowLeft', { altKey: true }, input);
+    press('ArrowLeft'); // without Alt: the grid's arrow, not a back
+    press('ArrowLeft', { altKey: true, ctrlKey: true });
+    expect(backs).toBe(2);
+    expect(event.defaultPrevented).toBe(true);
   });
 });

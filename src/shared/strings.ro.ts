@@ -387,6 +387,37 @@ export const appStrings = {
     ` în ${zone}`,
   ],
   arrivalToastSee: 'Vezi',
+  /** The action of a single-entry arrival toast. */
+  arrivalToastOpen: 'Deschide',
+  /** The key hints while a sheet is open (EXPERIENCE, status-bar). */
+  sheetKeyHints: [{ keys: 'Esc', action: 'înapoi' }],
+  /** The window title with a sheet open: „remove.bg — WhenKit”. */
+  sheetWindowTitle: (name: string): string =>
+    `${name} — ${appStrings.productName}`,
+  sheetBack: 'Înapoi',
+  sheetCrumbsLabel: 'Poziția fișei',
+  sheetLabel: (name: string): string => `Fișa ${name}`,
+  /** „Când o folosesc · 4”. */
+  sheetSituations: (kind: EntryKind, count: number): string =>
+    `${entryStrings.situations(kind)} · ${count}`,
+  /** The side lists: an umbrella's children, a child's umbrellas, related entries. */
+  sheetChildren: (count: number): string => `Concepte · ${count}`,
+  sheetParents: 'Face parte din',
+  sheetRelated: (count: number): string => `Resurse înrudite · ${count}`,
+  /** The read-only notes box when nothing was written yet. */
+  notesPlaceholder: 'Scrie aici ce vrei să-ți amintești.',
+  /** The title block: „FIȘĂ · UNEALTĂ” and „rev. 3”. */
+  titleBlockLabel: 'Bloc de titlu',
+  titleBlockHead: (kind: EntryKind): string =>
+    `FIȘĂ · ${kindLabels[kind].toUpperCase()}`,
+  titleBlockRevision: (revision: number): string => `rev. ${revision}`,
+  titleBlockZone: 'Zonă',
+  titleBlockType: 'Tip',
+  titleBlockAdded: 'Adăugată',
+  titleBlockVerified: 'Verificată',
+  titleBlockId: 'Id',
+  titleBlockStars: 'Stele',
+  titleBlockLastCommit: 'Ultimul commit',
   reloadFailed: 'Nu am putut reîncărca catalogul.',
   toastsLabel: 'Notificări',
   toastClose: 'Închide',

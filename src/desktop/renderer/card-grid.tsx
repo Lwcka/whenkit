@@ -1,7 +1,13 @@
 import { useLayoutEffect, useRef, useState, type KeyboardEvent } from 'react';
 import type { EntryDto } from '../../shared/ipc';
 import { appStrings } from '../../shared/strings.ro';
-import { isGridKey, isNew, nextGridIndex } from './catalog-view';
+import {
+  entrySlot,
+  isGridKey,
+  isNew,
+  nextGridIndex,
+  pulseParity,
+} from './catalog-view';
 import { EntryCard, EntryCardSkeleton } from './entry-card';
 import './card-grid.css';
 
@@ -29,6 +35,10 @@ export interface CardGridProps {
   pulses?: ReadonlyMap<string, number>;
   /** The clock of the tape text and of the tape's lifetime (ms). */
   now?: number;
+  /** Opens the sheet of an entry (click, Enter). */
+  onOpen?: (id: string) => void;
+  /** The card that is the Tab stop at first (the one a sheet was opened from). */
+  initialActiveId?: string;
 }
 
 const NONE: ReadonlyMap<string, number> = new Map();
@@ -63,6 +73,8 @@ function Cards({
   arrivals = NONE,
   pulses = NONE,
   now = 0,
+  onOpen,
+  initialActiveId,
 }: Omit<CardGridProps, 'viewKey'>) {
   const list = useRef<HTMLUListElement>(null);
   const layout = useRef<Layout | null>(null);
@@ -104,7 +116,9 @@ function Cards({
     });
   });
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(
+    initialActiveId ?? null,
+  );
   const found = entries.findIndex((entry) => entry.id === activeId);
   const active = found < 0 ? 0 : found;
 
@@ -139,12 +153,16 @@ function Cards({
         >
           <EntryCard
             entry={entry}
-            slot={slotOf(entry, slots)}
+            slot={entrySlot(entry, slots)}
             index={index}
             tabIndex={index === active ? 0 : -1}
             onFocus={() => setActiveId(entry.id)}
+            onOpen={() => onOpen?.(entry.id)}
             tape={tapeOf(entry.id, arrivals, now)}
-            pulse={pulseOf(entry.id, pulses, mountedPulses.current)}
+            pulse={pulseParity(
+              pulses.get(entry.id) ?? 0,
+              mountedPulses.current.get(entry.id) ?? 0,
+            )}
           />
         </li>
       ))}
@@ -161,25 +179,6 @@ function tapeOf(
   return arrivedAt !== undefined && isNew(arrivedAt, now)
     ? appStrings.arrivalTape(now - arrivedAt)
     : undefined;
-}
-
-function pulseOf(
-  id: string,
-  pulses: ReadonlyMap<string, number>,
-  atMount: ReadonlyMap<string, number>,
-): 'a' | 'b' | undefined {
-  const count = pulses.get(id) ?? 0;
-  if (count === (atMount.get(id) ?? 0)) return undefined;
-  return count % 2 === 0 ? 'b' : 'a';
-}
-
-function slotOf(
-  entry: EntryDto,
-  slots: ReadonlyMap<string, number>,
-): number | null {
-  // Categories arrive sorted by name_key: the first one colors the card.
-  const first = entry.categories[0];
-  return first === undefined ? null : (slots.get(first.id) ?? null);
 }
 
 /** The placeholder grid shown when the first load is slow. */

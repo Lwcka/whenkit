@@ -193,6 +193,12 @@
   --entry-card-body-lines: 2;
   --empty-state-target-size: 120px;
   --empty-state-target-size-small: 72px;
+  --entry-sheet-tab-width: 84px;
+  --entry-sheet-tab-height: 11px;
+  --entry-sheet-tab-left: 40px;
+  --entry-sheet-mark-size: 50px;
+  --entry-sheet-pulse-ring: 0 0 0 3px var(--accent);
+  --situation-callout-number-size: 26px;
 }
 
 :root[data-theme='light'] {

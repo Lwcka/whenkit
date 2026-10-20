@@ -1,0 +1,43 @@
+/* sheet-bar (DESIGN, sheet-bar): replaces the category bar while a sheet shows. */
+.sheet-bar {
+  align-items: center;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  flex: none;
+  gap: var(--spacing-3);
+  height: var(--spacing-sheet-bar-height);
+  padding: 0 var(--spacing-bar-x);
+}
+
+.sheet-bar nav {
+  min-width: 0;
+}
+
+.sheet-bar-crumbs {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--typography-body-sm);
+  gap: var(--spacing-2);
+  list-style: none;
+  margin: 0;
+  min-width: 0;
+  padding: 0;
+  white-space: nowrap;
+}
+
+/* The slash between two crumbs. */
+.crumb + .crumb::before {
+  color: var(--line-strong);
+  content: '/';
+  margin-right: var(--spacing-2);
+}
+
+.crumb[data-current] {
+  color: var(--ink);
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

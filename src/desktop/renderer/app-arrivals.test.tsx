@@ -109,7 +109,7 @@ describe('App: an arrival in the current view', () => {
       {
         kind: 'arrival',
         text: 'Fișă nouă: n · Toolbox / Imagini & video',
-        action: null,
+        action: 'Deschide',
       },
     ]);
   });
@@ -180,7 +180,7 @@ describe('App: an arrival elsewhere', () => {
       {
         kind: 'arrival',
         text: 'Fișă nouă: Webhook · Learn / Backend & API-uri',
-        action: null,
+        action: 'Deschide',
       },
     ]);
   });
@@ -223,7 +223,7 @@ describe('App: batches', () => {
       {
         kind: 'arrival',
         text: 'Fișă nouă: Webhook · Learn / Backend & API-uri',
-        action: null,
+        action: 'Deschide',
       },
     ]);
     expect(
