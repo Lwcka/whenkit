@@ -21,6 +21,7 @@ export const IPC_CHANNELS = {
   catalogChanged: 'catalog:changed',
   entriesSearch: 'entries:search',
   windowSetTheme: 'window:setTheme',
+  shellOpenExternal: 'shell:openExternal',
 } as const;
 
 /** The two themes of the window (AD-20). */
@@ -28,6 +29,22 @@ export type Theme = 'light' | 'dark';
 
 export function isTheme(value: unknown): value is Theme {
   return value === 'light' || value === 'dark';
+}
+
+/**
+ * Whether `value` is a link the window may hand to the default browser
+ * (AD-9): a parseable URL with the `http:` or `https:` scheme. Both the
+ * renderer (to decide what is a link) and main (the security boundary, which
+ * does not trust the renderer) use this one check.
+ */
+export function isExternalUrl(value: unknown): value is string {
+  if (typeof value !== 'string') return false;
+  try {
+    const { protocol } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:';
+  } catch {
+    return false;
+  }
 }
 
 /** Main hands the resolved workspace to preload as `--whenkit-workspace=<path>`. */
@@ -74,6 +91,11 @@ export interface WhenkitApi {
    */
   onCatalogChanged(listener: () => void): () => void;
   setTheme(theme: Theme): Promise<IpcResult<null>>;
+  /**
+   * Opens `url` in the default browser (AD-9). Main refuses anything but
+   * `http:`/`https:` with `ARGUMENTS_INVALID`; the window never navigates.
+   */
+  openExternal(url: string): Promise<IpcResult<null>>;
   /** Zooms the whole interface (preload `webFrame`; no IPC, nothing persisted). */
   setZoomFactor(factor: number): void;
 }

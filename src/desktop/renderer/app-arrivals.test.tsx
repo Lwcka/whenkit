@@ -27,6 +27,7 @@ const api: FrameApi = {
   searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
+  openExternal: () => Promise.resolve({ ok: true, data: null }),
 };
 
 function snapshot(...entries: EntryDto[]): IpcResult<CatalogSnapshotDto> {

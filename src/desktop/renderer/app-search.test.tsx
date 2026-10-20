@@ -59,6 +59,7 @@ const api: FrameApi = {
   workspacePath: 'C:\\ws',
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
+  openExternal: () => Promise.resolve({ ok: true, data: null }),
   searchEntries: (text) => {
     asked.push(text);
     if (failing) {

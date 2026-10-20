@@ -47,7 +47,11 @@ import { Toolbar, ZONE_ORDER } from './toolbar';
 /** What the frame needs from the bridge. */
 export type FrameApi = Pick<
   WhenkitApi,
-  'searchEntries' | 'setTheme' | 'setZoomFactor' | 'workspacePath'
+  | 'openExternal'
+  | 'searchEntries'
+  | 'setTheme'
+  | 'setZoomFactor'
+  | 'workspacePath'
 >;
 
 /** DESIGN motion.skeleton-delay (200 ms), mirrored from tokens.css for the timer. */
@@ -486,6 +490,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
                 slots={slots}
                 pulses={pulses.get(shownEntry.id) ?? 0}
                 onOpen={openEntry}
+                onOpenExternal={(url) => void api.openExternal(url)}
               />
             </div>
           </main>

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { WORKSPACE_ARGUMENT_PREFIX, workspaceFromArgv } from './ipc';
+import {
+  isExternalUrl,
+  WORKSPACE_ARGUMENT_PREFIX,
+  workspaceFromArgv,
+} from './ipc';
 
 describe('workspaceFromArgv', () => {
   it.each([
@@ -18,5 +22,31 @@ describe('workspaceFromArgv', () => {
     ],
   ])('%s', (_label, argv, expected) => {
     expect(workspaceFromArgv(argv)).toBe(expected);
+  });
+});
+
+describe('isExternalUrl', () => {
+  it.each(['https://react.dev', 'http://a.b/c?d=1#e', 'HTTPS://A.B'])(
+    'accepts %s',
+    (value) => {
+      expect(isExternalUrl(value)).toBe(true);
+    },
+  );
+
+  it.each([
+    'javascript:alert(1)',
+    'file:///C:/a',
+    'mailto:a@b',
+    'ftp://a.b',
+    'data:text/html,x',
+    'not a url',
+    '/relative/path',
+    '',
+    42,
+    null,
+    undefined,
+    { href: 'https://a.b' },
+  ])('refuses %j', (value) => {
+    expect(isExternalUrl(value)).toBe(false);
   });
 });

@@ -23,6 +23,8 @@ const api = {
   },
   setTheme: (theme: Theme) =>
     ipcRenderer.invoke(IPC_CHANNELS.windowSetTheme, theme),
+  openExternal: (url: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.shellOpenExternal, url),
   setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
 } satisfies WhenkitApi;
 
