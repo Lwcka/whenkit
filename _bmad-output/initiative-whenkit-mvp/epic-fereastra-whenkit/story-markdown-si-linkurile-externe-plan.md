@@ -77,6 +77,11 @@ context:
 
 ## Implementation Notes
 
+- `skipHtml` drops a whole HTML block: `<script>…</script> **bold**` on one line vanishes entirely, so test fixtures put raw HTML on its own line.
+- Links whose `href` starts with `#` (GFM footnote references and back links) stay ordinary in-page anchors with their attributes; every other non-http(s) link is plain text. Footnote labels come from `strings.ro.ts` (`footnotesLabel`, `footnoteBack`).
+- The one-column copy of `open-in-browser` is a direct child of `.sheet-main` after the header; the side copy is hidden at ≤959 px.
+- Not checked by hand (no GUI in this session): `npm start`, clicking „Deschide în browser” and a source, 720 and 1200 px.
+
 ## Plan Change Log
 
 ## Review Triage Log
