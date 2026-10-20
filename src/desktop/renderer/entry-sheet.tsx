@@ -1,6 +1,12 @@
-import { ArrowRight, Check, Flag, Pencil } from 'lucide-react';
+import {
+  ArrowRight,
+  Check,
+  ExternalLink as ExternalLinkIcon,
+  Flag,
+  Pencil,
+} from 'lucide-react';
 import { useEffect, useRef, type ReactNode } from 'react';
-import type { EntryDto } from '../../shared/ipc';
+import { isExternalUrl, type EntryDto } from '../../shared/ipc';
 import {
   appStrings,
   entryStrings,
@@ -11,6 +17,8 @@ import {
   zoneLabels,
 } from '../../shared/strings.ro';
 import { entrySlot, pulseParity, sheetLinks, shortId } from './catalog-view';
+import { ExternalLink } from './external-link';
+import { MarkdownContent } from './markdown-content';
 import './entry-sheet.css';
 
 export interface EntrySheetProps {
@@ -24,6 +32,38 @@ export interface EntrySheetProps {
   pulses: number;
   /** Opens the sheet of a linked entry (pushes it on the stack). */
   onOpen: (id: string) => void;
+  /** Opens a link in the default browser (AD-9); main checks it again. */
+  onOpenExternal: (url: string) => void;
+}
+
+/**
+ * The accent block that opens the entry's URL in the browser (DESIGN,
+ * open-in-browser). Absent when the entry has no http(s) URL.
+ */
+function OpenInBrowser({
+  url,
+  onOpenExternal,
+}: {
+  url: string | null;
+  onOpenExternal: (url: string) => void;
+}) {
+  if (!isExternalUrl(url)) return null;
+  return (
+    <a
+      className="open-in-browser"
+      href={url}
+      onClick={(event) => {
+        event.preventDefault();
+        onOpenExternal(url);
+      }}
+    >
+      <span className="open-in-browser-text">
+        {appStrings.openInBrowser}
+        <small className="open-in-browser-url">{url}</small>
+      </span>
+      <ExternalLinkIcon aria-hidden="true" />
+    </a>
+  );
 }
 
 /** A linked entry as a row: dot, name, what it does, arrow (DESIGN, related-link). */
@@ -170,7 +210,8 @@ function TitleBlock({ entry }: { entry: EntryDto }) {
 /**
  * The full entry, read-only (DESIGN, entry-sheet): everything of the entry
  * model in the main column, the links and the title block in the side panel.
- * Content and sources are plain text; nothing here opens a link (AD-9).
+ * Links open in the default browser through `onOpenExternal`, only when they
+ * are http(s); the window itself never navigates (AD-9).
  */
 export function EntrySheet({
   entry,
@@ -178,6 +219,7 @@ export function EntrySheet({
   slots,
   pulses,
   onOpen,
+  onOpenExternal,
 }: EntrySheetProps) {
   const root = useRef<HTMLElement>(null);
   // What the entry had counted when the sheet opened does not pulse.
@@ -210,7 +252,13 @@ export function EntrySheet({
             <h1 className="sheet-title">{entry.name}</h1>
             <div className="sheet-subline">
               {entry.url !== null && (
-                <span className="sheet-url">{entry.url}</span>
+                <ExternalLink
+                  href={entry.url}
+                  onOpen={onOpenExternal}
+                  className="sheet-url"
+                >
+                  {entry.url}
+                </ExternalLink>
               )}
               {entry.resourceType !== null && (
                 <span>{resourceTypeLabels[entry.resourceType]}</span>
@@ -228,6 +276,8 @@ export function EntrySheet({
             </div>
           </div>
         </header>
+        {/* The one-column layout shows this copy under the title; the side panel's is hidden there. */}
+        <OpenInBrowser url={entry.url} onOpenExternal={onOpenExternal} />
         <p className="sheet-lead">{entry.whatItDoes}</p>
 
         {entry.situations.length > 0 && (
@@ -251,7 +301,10 @@ export function EntrySheet({
         {entry.content !== null && entry.content.trim() !== '' && (
           <section>
             <h2 className="sheet-section-label">{entryStrings.content}</h2>
-            <div className="markdown-content">{entry.content}</div>
+            <MarkdownContent
+              source={entry.content}
+              onOpenExternal={onOpenExternal}
+            />
           </section>
         )}
 
@@ -260,7 +313,11 @@ export function EntrySheet({
             <h2 className="sheet-section-label">{entryStrings.sources}</h2>
             <ul className="sheet-sources">
               {entry.sources.map((source, index) => (
-                <li key={index}>{source}</li>
+                <li key={index}>
+                  <ExternalLink href={source} onOpen={onOpenExternal}>
+                    {source}
+                  </ExternalLink>
+                </li>
               ))}
             </ul>
           </section>
@@ -294,6 +351,7 @@ export function EntrySheet({
       </div>
 
       <aside className="sheet-side">
+        <OpenInBrowser url={entry.url} onOpenExternal={onOpenExternal} />
         <LinkList
           label={appStrings.sheetChildren(links.children.length)}
           targets={links.children}

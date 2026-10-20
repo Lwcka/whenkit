@@ -18,7 +18,11 @@ const slots = new Map([
 function sheet(
   entry: EntryDto,
   entries: readonly EntryDto[] = [entry],
-  props: { pulses?: number; onOpen?: (id: string) => void } = {},
+  props: {
+    pulses?: number;
+    onOpen?: (id: string) => void;
+    onOpenExternal?: (url: string) => void;
+  } = {},
 ) {
   const view = render(
     <EntrySheet
@@ -27,6 +31,7 @@ function sheet(
       slots={slots}
       pulses={props.pulses ?? 0}
       onOpen={props.onOpen ?? (() => {})}
+      onOpenExternal={props.onOpenExternal ?? (() => {})}
     />,
   );
   return {
@@ -81,9 +86,7 @@ describe('EntrySheet: a tool with everything', () => {
 
     expect(view.text('.sheet-title')).toBe('remove.bg');
     expect(view.text('.sheet-mark')).toBe('I');
-    // The URL is plain text, never a link (entry 8 adds the browser button).
     expect(view.text('.sheet-url')).toBe('https://remove.bg');
-    expect(view.container.querySelector('a')).toBeNull();
     expect(view.texts('.sheet-subline > span')).toContain('site');
     expect(view.texts('.sheet-category')).toEqual([
       'Imagini & video',
@@ -178,6 +181,34 @@ describe('EntrySheet: a tool with everything', () => {
     expect(onOpen).toHaveBeenCalledWith('unscreen');
   });
 
+  it('opens the URL in the browser from the block and from the subline', () => {
+    const onOpenExternal = vi.fn();
+    const view = sheet(tool, [tool, related], { onOpenExternal });
+
+    // Two copies of the block (one per layout); the media query hides one.
+    const blocks = screen.getAllByRole('link', { name: /Deschide în browser/ });
+    expect(blocks).toHaveLength(2);
+    expect(
+      view.container.querySelector('.sheet-side > .open-in-browser'),
+    ).not.toBeNull();
+    expect(
+      view.container.querySelector('.sheet-main > .open-in-browser'),
+    ).not.toBeNull();
+    expect(view.texts('.open-in-browser-url')).toEqual([
+      'https://remove.bg',
+      'https://remove.bg',
+    ]);
+
+    // fireEvent returns false when the default action was prevented.
+    expect(fireEvent.click(blocks[0]!)).toBe(false);
+    expect(fireEvent.click(view.container.querySelector('a.sheet-url')!)).toBe(
+      false,
+    );
+    expect(onOpenExternal).toHaveBeenCalledTimes(2);
+    expect(onOpenExternal).toHaveBeenNthCalledWith(1, 'https://remove.bg');
+    expect(onOpenExternal).toHaveBeenNthCalledWith(2, 'https://remove.bg');
+  });
+
   it('takes the focus when it opens, so the keyboard is in it', () => {
     const view = sheet(tool, [tool, related]);
     expect(document.activeElement).toBe(view.root());
@@ -202,6 +233,7 @@ describe('EntrySheet: the gaps', () => {
     expect(view.container.querySelector('.related-links')).toBeNull();
     expect(view.container.querySelector('.verification-note')).toBeNull();
     expect(view.container.querySelector('.sheet-url')).toBeNull();
+    expect(view.container.querySelector('.open-in-browser')).toBeNull();
     expect(view.container.querySelector('.sheet-category')).toBeNull();
     // No category: the mark takes the name's initial, and no color slot.
     expect(view.text('.sheet-mark')).toBe('B');
@@ -210,6 +242,13 @@ describe('EntrySheet: the gaps', () => {
     const rubricLabels = view.texts('.title-block-label');
     expect(rubricLabels).toEqual(['Zonă', 'Adăugată', 'Id']);
     expect(view.container.querySelector('.title-block-check')).toBeNull();
+  });
+
+  it('shows a URL that is not http(s) as text, with no block to open it', () => {
+    const view = sheet({ ...bare, url: 'ftp://files.example.com/a' });
+    expect(view.text('.sheet-url')).toBe('ftp://files.example.com/a');
+    expect(view.container.querySelector('a')).toBeNull();
+    expect(view.container.querySelector('.open-in-browser')).toBeNull();
   });
 
   it('shows the placeholder when the notes are empty or blank', () => {
@@ -258,21 +297,19 @@ describe('EntrySheet: a concept', () => {
     name: 'Tipuri de API',
     categories: [backend],
     childIds: [...kids.map((kid) => kid.id), 'gone'],
-    content: 'Linia unu\n\n<script>alert(1)</script> **nu e bold**\nLinia doi',
+    content: 'Linia unu\n\n<script>alert(1)</script>\n\n**bold** si Linia doi',
     sources: ['https://docs.example.com/api', 'Cartea X, cap. 3'],
     situations: ['aleg un API'],
   });
   const all = [umbrella, ...kids];
 
-  it('shows the content and the sources as plain text', () => {
-    const view = sheet(umbrella, all);
+  it('renders the content as Markdown and the sources as text or links', () => {
+    const onOpenExternal = vi.fn();
+    const view = sheet(umbrella, all, { onOpenExternal });
 
     const content = view.container.querySelector('.markdown-content');
-    expect(content?.textContent).toBe(
-      'Linia unu\n\n<script>alert(1)</script> **nu e bold**\nLinia doi',
-    );
-    // Text only: no element was made from the content.
-    expect(content?.children.length).toBe(0);
+    expect(content?.querySelector('script')).toBeNull();
+    expect(content?.querySelector('strong')?.textContent).toBe('bold');
     expect(labels(view)).toEqual([
       'Când îl aleg · 1',
       'Conținut',
@@ -283,7 +320,13 @@ describe('EntrySheet: a concept', () => {
       'https://docs.example.com/api',
       'Cartea X, cap. 3',
     ]);
-    expect(view.container.querySelector('a')).toBeNull();
+    // The first source is a link, the second plain text.
+    const links = view.container.querySelectorAll('.sheet-sources a');
+    expect(links).toHaveLength(1);
+    expect(fireEvent.click(links[0]!)).toBe(false);
+    expect(onOpenExternal).toHaveBeenCalledWith('https://docs.example.com/api');
+    // A concept has no URL of its own: no block to open it.
+    expect(view.container.querySelector('.open-in-browser')).toBeNull();
     expect(view.text('.title-block-head')).toContain('FIȘĂ · CONCEPT');
     // A concept has no type rubric.
     expect(view.texts('.title-block-label')).not.toContain('Tip');
@@ -321,6 +364,7 @@ describe('EntrySheet: live updates', () => {
         slots={slots}
         pulses={3}
         onOpen={() => {}}
+        onOpenExternal={() => {}}
       />,
     );
     expect(view.root().getAttribute('data-pulse')).toBe('a');
@@ -333,6 +377,7 @@ describe('EntrySheet: live updates', () => {
         slots={slots}
         pulses={4}
         onOpen={() => {}}
+        onOpenExternal={() => {}}
       />,
     );
     expect(view.root().getAttribute('data-pulse')).toBe('b');

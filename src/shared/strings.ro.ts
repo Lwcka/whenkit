@@ -403,6 +403,12 @@ export const appStrings = {
   /** The side lists: an umbrella's children, a child's umbrellas, related entries. */
   sheetChildren: (count: number): string => `Concepte · ${count}`,
   sheetParents: 'Face parte din',
+  /** The accent block of the side panel (DESIGN, open-in-browser). */
+  openInBrowser: 'Deschide în browser',
+  /** The footnotes block of a concept's Markdown (remark-gfm) and its back links. */
+  footnotesLabel: 'Note',
+  footnoteBack: (referenceIndex: number, rereferenceIndex: number): string =>
+    `Înapoi la referința ${referenceIndex + 1}${rereferenceIndex > 1 ? `-${rereferenceIndex}` : ''}`,
   sheetRelated: (count: number): string => `Resurse înrudite · ${count}`,
   /** The read-only notes box when nothing was written yet. */
   notesPlaceholder: 'Scrie aici ce vrei să-ți amintești.',

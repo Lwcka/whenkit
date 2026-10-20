@@ -114,7 +114,7 @@
   margin-top: var(--spacing-2);
 }
 
-/* The URL is text only: opening it is the browser button's job (entry 8). */
+/* The URL in the subline: a link when it is http(s), plain accent text otherwise. */
 .sheet-url {
   color: var(--accent);
   overflow-wrap: anywhere;
@@ -203,11 +203,118 @@
   width: var(--situation-callout-number-size);
 }
 
-/* The content of a concept: plain text, line breaks kept (no Markdown yet). */
+/* External links: accent with the ↗ icon after the text (DESIGN, markdown-content). */
+.external-link {
+  align-items: baseline;
+  color: var(--accent);
+  display: inline;
+  text-decoration: none;
+}
+
+.external-link:hover {
+  text-decoration: underline;
+}
+
+.external-link .lucide {
+  display: inline;
+  margin-left: var(--spacing-1);
+  vertical-align: -1px;
+}
+
+/* The content of a concept, rendered from Markdown (DESIGN, markdown-content). */
 .markdown-content {
   font: var(--typography-body);
   overflow-wrap: anywhere;
-  white-space: pre-wrap;
+}
+
+.markdown-content > :first-child {
+  margin-top: 0;
+}
+
+.markdown-content > :last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content pre,
+.markdown-content blockquote {
+  margin: 0 0 var(--spacing-3);
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  padding-left: var(--spacing-6);
+}
+
+.markdown-content h2 {
+  font: var(--typography-headline);
+  letter-spacing: var(--ls-headline);
+  margin: var(--spacing-5) 0 var(--spacing-3);
+}
+
+.markdown-content h3,
+.markdown-content h4,
+.markdown-content h5,
+.markdown-content h6 {
+  font: var(--typography-title-sm);
+  letter-spacing: var(--ls-title-sm);
+  margin: var(--spacing-4) 0 var(--spacing-2);
+}
+
+.markdown-content blockquote {
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-2);
+  padding-left: var(--spacing-4);
+}
+
+.markdown-content code {
+  background: var(--markdown-content-code-background);
+  border-radius: var(--rounded-sm);
+  font: var(--typography-mono);
+  padding: 1px var(--spacing-1);
+}
+
+.markdown-content pre {
+  background: var(--markdown-content-code-background);
+  border-radius: var(--rounded-lg);
+  overflow-x: auto;
+  padding: var(--spacing-3) var(--spacing-4);
+}
+
+.markdown-content pre code {
+  background: none;
+  padding: 0;
+}
+
+/* The table scrolls with the page, never wider than the column. */
+.markdown-content table {
+  border: 1px solid var(--markdown-content-table-border);
+  border-collapse: separate;
+  border-radius: var(--markdown-content-table-radius);
+  border-spacing: 0;
+  display: block;
+  margin: 0 0 var(--spacing-3);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border-bottom: 1px solid var(--markdown-content-table-border);
+  padding: var(--spacing-2) var(--spacing-3);
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-content th {
+  background: var(--markdown-content-table-header);
+  font: var(--typography-title-sm);
+}
+
+.markdown-content tr:last-child td {
+  border-bottom: 0;
 }
 
 .sheet-sources {
@@ -268,6 +375,44 @@
 }
 
 /* ---------- side panel ---------- */
+
+/* The accent block that opens the URL in the browser (DESIGN, open-in-browser). */
+.open-in-browser {
+  align-items: center;
+  background: var(--accent);
+  border-radius: var(--rounded-xl);
+  box-shadow: var(--elevation-accent);
+  color: var(--accent-ink);
+  display: flex;
+  font: var(--typography-title-sm);
+  gap: var(--spacing-3);
+  letter-spacing: var(--ls-tab);
+  padding: var(--open-in-browser-padding);
+  text-decoration: none;
+}
+
+.open-in-browser-text {
+  min-width: 0;
+}
+
+.open-in-browser-url {
+  display: block;
+  font: var(--typography-mono-sm);
+  letter-spacing: 0;
+  margin-top: var(--spacing-1);
+  opacity: var(--open-in-browser-url-opacity);
+  overflow-wrap: anywhere;
+}
+
+.open-in-browser .lucide {
+  flex: none;
+  margin-left: auto;
+}
+
+/* The copy under the title belongs to the one-column layout only. */
+.sheet-main > .open-in-browser {
+  display: none;
+}
 
 .sheet-side {
   background: color-mix(in srgb, var(--surface-2) 70%, var(--surface));
@@ -426,6 +571,14 @@
 @media (max-width: 959px) {
   .entry-sheet {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .sheet-main > .open-in-browser {
+    display: flex;
+  }
+
+  .sheet-side > .open-in-browser {
+    display: none;
   }
 
   .sheet-side {

@@ -61,6 +61,7 @@ const catalog = [removeBg, photopea, nmap, umbrella, rest, graphql];
 
 const api: FrameApi = {
   workspacePath: 'C:\\ws',
+  openExternal: () => Promise.resolve({ ok: true, data: null }),
   searchEntries: (text) =>
     Promise.resolve({
       ok: true,

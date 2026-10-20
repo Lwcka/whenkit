@@ -199,6 +199,12 @@
   --entry-sheet-mark-size: 50px;
   --entry-sheet-pulse-ring: 0 0 0 3px var(--accent);
   --situation-callout-number-size: 26px;
+  --open-in-browser-padding: 14px 16px;
+  --open-in-browser-url-opacity: 0.85;
+  --markdown-content-table-header: var(--surface-2);
+  --markdown-content-table-border: var(--line);
+  --markdown-content-table-radius: var(--rounded-lg);
+  --markdown-content-code-background: var(--surface-2);
 }
 
 :root[data-theme='light'] {

@@ -6,6 +6,7 @@ import {
   Menu,
   nativeTheme,
   screen,
+  shell,
 } from 'electron';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
@@ -27,6 +28,7 @@ import { appStrings, mainStrings } from '../../shared/strings.ro';
 import { openDesktopCatalog, searchResult, snapshotResult } from './catalog';
 import { watchCatalog, type CatalogWatcher } from './catalog-watch';
 import { createErrorReporter } from './error-log';
+import { openExternalResult } from './external-link';
 import { isAppNavigation } from './navigation';
 import {
   nativeThemeSettings,
@@ -208,6 +210,9 @@ function main(): void {
       );
       ipcMain.handle(IPC_CHANNELS.entriesSearch, (_event, text: unknown) =>
         searchResult(catalog, text, reporter.log),
+      );
+      ipcMain.handle(IPC_CHANNELS.shellOpenExternal, (_event, url: unknown) =>
+        openExternalResult(url, (u) => shell.openExternal(u), reporter.log),
       );
       ipcMain.handle(
         IPC_CHANNELS.windowSetTheme,
