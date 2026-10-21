@@ -3,7 +3,7 @@ title: 'Notițele mele'
 type: 'feature'
 ticket: '9'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '1b23ab5d1f3edea11596ad013ac88fd003241b1d'
 route: 'full'
 route_source: 'auto'

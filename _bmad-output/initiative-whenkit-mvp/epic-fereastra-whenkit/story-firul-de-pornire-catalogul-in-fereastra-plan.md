@@ -3,7 +3,7 @@ title: 'Firul de pornire: catalogul în fereastră'
 type: 'feature'
 ticket: '1'
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: '1950f3738692cb15c7f6c76b9c6daa2fe2c908a8'
 route: 'full'
 route_source: 'auto'

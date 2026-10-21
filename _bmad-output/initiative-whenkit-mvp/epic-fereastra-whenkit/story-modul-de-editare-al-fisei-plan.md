@@ -3,7 +3,7 @@ title: 'Modul de editare al fișei'
 type: 'feature'
 ticket: '12'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '0580baf5450ec29f05ffab01dc282bc5140a01ca'
 route: 'full'
 route_source: 'auto'

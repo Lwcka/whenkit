@@ -3,7 +3,7 @@ title: 'Markdown și linkurile externe'
 type: 'feature'
 ticket: '8'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '290705706e75314d78fb00ae8558f558b4106c2c'
 route: 'full'
 route_source: 'auto'

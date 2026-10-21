@@ -3,7 +3,7 @@ title: 'Răsfoirea pe categorii'
 type: 'feature'
 ticket: '4'
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'a0a2be3a4e6ca4735ec57a96fdfd75410bf76d9d'
 route: 'full'
 route_source: 'auto'

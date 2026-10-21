@@ -3,7 +3,7 @@ title: 'Căutarea text'
 type: 'feature'
 ticket: '6'
 created: '2026-10-20'
-status: 'built'
+status: done
 baseline_revision: '1ad364477c498d59befd9d26c6b39cc45e769b32'
 route: 'full'
 route_source: 'auto'

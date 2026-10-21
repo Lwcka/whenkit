@@ -3,7 +3,7 @@ title: 'Ștergerea unei fișe'
 type: 'feature'
 ticket: '10'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: 'e55fecb729b4f600702671d424475f22af1e1c41'
 route: 'full'
 route_source: 'auto'

@@ -53,4 +53,10 @@ Driverul desktop (`src/desktop/main`, `preload`, `renderer`), contractul IPC (`s
 - Decision: firul de pornire e intrarea 1 (snapshot → IPC → depozit → carduri simple în ambele tab-uri, cu erorile de pornire); după cadru vine întâi răsfoirea, apoi actualizarea live (AD-10), cea mai nesigură parte (2026-10-19).
 - Decision: `ipc.ts`, preload, handlerii din main, `ports.ts` și `SqliteCatalogStore` sunt extinse de mai multe intrări doar prin adăugare, în ordinea din `tickets.toml`; scrierile prin IPC trec toate prin helperul din intrarea 5, care emite `catalog:changed` și întoarce DTO-urile schimbate (2026-10-19).
 - Decision: curățenia (15) înaintea verificării pe aplicația instalată (16), ca în primul epic; problemele găsite acolo devin tichete de bug (2026-10-19).
+- Decision: verificarea pe aplicația instalată (16, 2026-10-21) a trecut Done when 1–6; ce a găsit devine intrările 17–19 (bug-uri) și 20 (decizia 1B), plus povestea `/adauga` din `backlog/` (decizia 2A) (2026-10-21).
+- Decision: pentru intrarea 20, EXPERIENCE.md (Information Architecture, Component Patterns, Flow 7), DESIGN.md (`entry-card`, meta) și macheta `key-learn-import.html` trec la „colecție · N concepte” prin `bmad-ux`, înainte de build (2026-10-21).
+- Decision: la intrarea 20 se schimbă doar fereastra și exportul. CLI-ul (`whenkit show`, motivele de import) și skill-urile păstrează „umbrelă” ca termen tehnic, pentru că acolo le citește mai ales Claude (opțiunea 2A a autorului, 2026-10-21).
+- Decision: 20 și povestea `/adauga` din `backlog/` nu depind una de alta; ambele schimbă `strings.ro.ts`, la chei diferite, iar linia de lucru e una singură, deci nu rulează în paralel (2026-10-21).
+- Decision: fără a doua curățenie după 17–20: sunt reparații mici, fiecare cu revizia ei (2026-10-21).
+- Decision: problema amânată cu fonturile Cascadia Mono inline e închisă fără tichet: în build sunt inline doar variantele `woff` de rezervă, aflate după `woff2`, deci nu se cer niciodată (2026-10-21).
 - Waits on epic-catalog-prin-claude because: citește și scrie prin nucleul și SqliteCatalogStore construite acolo și lucrează pe catalogul real importat.

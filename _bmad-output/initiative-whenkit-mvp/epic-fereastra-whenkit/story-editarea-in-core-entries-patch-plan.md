@@ -3,7 +3,7 @@ title: 'Editarea în core: entries:patch'
 type: 'feature'
 ticket: '11'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '1f1344dedaa66159e290a64f8bdfb6a5465139cb'
 route: 'full'
 route_source: 'auto'

@@ -3,7 +3,7 @@ title: 'Cadrul vizual: tokeni, temă, bare și scurtături'
 type: 'feature'
 ticket: '3'
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'bdf7af0b50be4490f7f3ef10136ef05d96f832ac'
 route: 'full'
 route_source: 'auto'

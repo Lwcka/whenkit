@@ -5,10 +5,4 @@ Pruned on 2026-10-15 at the closure of epic-catalog-prin-claude: entries already
 
 Nothing is deferred: the last entry (journal rows that a retry cannot clear) was built as ticket 1.18 on 2026-10-16.
 
-- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-fereastra-whenkit/story-cadrul-vizual-tokeni-tema-bare-si-scurtaturi-plan.md`
-  summary: At zoom above 100 % the in-app title bar may not fit its contents (theme switch 28 px, app-mark 20 px) inside the native 40-DIP overlay, or may stop lining up with the native buttons, since the overlay height never follows the zoom.
-  evidence: Opus review of entry 3 (2026-10-19), unverified (medium if true): `title-bar.css` takes its height from `env(titlebar-area-height)` while `TITLE_BAR_HEIGHT` stays 40; settle it with `npm start` at Ctrl+= 150 % and 200 %. A fix likely has main own the zoom (an IPC that also resizes the overlay), which changes AD-20's zoom line.
-
-- source_plan: `_bmad-output/initiative-whenkit-mvp/epic-fereastra-whenkit/story-rasfoirea-pe-categorii-plan.md`
-  summary: The production renderer build inlines the smallest Cascadia Mono subsets as `data:` font URIs, which the CSP (`default-src 'self'`, no `font-src`) blocks, so those glyph ranges fall back to Consolas.
-  evidence: Seen by the implementer of entry 4 as console CSP warnings in a scratch production build (2026-10-19); the `@fontsource/cascadia-mono` import dates from entry 3. Settle with `npm run make` and the DevTools console; a likely fix is `build.assetsInlineLimit: 0` in `vite.renderer.config.mts`.
+Pruned on 2026-10-21 after the installed-app verification (entry 2.16): the title-bar zoom entry became bug 2.19, and the inlined Cascadia Mono `data:` fonts were closed as harmless (only `woff` fallbacks listed after `woff2`, never fetched).

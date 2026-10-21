@@ -3,7 +3,7 @@ title: 'Curățenie finală (refactor sweep)'
 type: 'refactor'
 ticket: '15'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: 'bfdff691e743e52b92f824672450552c194bb4f9'
 route: 'full'
 route_source: 'auto'

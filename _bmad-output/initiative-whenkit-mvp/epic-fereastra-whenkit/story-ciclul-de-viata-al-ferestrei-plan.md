@@ -3,7 +3,7 @@ title: 'Ciclul de viață al ferestrei'
 type: 'feature'
 ticket: '2'
 created: '2026-10-19'
-status: 'built'
+status: done
 baseline_revision: 'cf384d0dfa1cb33c23546ebb61da463703d30f23'
 route: 'full'
 route_source: 'auto'

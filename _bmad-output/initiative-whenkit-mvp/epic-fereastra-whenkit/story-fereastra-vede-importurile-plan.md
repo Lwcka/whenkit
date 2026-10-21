@@ -3,7 +3,7 @@ title: 'Fereastra vede importurile'
 type: 'feature'
 ticket: '5'
 created: '2026-10-20'
-status: 'built'
+status: done
 baseline_revision: '897b671f79ec3428f6094a80f7bd931001dfb218'
 route: 'full'
 route_source: 'auto'

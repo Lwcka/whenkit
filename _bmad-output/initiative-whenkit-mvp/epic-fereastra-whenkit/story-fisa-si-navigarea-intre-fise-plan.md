@@ -3,7 +3,7 @@ title: 'Fișa și navigarea între fișe'
 type: 'feature'
 ticket: '7'
 created: '2026-10-20'
-status: 'built'
+status: done
 baseline_revision: '24d70a17dd16acc321dd3fc93397b8d2d3aa9e6b'
 route: 'full'
 route_source: 'auto'

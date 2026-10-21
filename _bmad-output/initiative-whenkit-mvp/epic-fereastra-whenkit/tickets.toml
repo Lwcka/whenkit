@@ -191,3 +191,51 @@ covers = ["CAP-8", "CAP-9", "CAP-10", "CAP-11", "CAP-13"]
 after = [15, "1.14"]
 hitl = true
 risk = "medium"
+
+[[entry]]
+id = 17
+type = "bug"
+title = "Trecerea de la o temă la alta e sacadată"
+description = "Comutarea temei din bara de titlu schimbă culorile cu sacadări vizibile în loc de o trecere lină în {motion.theme}; găsit la verificarea pe aplicația instalată (2.16, A8)."
+verify = "Autorul comută tema în aplicația instalată, pe lista cu catalogul real și pe o fișă, și vede o singură trecere lină, fără salturi."
+covers = ["CAP-8"]
+after = []
+hitl = true
+risk = "low"
+refine = true
+
+[[entry]]
+id = 18
+type = "bug"
+title = "Fereastra maximizată nu revine maximizată după repornire"
+description = "O fereastră închisă maximizată pornește din nou la dimensiunea normală; window-state.json ține minte și starea maximizată (AD-20 extins); găsit la 2.16, A9."
+verify = "Maximizat, închis, repornit: fereastra e maximizată, iar „Restore” o readuce la poziția și dimensiunea normale salvate."
+covers = ["CAP-8"]
+after = [17]
+hitl = true
+risk = "low"
+refine = true
+
+[[entry]]
+id = 19
+type = "bug"
+title = "La zoom mare, comutatorul de temă iese din bara de titlu"
+description = "Peste 100 % zoom, conținutul barei de titlu nu mai încape în bara nativă de 40 DIP și nu se aliniază cu butoanele native; main-ul preia zoomul, care se și păstrează după repornire (decizia 3A); găsit la 2.16, L6 și L7."
+verify = "La 80, 100, 150 și 200 % bara de titlu își încape conținutul și e aliniată cu butoanele native; zoomul ales revine după repornire."
+covers = ["CAP-8"]
+after = [18]
+hitl = true
+risk = "medium"
+refine = true
+
+[[entry]]
+id = 20
+type = "story"
+title = "Colecția de concepte în locul umbrelei"
+description = "Cardul unui concept cu concepte legate sub el arată „colecție · N concepte” în loc de „umbrelă · N copii”, iar exportul titrează părinții unei fișe „Face parte din”, ca fișa; nici fereastra, nici exportul nu mai spun „umbrelă” sau „copii” (decizia 1B)."
+verify = "Teste: eticheta cardului cu 1, 2 și 20 de concepte („colecție · 1 concept”, „colecție · 2 concepte”, „colecție · 20 de concepte”) și titlul „Face parte din” în fișa .md exportată a unui copil."
+covers = ["CAP-8", "CAP-13"]
+after = []
+hitl = false
+risk = "low"
+references = ["ux-whenkit/EXPERIENCE.md", "ux-whenkit/DESIGN.md#entry-card", "ux-whenkit/mockups/key-learn-import.html"]

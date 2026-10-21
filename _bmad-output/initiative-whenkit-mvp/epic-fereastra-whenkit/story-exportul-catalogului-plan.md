@@ -3,7 +3,7 @@ title: 'Exportul catalogului'
 type: 'feature'
 ticket: '14'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '9d2b25562519c3c9e4a2da23ff28263700ce667d'
 route: 'full'
 route_source: 'auto'

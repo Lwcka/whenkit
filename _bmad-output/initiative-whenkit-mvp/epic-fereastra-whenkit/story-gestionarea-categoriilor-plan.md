@@ -3,7 +3,7 @@ title: 'Gestionarea categoriilor'
 type: 'feature'
 ticket: '13'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '8ec65f6b4e1100ab8af1aa858f6b4c4802efbfe0'
 route: 'full'
 route_source: 'auto'
