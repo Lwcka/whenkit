@@ -1,0 +1,65 @@
+/* text-field (DESIGN, text-field): label above, field, error under it. */
+.text-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  min-width: 0;
+}
+
+.text-field-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+}
+
+.text-field-label-text {
+  color: var(--text-field-label);
+  font: var(--typography-label-sm);
+  letter-spacing: var(--ls-label-sm);
+}
+
+.text-field-input {
+  background: var(--text-field-background);
+  border: 1px solid var(--text-field-border);
+  border-radius: var(--text-field-radius);
+  box-sizing: border-box;
+  color: var(--ink);
+  font: var(--typography-body);
+  height: var(--text-field-height);
+  min-width: 0;
+  padding: 0 var(--spacing-3);
+  width: 100%;
+}
+
+.text-field-input[data-mono] {
+  font: var(--typography-text-field-mono);
+}
+
+/* A multi-line field grows with its text, down from a few rows. */
+textarea.text-field-input {
+  field-sizing: content;
+  height: auto;
+  min-height: var(--text-field-textarea-min-height);
+  padding: var(--spacing-2) var(--spacing-3);
+  resize: vertical;
+}
+
+.text-field-input:focus {
+  border-color: var(--text-field-border-focus);
+}
+
+.text-field-input[aria-invalid='true'] {
+  border-color: var(--text-field-border-error);
+}
+
+.text-field-input:disabled {
+  cursor: default;
+  opacity: var(--disabled-opacity);
+}
+
+.text-field-error {
+  color: var(--text-field-error);
+  font: var(--typography-caption);
+  margin: 0;
+  overflow-wrap: anywhere;
+}

@@ -59,6 +59,7 @@ const api: FrameApi = {
   workspacePath: 'C:\\ws',
   setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
+  patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
   openExternal: () => Promise.resolve({ ok: true, data: null }),

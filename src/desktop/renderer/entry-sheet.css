@@ -420,8 +420,14 @@
   width: 100%;
 }
 
-.related-link:hover {
+.related-link:hover:not(:disabled) {
   border-color: var(--line-strong);
+}
+
+/* Inactive while the entry is edited. */
+.related-link:disabled {
+  cursor: default;
+  opacity: var(--disabled-opacity);
 }
 
 .related-link-dot {

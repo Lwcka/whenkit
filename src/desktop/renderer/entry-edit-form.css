@@ -1,0 +1,41 @@
+/* The entry sheet's main column in edit mode (DESIGN, entry-sheet): the same
+   rhythm as reading, with the controls in place of the text. */
+.entry-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-4);
+  min-width: 0;
+}
+
+.entry-edit-head {
+  align-items: flex-start;
+  display: flex;
+  gap: var(--spacing-5);
+}
+
+/* The mark lines up with the field, not with its label. */
+.entry-edit-head > .sheet-mark {
+  margin-top: var(--spacing-6);
+}
+
+.entry-edit-head-fields {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--spacing-3);
+  min-width: 0;
+}
+
+.entry-edit-head-row {
+  display: grid;
+  gap: var(--spacing-3);
+  grid-template-columns: minmax(0, 1fr) var(--entry-sheet-edit-type-width);
+}
+
+.entry-edit-head-row[data-concept] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.entry-edit-form section > .sheet-section-label {
+  margin-bottom: var(--spacing-3);
+}

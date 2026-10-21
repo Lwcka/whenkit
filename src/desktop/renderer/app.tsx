@@ -33,7 +33,21 @@ import {
   type Zone,
 } from './catalog-view';
 import { CategoryBar, type CategoryBarItem } from './category-bar';
+import { ConflictBanner } from './conflict-banner';
 import { Dialog } from './dialog';
+import {
+  changesLinks,
+  draftFromEntry,
+  hasErrors,
+  isDirty,
+  issuesByField,
+  patchChanges,
+  reasonsByField,
+  validateDraft,
+  withoutErrorsOf,
+  type Draft,
+  type FieldErrors,
+} from './edit-draft';
 import { EmptyState } from './empty-state';
 import { EntrySheet } from './entry-sheet';
 import {
@@ -59,6 +73,7 @@ export type FrameApi = Pick<
   WhenkitApi,
   | 'deleteEntry'
   | 'openExternal'
+  | 'patchEntry'
   | 'searchEntries'
   | 'setNotes'
   | 'setTheme'
@@ -96,6 +111,27 @@ interface Leaving {
   index: number;
   /** The list view it belongs to (the grid remounts on a new one). */
   viewKey: string;
+}
+
+/** An entry open in edit mode (CAP-10, EXPERIENCE Flow 3). */
+interface EditState {
+  entryId: string;
+  /** The entry as it was when the edit began or was last reloaded: what the draft is compared with. */
+  base: EntryDto;
+  /** The user's own copy; it never follows the store's DTO (AD-10). */
+  draft: Draft;
+  /** The revision the edit started on, refreshed only by „Reîncarcă fișa” (AD-16). */
+  expectedRevision: number;
+  /** What the last save's answer says about the fields. */
+  errors: FieldErrors;
+  /** A save answered CONFLICT. */
+  conflict: boolean;
+  /** The banner was on screen when the save began: it stays while the save runs. */
+  bannerHeld: boolean;
+  /** A save is running; 'links' when core verifies the links first. */
+  saving: 'text' | 'links' | null;
+  /** The confirmation on screen over the form. */
+  confirm: 'cancel' | 'reload' | null;
 }
 
 /** True once `active` has been true for `ms` without a break. */
@@ -148,6 +184,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const [leaving, setLeaving] = useState<Leaving | null>(null);
   const deleteButton = useRef<HTMLButtonElement>(null);
   const cancelButton = useRef<HTMLButtonElement>(null);
+  const backToEditingButton = useRef<HTMLButtonElement>(null);
   // The zone tab follows the entry on screen; the list's own zone is kept.
   const shownZone: Zone = shownEntry?.zone ?? zone;
 
@@ -222,7 +259,8 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   // Opening an entry ends its arrival. From the list the stack starts and the
   // origin is saved; from a sheet the entry is pushed.
   const openEntry = (id: string) => {
-    if (!byId.has(id)) return;
+    // Nothing opens over a form that is being edited.
+    if (!byId.has(id) || editing) return;
     store.dismissArrival(id);
     setLeaving(null);
     if (!sheetOpen) {
@@ -243,17 +281,26 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const backRef = useRef(goBack);
   const sheetOpenRef = useRef(sheetOpen);
   const requestDeleteRef = useRef(() => {});
+  const editingRef = useRef(false);
+  const startEditRef = useRef(() => {});
+  const saveEditRef = useRef(() => {});
+  const requestCancelRef = useRef(() => {});
   useEffect(() => {
     openRef.current = openEntry;
     backRef.current = goBack;
     sheetOpenRef.current = sheetOpen;
     requestDeleteRef.current = requestDelete;
+    editingRef.current = editing;
+    startEditRef.current = startEdit;
+    saveEditRef.current = () => void saveEdit();
+    requestCancelRef.current = requestCancel;
   });
 
   // „Șterge” in the sheet-bar and the Delete key only open the confirmation. The
   // focus goes to the button first, so Esc and „Renunță” bring it back there.
   const requestDelete = () => {
-    if (shownEntry === undefined || confirmingDelete !== null) return;
+    if (shownEntry === undefined || confirmingDelete !== null || editing)
+      return;
     deleteButton.current?.focus();
     setConfirmingDelete(shownEntry.id);
   };
@@ -294,12 +341,206 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     // sheet below, or on the list (above).
   };
 
+  // Editing (CAP-10, Flow 3): the draft, the confirmations and the save live
+  // here because the key bindings, the sheet-bar and the dialogs all need them.
+  // An edit belongs to the entry on screen: when that changes under it (the
+  // entry vanished, the stack was popped) it is forgotten.
+  const [edit, setEdit] = useState<EditState | null>(null);
+  const editing = edit !== null && shownEntry?.id === edit.entryId;
+  const activeEdit = editing ? edit : null;
+  useEffect(() => {
+    if (edit !== null && !editing) setEdit(null);
+  });
+  const localErrors: FieldErrors =
+    activeEdit !== null && shownEntry !== undefined
+      ? validateDraft(activeEdit.draft, shownEntry.kind)
+      : {};
+  const editInvalid = hasErrors(localErrors);
+  const editDirty =
+    activeEdit !== null && isDirty(activeEdit.draft, activeEdit.base);
+  // The terminal updated the entry while it was edited, or a save said so.
+  // While a save runs the banner is as it was when the save began: it does not
+  // vanish and come back with the answer, and the save's own revision bump
+  // does not raise it.
+  const showConflict =
+    activeEdit !== null &&
+    shownEntry !== undefined &&
+    (activeEdit.saving !== null
+      ? activeEdit.bannerHeld || activeEdit.conflict
+      : activeEdit.conflict ||
+        shownEntry.revision > activeEdit.expectedRevision);
+
+  const startEdit = () => {
+    if (shownEntry === undefined || editing || confirmingDelete !== null)
+      return;
+    setEdit({
+      entryId: shownEntry.id,
+      base: shownEntry,
+      draft: draftFromEntry(shownEntry),
+      expectedRevision: shownEntry.revision,
+      errors: {},
+      conflict: false,
+      bannerHeld: false,
+      saving: null,
+      confirm: null,
+    });
+  };
+  const changeDraft = (changes: Partial<Draft>) =>
+    setEdit((previous) =>
+      previous === null || previous.saving !== null
+        ? previous
+        : {
+            ...previous,
+            draft: { ...previous.draft, ...changes },
+            errors: withoutErrorsOf(
+              previous.errors,
+              Object.keys(changes) as (keyof Draft)[],
+            ),
+          },
+    );
+  const setConfirm = (confirm: EditState['confirm']) =>
+    setEdit((previous) =>
+      previous === null ? previous : { ...previous, confirm },
+    );
+  // „Renunță” and Esc: a clean form leaves at once, a changed one asks first.
+  const requestCancel = () => {
+    if (activeEdit === null || activeEdit.saving !== null) return;
+    if (activeEdit.confirm !== null) return;
+    if (editDirty) setConfirm('cancel');
+    else setEdit(null);
+  };
+  // „Reîncarcă fișa”: the store reads the catalog again (a refused save leaves
+  // it behind), then the form is rebuilt from the entry as it is now, with its
+  // revision as the new expectation; the banner goes and the focus is in „Nume”.
+  const focusName = useRef(false);
+  const reloadEdit = async () => {
+    if (activeEdit === null) return;
+    const id = activeEdit.entryId;
+    await store.reload();
+    const latest = store.getState();
+    const fresh =
+      latest.status === 'ready'
+        ? latest.entries.find((candidate) => candidate.id === id)
+        : undefined;
+    // An entry that vanished ends its edit by itself.
+    if (fresh === undefined) return;
+    focusName.current = true;
+    setEdit((previous) =>
+      previous?.entryId !== id
+        ? previous
+        : {
+            ...previous,
+            base: fresh,
+            draft: draftFromEntry(fresh),
+            expectedRevision: fresh.revision,
+            errors: {},
+            conflict: false,
+            bannerHeld: false,
+            confirm: null,
+          },
+    );
+  };
+  const requestReload = () => {
+    if (activeEdit === null || activeEdit.saving !== null) return;
+    if (activeEdit.confirm !== null) return;
+    if (editDirty) setConfirm('reload');
+    else void reloadEdit();
+  };
+  // Ctrl+S and „Salvează”: only the changed fields go, with the revision the
+  // edit started on (AD-16). Core verifies; the window only maps the answer.
+  const saveEdit = async () => {
+    if (activeEdit === null || activeEdit.saving !== null) return;
+    if (activeEdit.confirm !== null || editInvalid) return;
+    const { entryId, draft, base, expectedRevision } = activeEdit;
+    const changes = patchChanges(draft, base);
+    if (Object.keys(changes).length === 0) {
+      setEdit(null);
+      return;
+    }
+    setEdit((previous) =>
+      previous === null
+        ? previous
+        : {
+            ...previous,
+            errors: {},
+            bannerHeld: showConflict,
+            saving: changesLinks(changes) ? 'links' : 'text',
+          },
+    );
+    const result = await store.write(() =>
+      api.patchEntry({ id: entryId, expectedRevision, changes }),
+    );
+    if (result.ok) {
+      setEdit((previous) => (previous?.entryId === entryId ? null : previous));
+      return;
+    }
+    const { error } = result;
+    let errors: FieldErrors = {};
+    if (error.code === 'ENTRY_REJECTED')
+      errors = reasonsByField(error.reasons ?? [], draft);
+    else if (error.code === 'ARGUMENTS_INVALID')
+      errors = issuesByField(error.issues ?? []);
+    else if (error.code === 'OFFLINE') errors = { url: appStrings.editOffline };
+    const conflict = error.code === 'CONFLICT';
+    // Anything the form cannot show under a field or in the banner is a toast.
+    if (!conflict && !hasErrors(errors))
+      toasts.push({ kind: 'error', message: errorMessages[error.code] });
+    setEdit((previous) =>
+      previous?.entryId === entryId
+        ? {
+            ...previous,
+            errors,
+            conflict: previous.conflict || conflict,
+            saving: null,
+          }
+        : previous,
+    );
+    // A refused save emits no catalog change: read the catalog, so the banner
+    // and „Reîncarcă fișa” see the revision that refused it.
+    if (conflict) void store.reload();
+  };
+  // After a failed save the fields unlock: the focus goes to the first one
+  // that was refused, or to „Salvează” when none is (it was lost when the form
+  // locked). After a reload it goes to „Nume”.
+  const wasSaving = useRef(false);
+  useEffect(() => {
+    const saving = activeEdit?.saving != null;
+    if (activeEdit !== null && wasSaving.current && !saving) {
+      (
+        document.querySelector<HTMLElement>(
+          '.entry-edit-form [aria-invalid="true"]',
+        ) ??
+        document.querySelector<HTMLElement>(
+          '.sheet-bar [data-variant="primary"]',
+        )
+      )?.focus();
+    }
+    wasSaving.current = saving;
+    if (focusName.current && activeEdit !== null) {
+      focusName.current = false;
+      document
+        .querySelector<HTMLElement>('.entry-edit-form input')
+        ?.focus({ preventScroll: true });
+    }
+  });
+  // Leaving the edit puts the focus back on the sheet, as when it opened.
+  const wasEditing = useRef(false);
+  useLayoutEffect(() => {
+    const was = wasEditing.current;
+    wasEditing.current = editing;
+    if (was && !editing)
+      document
+        .querySelector<HTMLElement>('.entry-sheet')
+        ?.focus({ preventScroll: true });
+  }, [editing]);
+
   // Every import that lands makes one toast per zone; „Vezi” opens that zone
   // at Toate, and a single arrival's „Deschide” opens its sheet.
   useEffect(
     () =>
       store.subscribeArrivals((arrived) => {
         const see = (target: Zone) => {
+          if (editingRef.current) return;
           closeSheet();
           setSearchText('');
           setZone(target);
@@ -380,6 +621,11 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
       ),
       registerEscape(ESCAPE_PRIORITY.activeSearch, hasText, clear),
       registerEscape(
+        ESCAPE_PRIORITY.editing,
+        () => editingRef.current,
+        () => requestCancelRef.current(),
+      ),
+      registerEscape(
         ESCAPE_PRIORITY.openSheet,
         () => sheetOpenRef.current,
         () => backRef.current(),
@@ -401,7 +647,8 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     const onMouseUp = (event: MouseEvent) => {
       if (event.button !== MOUSE_BACK || !backOpen()) return;
       event.preventDefault();
-      backRef.current();
+      // The form is left only by „Renunță” or a save.
+      if (!editingRef.current) backRef.current();
     };
     document.addEventListener('mousedown', onMouseDown);
     document.addEventListener('mouseup', onMouseUp);
@@ -454,6 +701,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   // Switching zones, from the tabs or Ctrl+1/2, leaves the sheets.
   const changeZone = useCallback(
     (target: Zone) => {
+      if (editingRef.current) return;
       closeSheet();
       setZone(target);
     },
@@ -461,6 +709,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   );
   // Typing a search from a sheet goes back to the list, in the zone on screen.
   const changeSearch = (text: string) => {
+    if (editing) return;
     if (sheetOpen) {
       setZone(shownZone);
       closeSheet();
@@ -484,6 +733,9 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
           back: () => backRef.current(),
           sheetOpen: () => sheetOpenRef.current,
           requestDelete: () => requestDeleteRef.current(),
+          editing: () => editingRef.current,
+          startEdit: () => startEditRef.current(),
+          save: () => saveEditRef.current(),
         }),
       ),
     [zoom, changeZone],
@@ -568,6 +820,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
           onChange: changeSearch,
           inputRef: searchInput,
         }}
+        disabled={editing}
       />
       {shownEntry !== undefined ? (
         <div
@@ -578,11 +831,23 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
           <SheetBar
             crumbs={sheetCrumbs(shownEntry)}
             onBack={goBack}
+            onEdit={startEdit}
             onDelete={requestDelete}
             deleteRef={deleteButton}
+            editing={
+              activeEdit === null
+                ? undefined
+                : {
+                    onCancel: requestCancel,
+                    onSave: () => void saveEdit(),
+                    saveDisabled: editInvalid,
+                    saving: activeEdit.saving,
+                  }
+            }
           />
           <main className="shell">
             <div key={shownEntry.id} className="shell-scroll">
+              {showConflict && <ConflictBanner onReload={requestReload} />}
               <EntrySheet
                 entry={shownEntry}
                 entries={state.entries}
@@ -592,6 +857,19 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
                 onOpenExternal={(url) => void api.openExternal(url)}
                 onSaveNotes={(id, notes) =>
                   store.write(() => api.setNotes(id, notes))
+                }
+                edit={
+                  activeEdit === null
+                    ? undefined
+                    : {
+                        draft: activeEdit.draft,
+                        onChange: changeDraft,
+                        errors: { ...activeEdit.errors, ...localErrors },
+                        locked: activeEdit.saving !== null,
+                        categories: state.categories.filter(
+                          (category) => category.zone === shownEntry.zone,
+                        ),
+                      }
                 }
               />
             </div>
@@ -680,8 +958,62 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         count={state.entries.length}
         lastAddedAt={state.entries[0]?.addedAt ?? null}
         workspacePath={api.workspacePath}
-        keyHints={sheetOpen ? appStrings.sheetKeyHints : undefined}
+        keyHints={
+          editing
+            ? appStrings.editKeyHints
+            : sheetOpen
+              ? appStrings.sheetKeyHints
+              : undefined
+        }
       />
+      {shownEntry !== undefined && activeEdit?.confirm === 'cancel' && (
+        <Dialog
+          title={appStrings.discardTitle}
+          actions={
+            <>
+              <Button
+                ref={backToEditingButton}
+                onClick={() => setConfirm(null)}
+              >
+                {appStrings.backToEditing}
+                <kbd className="kbd">Esc</kbd>
+              </Button>
+              <Button variant="danger-solid" onClick={() => setEdit(null)}>
+                {appStrings.discardChanges}
+              </Button>
+            </>
+          }
+          onCancel={() => setConfirm(null)}
+          initialFocusRef={backToEditingButton}
+        >
+          <p className="dialog-body">
+            {appStrings.discardBody(shownEntry.name)}
+          </p>
+        </Dialog>
+      )}
+      {activeEdit?.confirm === 'reload' && (
+        <Dialog
+          title={appStrings.reloadEntryTitle}
+          actions={
+            <>
+              <Button
+                ref={backToEditingButton}
+                onClick={() => setConfirm(null)}
+              >
+                {appStrings.backToEditing}
+                <kbd className="kbd">Esc</kbd>
+              </Button>
+              <Button variant="danger-solid" onClick={() => void reloadEdit()}>
+                {appStrings.reloadEntryConfirm}
+              </Button>
+            </>
+          }
+          onCancel={() => setConfirm(null)}
+          initialFocusRef={backToEditingButton}
+        >
+          <p className="dialog-body">{appStrings.reloadEntryBody}</p>
+        </Dialog>
+      )}
       {shownEntry !== undefined && confirmingDelete === shownEntry.id && (
         <Dialog
           title={appStrings.deleteEntryTitle(shownEntry.name)}

@@ -19,10 +19,18 @@ export interface ToolbarProps {
     onChange: (text: string) => void;
     inputRef: RefObject<HTMLInputElement | null>;
   };
+  /** The zone tabs and the search box are inactive (an entry is being edited). */
+  disabled?: boolean;
 }
 
 /** The toolbar: the two zone tabs, each with its live counter, and the search box. */
-export function Toolbar({ zone, counts, onZoneChange, search }: ToolbarProps) {
+export function Toolbar({
+  zone,
+  counts,
+  onZoneChange,
+  search,
+  disabled = false,
+}: ToolbarProps) {
   return (
     <div className="toolbar">
       <div
@@ -37,6 +45,7 @@ export function Toolbar({ zone, counts, onZoneChange, search }: ToolbarProps) {
             role="tab"
             className="zone-tab"
             aria-selected={zone === id}
+            disabled={disabled}
             onClick={() => onZoneChange(id)}
           >
             {zoneLabels[id]}
@@ -53,6 +62,7 @@ export function Toolbar({ zone, counts, onZoneChange, search }: ToolbarProps) {
           value={search.text}
           placeholder={appStrings.searchPlaceholder[zone]}
           aria-label={appStrings.searchLabel}
+          disabled={disabled}
           autoComplete="off"
           spellCheck={false}
           onChange={(event) => search.onChange(event.target.value)}

@@ -162,7 +162,9 @@ export function installKeyboard(
  * (also numpad), [ and ] move to the previous / next category (single keys:
  * they do nothing in a text field), Alt+← goes back one sheet while one is
  * open (it also works in a text field), Delete asks to delete the sheet on
- * screen (a single key too).
+ * screen (a single key too), E opens the sheet on screen in edit mode (a
+ * single key), and Ctrl+S saves the edit (also from a text field). While an
+ * entry is edited, everything that would leave the form is inactive.
  */
 export function frameBindings({
   selectZone,
@@ -172,6 +174,9 @@ export function frameBindings({
   back,
   sheetOpen,
   requestDelete,
+  editing,
+  startEdit,
+  save,
 }: {
   selectZone: (index: 0 | 1) => void;
   zoom: Zoom;
@@ -180,20 +185,37 @@ export function frameBindings({
   back: () => void;
   sheetOpen: () => boolean;
   requestDelete: () => void;
+  /** An entry is being edited. */
+  editing: () => boolean;
+  startEdit: () => void;
+  save: () => void;
 }): Binding[] {
+  const reading = () => sheetOpen() && !editing();
   return [
     { code: ['KeyK', 'KeyF'], ctrl: true, run: () => focusSearch() },
     { code: 'BracketLeft', shift: false, run: () => moveCategory(-1) },
     { code: 'BracketRight', shift: false, run: () => moveCategory(1) },
-    { code: 'ArrowLeft', alt: true, when: sheetOpen, run: () => back() },
+    { code: 'ArrowLeft', alt: true, when: reading, run: () => back() },
     {
       code: 'Delete',
       shift: false,
-      when: sheetOpen,
+      when: reading,
       run: () => requestDelete(),
     },
-    { code: 'Digit1', ctrl: true, run: () => selectZone(0) },
-    { code: 'Digit2', ctrl: true, run: () => selectZone(1) },
+    { code: 'KeyE', shift: false, when: reading, run: () => startEdit() },
+    { code: 'KeyS', ctrl: true, when: editing, run: () => save() },
+    {
+      code: 'Digit1',
+      ctrl: true,
+      when: () => !editing(),
+      run: () => selectZone(0),
+    },
+    {
+      code: 'Digit2',
+      ctrl: true,
+      when: () => !editing(),
+      run: () => selectZone(1),
+    },
     {
       code: ['Equal', 'NumpadAdd'],
       ctrl: true,
