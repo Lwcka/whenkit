@@ -54,11 +54,11 @@ import { EmptyState } from './empty-state';
 import { EntrySheet } from './entry-sheet';
 import {
   ESCAPE_PRIORITY,
-  createZoom,
   frameBindings,
   installKeyboard,
   isDialogOpen,
   registerEscape,
+  type Zoom,
 } from './keyboard';
 import './kbd.css';
 import { useSearch } from './search';
@@ -85,8 +85,8 @@ export type FrameApi = Pick<
   | 'searchEntries'
   | 'setNotes'
   | 'setTheme'
-  | 'setZoomFactor'
   | 'workspacePath'
+  | 'zoom'
 >;
 
 /** DESIGN motion.skeleton-delay (200 ms), mirrored from tokens.css for the timer. */
@@ -751,8 +751,17 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     setSearchText(text);
   };
 
-  const { setZoomFactor } = api;
-  const zoom = useMemo(() => createZoom(setZoomFactor), [setZoomFactor]);
+  // Only the intent goes out; main owns the factor and answers nothing the
+  // window needs (AD-20).
+  const { zoom: sendZoom } = api;
+  const zoom = useMemo<Zoom>(
+    () => ({
+      zoomIn: () => void sendZoom('in'),
+      zoomOut: () => void sendZoom('out'),
+      reset: () => void sendZoom('reset'),
+    }),
+    [sendZoom],
+  );
   useEffect(
     () =>
       installKeyboard(

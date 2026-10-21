@@ -95,6 +95,28 @@ describe('parseWindowState', () => {
     expect(parseWindowState(text, [SCREEN])).toEqual({ maximized: true });
   });
 
+  it('reads the zoom', () => {
+    expect(parseWindowState(file({ version: 1, zoom: 1.5 }), [SCREEN])).toEqual(
+      { zoom: 1.5 },
+    );
+  });
+
+  it('reads a file without the zoom as having none', () => {
+    const state = parseWindowState(file({ version: 1, theme: 'dark' }), [
+      SCREEN,
+    ]);
+    expect(state.zoom).toBeUndefined();
+  });
+
+  it.each([
+    [3, 2],
+    [0.5, 0.8],
+  ])('clamps a zoom of %s to %s', (zoom, expected) => {
+    expect(parseWindowState(file({ version: 1, zoom }), [SCREEN])).toEqual({
+      zoom: expected,
+    });
+  });
+
   it('reads a file with only a theme', () => {
     expect(
       parseWindowState(file({ version: 1, theme: 'light' }), [SCREEN]),
@@ -113,6 +135,10 @@ describe('parseWindowState', () => {
     ['not an object', '[1]'],
     ['a missing version', file({ theme: 'dark', bounds: BOUNDS })],
     ['a wrong version', file({ version: 2, theme: 'dark', bounds: BOUNDS })],
+    [
+      'a non-numeric zoom',
+      file({ version: 1, theme: 'dark', bounds: BOUNDS, zoom: 'big' }),
+    ],
     [
       'a non-boolean maximized',
       file({ version: 1, theme: 'dark', bounds: BOUNDS, maximized: 'yes' }),
@@ -192,6 +218,28 @@ describe('window-state.json on disk', () => {
       bounds: BOUNDS,
       maximized: true,
     });
+  });
+
+  it('round-trips the zoom', () => {
+    const target = path.join(dir, 'window-state.json');
+    writeWindowState(target, { bounds: BOUNDS, zoom: 1.5 });
+
+    expect(readWindowState(target, [SCREEN])).toEqual({
+      bounds: BOUNDS,
+      zoom: 1.5,
+    });
+    expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual({
+      version: 1,
+      bounds: BOUNDS,
+      zoom: 1.5,
+    });
+  });
+
+  it('does not write a zoom that is absent', () => {
+    const target = path.join(dir, 'window-state.json');
+    writeWindowState(target, { bounds: BOUNDS });
+
+    expect(JSON.parse(readFileSync(target, 'utf8'))).not.toHaveProperty('zoom');
   });
 
   it('does not write maximized for a normal window', () => {

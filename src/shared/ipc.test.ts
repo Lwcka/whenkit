@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   isExternalUrl,
+  isZoomIntent,
   WORKSPACE_ARGUMENT_PREFIX,
   workspaceFromArgv,
 } from './ipc';
@@ -23,6 +24,19 @@ describe('workspaceFromArgv', () => {
   ])('%s', (_label, argv, expected) => {
     expect(workspaceFromArgv(argv)).toBe(expected);
   });
+});
+
+describe('isZoomIntent', () => {
+  it.each(['in', 'out', 'reset'])('accepts %s', (value) => {
+    expect(isZoomIntent(value)).toBe(true);
+  });
+
+  it.each(['big', '', 'IN', 2, 1.1, null, undefined, {}, ['in']])(
+    'refuses %j',
+    (value) => {
+      expect(isZoomIntent(value)).toBe(false);
+    },
+  );
 });
 
 describe('isExternalUrl', () => {

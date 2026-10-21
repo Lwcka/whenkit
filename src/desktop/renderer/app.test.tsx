@@ -169,12 +169,14 @@ describe('App frame', () => {
   });
 
   it('zooms through the bridge on Ctrl+=', async () => {
-    const setZoomFactor = vi.fn();
-    await renderWith(snapshot, fakeFrameApi({ setZoomFactor }));
+    const zoom = vi.fn(() =>
+      Promise.resolve({ ok: true as const, data: null }),
+    );
+    await renderWith(snapshot, fakeFrameApi({ zoom }));
 
     fireEvent.keyDown(document, { code: 'Equal', ctrlKey: true });
     fireEvent.keyDown(document, { code: 'Digit0', ctrlKey: true });
-    expect(setZoomFactor.mock.calls).toEqual([[1.1], [1]]);
+    expect(zoom.mock.calls).toEqual([['in'], ['reset']]);
   });
 
   it('shows the title bar and the status bar from the catalog store', async () => {

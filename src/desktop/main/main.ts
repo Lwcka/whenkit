@@ -65,6 +65,7 @@ import {
   writeWindowState,
   type WindowState,
 } from './window-state';
+import { ZOOM_DEFAULT, zoomResult } from './zoom';
 
 /** The window never waits long for a lock held by the CLI (AD-4). */
 const DESKTOP_BUSY_TIMEOUT_MS = 2000;
@@ -178,8 +179,17 @@ function main(): void {
     }
   };
 
+  /** The zoom factor main holds (AD-20); 100% until the user changes it. */
+  const currentZoom = (): number => saved.zoom ?? ZOOM_DEFAULT;
+
   const createWindow = (theme: Theme, workspace: string | null) => {
-    const { backgroundColor, titleBarOverlay } = nativeThemeSettings(theme);
+    const zoom = currentZoom();
+    // The overlay is as tall as the zoomed title bar (40 * zoom DIP), so the
+    // first paint already has the right height.
+    const { backgroundColor, titleBarOverlay } = nativeThemeSettings(
+      theme,
+      zoom,
+    );
     const window = new BrowserWindow({
       ...(saved.bounds ?? { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }),
       center: saved.bounds === undefined,
@@ -198,6 +208,8 @@ function main(): void {
         contextIsolation: true,
         sandbox: true,
         nodeIntegration: false,
+        // The saved zoom, so the first paint is already at it (AD-20).
+        zoomFactor: zoom,
         // The workspace is resolved once, here; the renderer reads it from
         // its launch arguments (no channel needed). The theme is not passed:
         // the renderer follows prefers-color-scheme, which Electron ties to
@@ -251,6 +263,12 @@ function main(): void {
       saveState(window);
     });
 
+    // Reapplied after every load (a dev reload): idempotent, since Chromium
+    // keeps the factor per origin.
+    window.webContents.on('did-finish-load', () => {
+      window.webContents.setZoomFactor(currentZoom());
+    });
+
     void window.loadURL(appUrl);
     // DevTools only in development, never in a packaged build.
     if (MAIN_WINDOW_VITE_DEV_SERVER_URL) window.webContents.openDevTools();
@@ -261,7 +279,10 @@ function main(): void {
 
   /** The native half of a theme: the window background and the caption buttons. */
   const applyNativeTheme = (window: BrowserWindow, theme: Theme) => {
-    const { backgroundColor, titleBarOverlay } = nativeThemeSettings(theme);
+    const { backgroundColor, titleBarOverlay } = nativeThemeSettings(
+      theme,
+      currentZoom(),
+    );
     window.setBackgroundColor(backgroundColor);
     window.setTitleBarOverlay(titleBarOverlay);
   };
@@ -422,6 +443,37 @@ function main(): void {
             return failure('INTERNAL');
           }
         },
+      );
+      // The zoom (AD-20): the renderer sends the intent, main steps, applies,
+      // resizes the title bar overlay to match and saves.
+      ipcMain.handle(IPC_CHANNELS.windowZoom, (event, intent: unknown) =>
+        zoomResult(
+          intent,
+          currentZoom(),
+          {
+            apply: (next) => {
+              event.sender.setZoomFactor(next);
+              BrowserWindow.fromWebContents(event.sender)?.setTitleBarOverlay(
+                nativeThemeSettings(currentTheme(), next).titleBarOverlay,
+              );
+            },
+            record: (next) => {
+              if (next === ZOOM_DEFAULT) delete saved.zoom;
+              else saved.zoom = next;
+              const window = BrowserWindow.fromWebContents(event.sender);
+              if (window !== null) {
+                saveState(window);
+                return;
+              }
+              try {
+                writeWindowState(statePath, saved);
+              } catch (error) {
+                reporter.log(error);
+              }
+            },
+          },
+          reporter.log,
+        ),
       );
       let watcher: CatalogWatcher | undefined;
       app.on('will-quit', () => {

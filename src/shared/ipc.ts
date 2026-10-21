@@ -33,6 +33,7 @@ export const IPC_CHANNELS = {
   categoriesDelete: 'categories:delete',
   catalogExport: 'catalog:export',
   windowSetTheme: 'window:setTheme',
+  windowZoom: 'window:zoom',
   shellOpenExternal: 'shell:openExternal',
   shellOpenExportFolder: 'shell:openExportFolder',
   /** Main to renderer: save the pending notes now (AD-20). */
@@ -46,6 +47,13 @@ export type Theme = 'light' | 'dark';
 
 export function isTheme(value: unknown): value is Theme {
   return value === 'light' || value === 'dark';
+}
+
+/** What the renderer asks of the zoom; main owns the factor (AD-20). */
+export type ZoomIntent = 'in' | 'out' | 'reset';
+
+export function isZoomIntent(value: unknown): value is ZoomIntent {
+  return value === 'in' || value === 'out' || value === 'reset';
 }
 
 /**
@@ -185,6 +193,10 @@ export interface WhenkitApi {
    * `http:`/`https:` with `ARGUMENTS_INVALID`; the window never navigates.
    */
   openExternal(url: string): Promise<IpcResult<null>>;
-  /** Zooms the whole interface (preload `webFrame`; no IPC, nothing persisted). */
-  setZoomFactor(factor: number): void;
+  /**
+   * Steps the zoom of the whole interface (AD-20). Main owns the factor: it
+   * applies it, resizes the title bar overlay and saves it. Main refuses
+   * anything but the three intents with `ARGUMENTS_INVALID`.
+   */
+  zoom(intent: ZoomIntent): Promise<IpcResult<null>>;
 }
