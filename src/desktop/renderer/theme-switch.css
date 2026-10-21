@@ -10,6 +10,20 @@
   margin-right: var(--theme-switch-gap);
   padding: var(--theme-switch-padding);
   position: relative;
+  transition:
+    background-color var(--motion-theme) var(--motion-ease),
+    border-color var(--motion-theme) var(--motion-ease);
+  /* Lifted out of the page's theme cross-fade: it shows only its live new
+     state, so its own transitions (knob slide, colors) play on top. */
+  view-transition-name: theme-switch;
+}
+
+::view-transition-old(theme-switch) {
+  display: none;
+}
+
+::view-transition-new(theme-switch) {
+  animation: none;
 }
 
 .theme-switch-slot {
