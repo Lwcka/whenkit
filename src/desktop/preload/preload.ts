@@ -49,6 +49,9 @@ const api = {
       ipcRenderer.removeListener(IPC_CHANNELS.windowFlushNotes, handler);
     };
   },
+  exportCatalog: () => ipcRenderer.invoke(IPC_CHANNELS.catalogExport),
+  openExportFolder: (path: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.shellOpenExportFolder, path),
   setTheme: (theme: Theme) =>
     ipcRenderer.invoke(IPC_CHANNELS.windowSetTheme, theme),
   openExternal: (url: string) =>

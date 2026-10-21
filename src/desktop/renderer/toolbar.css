@@ -123,7 +123,8 @@
   display: none;
 }
 
-/* toolbar-button (DESIGN): ghost without a fill; „Categorii” sits at the right. */
+/* toolbar-button (DESIGN): ghost without a fill; the buttons sit at the right,
+   starting after the search box. */
 .toolbar-button {
   align-items: center;
   background: transparent;
@@ -137,7 +138,6 @@
   gap: var(--spacing-2);
   height: var(--toolbar-button-height);
   justify-content: center;
-  margin-left: auto;
   padding: 0 var(--toolbar-button-padding-x);
   transition: background-color var(--motion-quick) var(--motion-ease);
   white-space: nowrap;
@@ -147,9 +147,30 @@
   background: var(--hover-overlay);
 }
 
+.search-box + .toolbar-button {
+  margin-left: auto;
+}
+
 .toolbar-button:disabled {
   cursor: default;
   opacity: var(--disabled-opacity);
+}
+
+/* toolbar-button-primary (DESIGN): „Exportă catalogul”, with a surface fill and
+   a strong border. Busy: disabled but at full opacity. */
+.toolbar-button-primary {
+  background: var(--toolbar-button-primary-background);
+  border-color: var(--toolbar-button-primary-border);
+  color: var(--toolbar-button-primary-foreground);
+}
+
+.toolbar-button-primary:hover:not(:disabled) {
+  background: linear-gradient(var(--hover-overlay), var(--hover-overlay))
+    var(--toolbar-button-primary-background);
+}
+
+.toolbar-button-primary[data-busy]:disabled {
+  opacity: 1;
 }
 
 /* Below spacing.bp-half (960px) the shortcut hint leaves the box and the

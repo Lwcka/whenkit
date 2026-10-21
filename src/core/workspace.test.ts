@@ -26,6 +26,9 @@ class FakeFileSystem implements FileSystem {
   mkdir(path: string) {
     this.dirs.add(path);
   }
+  removeDir(path: string) {
+    this.dirs.delete(path);
+  }
   readText(path: string) {
     const text = this.files.get(path);
     if (text === undefined || this.unreadable.has(path)) {

@@ -3,6 +3,7 @@ import {
   mkdirSync,
   readFileSync,
   readdirSync,
+  rmSync,
   writeFileSync,
 } from 'node:fs';
 import path from 'node:path';
@@ -23,6 +24,9 @@ export const nodeFileSystem: FileSystem = {
   exists: (target) => existsSync(target),
   mkdir: (target) => {
     mkdirSync(target, { recursive: true });
+  },
+  removeDir: (target) => {
+    rmSync(target, { recursive: true, force: true });
   },
   readText: (target) => readFileSync(target, 'utf8'),
   writeText: (target, text) => {

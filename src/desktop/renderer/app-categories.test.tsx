@@ -114,6 +114,8 @@ beforeEach(() => {
   api = {
     workspacePath: 'C:\\ws',
     openExternal: () => Promise.resolve({ ok: true, data: null }),
+    exportCatalog: () => Promise.resolve({ ok: true, data: null }),
+    openExportFolder: () => Promise.resolve({ ok: true, data: null }),
     searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
     setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
     deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),

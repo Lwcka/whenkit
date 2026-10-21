@@ -5,6 +5,7 @@ import {
   renameCategory,
 } from '../../core/categories';
 import { deleteEntry } from '../../core/delete-entry';
+import { exportCatalog, type ExportLabels } from '../../core/export-catalog';
 import type {
   CatalogSnapshotDto,
   EntryPatch,
@@ -25,7 +26,7 @@ import type {
 import { searchEntries } from '../../core/search-entries';
 import { setNotes } from '../../core/set-notes';
 import { catalogPath, resolveWorkspace } from '../../core/workspace';
-import type { IpcResult, WriteResult } from '../../shared/ipc';
+import type { ExportResultDto, IpcResult, WriteResult } from '../../shared/ipc';
 import { runWrite } from './catalog-watch';
 
 // The window's catalog (AD-10): opened once by main, for writing but without
@@ -117,6 +118,75 @@ export function snapshotResult(
   if (!opened.ok) return failure(opened.code);
   try {
     return { ok: true, data: catalogSnapshot(opened.store) };
+  } catch (error) {
+    return failure(codeOf(error, logError));
+  }
+}
+
+/** What `catalog:export` needs besides the store (AD-12, AD-13). */
+export interface ExportDeps {
+  fs: FileSystem;
+  clock: Clock;
+  /** The Romanian headings of the `.md` files, built from `strings.ro.ts`. */
+  labels: ExportLabels;
+}
+
+/**
+ * The `catalog:export` answer (CAP-13, AD-12, AD-18) once the user has
+ * answered the folder dialog: `parentDir` is the chosen folder, or
+ * `undefined` when the dialog was cancelled (then nothing is written and the
+ * answer is `null`). The export only reads the catalog: it is not a write
+ * (no `runWrite`, no `catalog:changed`). Never throws.
+ */
+export function exportCatalogResult(
+  opened: DesktopCatalog,
+  parentDir: string | undefined,
+  deps: ExportDeps,
+  logError: (error: unknown) => void = console.error,
+): IpcResult<ExportResultDto | null> {
+  if (!opened.ok) return failure(opened.code);
+  if (parentDir === undefined) return { ok: true, data: null };
+  try {
+    return {
+      ok: true,
+      data: exportCatalog(opened.store, deps, {
+        parentDir,
+        labels: deps.labels,
+      }),
+    };
+  } catch (error) {
+    // codeOf logs only unexpected errors; the disk error behind a failed
+    // write (EACCES, ENOSPC, …) is the only trace of why it failed (AD-19).
+    if (isWhenkitError(error) && error.code === 'EXPORT_WRITE_FAILED') {
+      try {
+        logError(error.cause);
+      } catch {
+        // Logging must not turn an answer into a throw (AD-18).
+      }
+    }
+    return failure(codeOf(error, logError));
+  }
+}
+
+/**
+ * The `shell:openExportFolder` answer (AD-9, AD-18). The renderer is not
+ * trusted: only a folder this session exported (`exported`) is opened, so
+ * the channel cannot open an arbitrary path. `open` is `shell.openPath`,
+ * which answers with an error string, empty on success. Never throws.
+ */
+export async function openExportFolderResult(
+  path: unknown,
+  exported: ReadonlySet<string>,
+  open: (path: string) => Promise<string>,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<null>> {
+  if (typeof path !== 'string' || !exported.has(path)) {
+    return failure('ARGUMENTS_INVALID');
+  }
+  try {
+    const problem = await open(path);
+    if (problem !== '') throw new Error(problem);
+    return { ok: true, data: null };
   } catch (error) {
     return failure(codeOf(error, logError));
   }

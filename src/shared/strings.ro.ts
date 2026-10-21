@@ -83,6 +83,7 @@ export const errorMessages: Record<ErrorCode, string> = {
     'Baza de date e blocată de alt proces. Încearcă din nou peste câteva secunde.',
   OFFLINE:
     'Nu există conexiune la internet, deci linkurile nu pot fi verificate. Importul s-a oprit: nu s-a scris și nu s-a respins nimic. Reia importul când revine conexiunea.',
+  EXPORT_WRITE_FAILED: 'Nu am putut scrie în folderul ales.',
   INTERNAL: 'Eroare internă neprevăzută.',
 };
 
@@ -210,6 +211,19 @@ export const entryStrings = {
   parentIds: 'Umbrele (id)',
   childIds: 'Copii (id)',
   id: 'Id',
+} as const;
+
+/** Headings of the exported `.md` files (AD-12, AD-13); core receives them as labels. */
+export const exportStrings = {
+  /** Slug of an entry whose name has no letter or digit. */
+  fallbackSlug: 'fisa',
+  situations: entryStrings.situations,
+  content: entryStrings.content,
+  sources: entryStrings.sources,
+  myNotes: entryStrings.myNotes,
+  umbrellas: 'Umbrele',
+  children: 'Concepte',
+  related: 'Resurse înrudite',
 } as const;
 
 export const categoryStrings = {
@@ -463,6 +477,15 @@ export const appStrings = {
   },
   /** Category management (CAP-11, EXPERIENCE Flow 5). */
   categoriesButton: 'Categorii',
+  /** Export (CAP-13, EXPERIENCE Flow 6). */
+  exportButton: 'Exportă catalogul',
+  exporting: 'Se exportă…',
+  /** „Catalog exportat: whenkit-export-2026-10-16_143002”. */
+  exported: (folderName: string): RichText => [
+    'Catalog exportat: ',
+    { strong: folderName },
+  ],
+  openFolder: 'Deschide folderul',
   categoryManagerTitle: 'Categorii',
   categoryManagerIntro: 'Categoriile noi apar doar din import.',
   categoryManagerClose: 'Închide',
@@ -555,6 +578,7 @@ export const appStrings = {
 
 /** Texts of the main process: native dialogs, outside the renderer (AD-19). */
 export const mainStrings = {
+  exportDialogTitle: 'Alege folderul pentru export',
   unexpectedErrorTitle: 'Eroare neprevăzută',
   unexpectedErrorBody: (logPath: string | undefined): string =>
     logPath === undefined

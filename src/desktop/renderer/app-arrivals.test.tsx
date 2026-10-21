@@ -34,6 +34,8 @@ const api: FrameApi = {
   mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   openExternal: () => Promise.resolve({ ok: true, data: null }),
+  exportCatalog: () => Promise.resolve({ ok: true, data: null }),
+  openExportFolder: () => Promise.resolve({ ok: true, data: null }),
 };
 
 function snapshot(...entries: EntryDto[]): IpcResult<CatalogSnapshotDto> {

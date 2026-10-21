@@ -30,8 +30,10 @@ export const IPC_CHANNELS = {
   categoriesRename: 'categories:rename',
   categoriesMerge: 'categories:merge',
   categoriesDelete: 'categories:delete',
+  catalogExport: 'catalog:export',
   windowSetTheme: 'window:setTheme',
   shellOpenExternal: 'shell:openExternal',
+  shellOpenExportFolder: 'shell:openExportFolder',
   /** Main to renderer: save the pending notes now (AD-20). */
   windowFlushNotes: 'window:flushNotes',
   /** Renderer to main: the pending notes are saved (AD-20). */
@@ -93,6 +95,12 @@ export interface WriteResult {
    * its list with it, so a renamed or removed category shows at once.
    */
   categories?: readonly CategoryDto[];
+}
+
+/** What an export answers with: the folder it created, inside the one the user picked. */
+export interface ExportResultDto {
+  folderName: string;
+  folderPath: string;
 }
 
 /** The bridge preload exposes as `window.whenkit`. */
@@ -158,6 +166,18 @@ export interface WhenkitApi {
    * renderer reloads the snapshot.
    */
   onCatalogChanged(listener: () => void): () => void;
+  /**
+   * Exports the catalog (CAP-13, AD-12): main opens the native folder dialog,
+   * then writes `whenkit-export-<date>/` inside the chosen folder. `null` =
+   * the dialog was cancelled, nothing written. Errors: `EXPORT_WRITE_FAILED`,
+   * or the code of a catalog that could not be read.
+   */
+  exportCatalog(): Promise<IpcResult<ExportResultDto | null>>;
+  /**
+   * Opens a folder this session exported, in the file explorer. Main refuses
+   * any other path with `ARGUMENTS_INVALID` (AD-9).
+   */
+  openExportFolder(path: string): Promise<IpcResult<null>>;
   setTheme(theme: Theme): Promise<IpcResult<null>>;
   /**
    * Opens `url` in the default browser (AD-9). Main refuses anything but

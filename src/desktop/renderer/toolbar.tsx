@@ -1,7 +1,8 @@
-import { Layers, Search } from 'lucide-react';
+import { Layers, LoaderCircle, Search, Upload } from 'lucide-react';
 import type { RefObject } from 'react';
 import type { EntryDto } from '../../shared/ipc';
 import { appStrings, formatCompact, zoneLabels } from '../../shared/strings.ro';
+import './button.css';
 import './kbd.css';
 import './toolbar.css';
 
@@ -21,22 +22,31 @@ export interface ToolbarProps {
   };
   /** „Categorii” was pressed: the owner opens the category manager. */
   onOpenCategories: () => void;
+  /** „Exportă catalogul” was pressed. It reads the stored catalog, so it stays active while editing. */
+  onExport: () => void;
+  /** The export is running: the button is busy (disabled, spinning loader, „Se exportă…”). */
+  exporting?: boolean;
   /** The zone tabs, the search box and „Categorii” are inactive (an entry is being edited). */
   disabled?: boolean;
 }
 
 /**
  * The toolbar: the two zone tabs, each with its live counter, the search box
- * and „Categorii”, which opens the category manager.
+ * „Categorii”, which opens the category manager, and „Exportă catalogul”.
  */
 export function Toolbar({
   zone,
   counts,
   onZoneChange,
   onOpenCategories,
+  onExport,
+  exporting = false,
   search,
   disabled = false,
 }: ToolbarProps) {
+  const exportLabel = exporting
+    ? appStrings.exporting
+    : appStrings.exportButton;
   return (
     <div className="toolbar">
       <div
@@ -87,6 +97,23 @@ export function Toolbar({
         <span className="toolbar-button-text">
           {appStrings.categoriesButton}
         </span>
+      </button>
+      <button
+        type="button"
+        className="toolbar-button toolbar-button-primary"
+        title={exportLabel}
+        aria-label={exportLabel}
+        aria-busy={exporting ? true : undefined}
+        data-busy={exporting ? '' : undefined}
+        disabled={exporting}
+        onClick={onExport}
+      >
+        {exporting ? (
+          <LoaderCircle aria-hidden="true" className="spin" />
+        ) : (
+          <Upload aria-hidden="true" />
+        )}
+        <span className="toolbar-button-text">{exportLabel}</span>
       </button>
     </div>
   );

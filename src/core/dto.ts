@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { ERROR_CODES } from './errors';
 import { ENTRY_KINDS, RESOURCE_TYPES, ZONES, zoneOf } from './entry';
+import { EXPORT_VERSION } from './versions';
 import type {
   StoredCategory,
   StoredEntry,
@@ -12,8 +13,8 @@ import { verdictReasonSchema } from './verification/reason-codes';
 export type { EntryPatch, EntryPatchInput } from './entry-patch';
 
 // The one set of DTOs (AD-18) that `--json`, IPC and the export share: plain
-// objects, dates as ISO strings. Links appear as id lists on the entry;
-// LinkDto arrives with the export.
+// objects, dates as ISO strings. Links appear as id lists on the entry and,
+// in the export, once each as a LinkDto.
 
 export const categoryDtoSchema = z.strictObject({
   id: z.string(),
@@ -64,6 +65,19 @@ export const entrySummaryDtoSchema = entryDtoSchema.omit({ content: true });
 
 export type EntrySummaryDto = z.infer<typeof entrySummaryDtoSchema>;
 
+/**
+ * One link between two entries (AD-5), as `catalog.json` lists it: a
+ * `related` link canonical (`fromId < toId`), a `parent` link from the
+ * umbrella to its child.
+ */
+export const linkDtoSchema = z.strictObject({
+  type: z.enum(['related', 'parent']),
+  fromId: z.string(),
+  toId: z.string(),
+});
+
+export type LinkDto = z.infer<typeof linkDtoSchema>;
+
 /** A journaled rejection (AD-5): what /importa needs to retry the item. */
 export const rejectionDtoSchema = z.strictObject({
   id: z.string(),
@@ -88,6 +102,17 @@ export const catalogSnapshotDtoSchema = z.strictObject({
 });
 
 export type CatalogSnapshotDto = z.infer<typeof catalogSnapshotDtoSchema>;
+
+/** `catalog.json` of an export (AD-12): the whole catalog, nothing left out. */
+export const catalogExportSchema = z.strictObject({
+  schemaVersion: z.literal(EXPORT_VERSION),
+  exportedAt: z.string(),
+  entries: z.array(entryDtoSchema),
+  categories: z.array(categoryDtoSchema),
+  links: z.array(linkDtoSchema),
+});
+
+export type CatalogExport = z.infer<typeof catalogExportSchema>;
 
 /** What a search answers with (AD-10): the ids only, in display order, both zones. */
 export const searchResultDtoSchema = z.strictObject({
