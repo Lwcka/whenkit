@@ -224,12 +224,12 @@ describe('exportCatalog', () => {
     );
     expect(body).not.toContain('## Conținut');
     expect(body).not.toContain('## Surse');
-    expect(body).not.toContain('## Umbrele');
+    expect(body).not.toContain('## Face parte din');
 
     expect(readSheet(folderPath, 'api')).toContain('## Concepte\n\n- [[');
     expect(readSheet(folderPath, 'api')).toContain('## Conținut\n\n# api');
     const rest = readSheet(folderPath, 'rest');
-    expect(rest).toContain('## Umbrele\n\n- [[api|API]]');
+    expect(rest).toContain('## Face parte din\n\n- [[api|API]]');
     expect(rest).toContain('## Surse\n\n- https://rest.dev/spec');
   });
 

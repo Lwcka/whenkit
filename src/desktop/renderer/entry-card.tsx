@@ -43,7 +43,7 @@ function Meta({ entry }: { entry: EntryDto }) {
     <div className="entry-card-meta">
       {umbrella && (
         <span className="entry-card-host">
-          {appStrings.umbrella(entry.childIds.length)}
+          {appStrings.collection(entry.childIds.length)}
         </span>
       )}
       {host !== null && <span className="entry-card-host">{host}</span>}
