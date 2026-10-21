@@ -18,6 +18,10 @@
   width: 100%;
 }
 
+.select[data-placeholder] .select-input {
+  color: var(--muted);
+}
+
 .select-input:focus {
   border-color: var(--select-border-focus);
 }

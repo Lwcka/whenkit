@@ -162,7 +162,7 @@ export function createCatalogStore(
    * Applies what a write changed (the entries it rewrote, the ids it deleted),
    * so it is known before the next reload.
    */
-  const applyChanged = ({ changed, removed = [] }: WriteResult) => {
+  const applyChanged = ({ changed, removed = [], categories }: WriteResult) => {
     if (state.status !== 'ready') return;
     let entries = state.entries;
     for (const dto of changed) {
@@ -181,10 +181,23 @@ export function createCatalogStore(
         [...state.arrivals].filter(([id]) => !gone.has(id)),
       );
       const pulses = new Map([...state.pulses].filter(([id]) => !gone.has(id)));
-      set({ ...state, entries, arrivals, pulses });
+      set({
+        ...state,
+        entries,
+        arrivals,
+        pulses,
+        ...(categories === undefined ? {} : { categories }),
+      });
       return;
     }
-    if (entries !== state.entries) set({ ...state, entries });
+    // The full category list of a category write replaces the store's own.
+    if (entries !== state.entries || categories !== undefined) {
+      set({
+        ...state,
+        entries,
+        ...(categories === undefined ? {} : { categories }),
+      });
+    }
   };
 
   const refresh = async () => {

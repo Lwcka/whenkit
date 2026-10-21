@@ -245,6 +245,18 @@
   --dialog-padding: 26px 28px 22px;
   --dialog-gap: 14px;
   --dialog-margin: 24px;
+  /* category-manager (DESIGN). */
+  --category-manager-width: 640px;
+  --category-manager-row-min-height: 44px;
+  --category-manager-row-button-height: 28px;
+  --category-manager-rename-background: var(--surface-2);
+  --category-manager-section-label: var(--typography-label);
+  --category-manager-row-count: var(--typography-mono-sm);
+  --category-manager-row-button-typography: var(--typography-caption);
+  --category-manager-gap: 6px;
+  --category-manager-row-gap: 10px;
+  --category-manager-row-button-padding-x: 10px;
+  --toolbar-button-padding-x: 15px;
 }
 
 :root[data-theme='light'] {

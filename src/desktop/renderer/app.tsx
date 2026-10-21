@@ -33,6 +33,7 @@ import {
   type Zone,
 } from './catalog-view';
 import { CategoryBar, type CategoryBarItem } from './category-bar';
+import { CategoryManager } from './category-manager';
 import { ConflictBanner } from './conflict-banner';
 import { Dialog } from './dialog';
 import {
@@ -71,7 +72,10 @@ import { Toolbar, ZONE_ORDER } from './toolbar';
 /** What the frame needs from the bridge. */
 export type FrameApi = Pick<
   WhenkitApi,
+  | 'deleteCategory'
   | 'deleteEntry'
+  | 'mergeCategories'
+  | 'renameCategory'
   | 'openExternal'
   | 'patchEntry'
   | 'searchEntries'
@@ -182,6 +186,8 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const [confirmingDelete, setConfirmingDelete] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [leaving, setLeaving] = useState<Leaving | null>(null);
+  // The category manager (CAP-11): a dialog over whatever the window shows.
+  const [managingCategories, setManagingCategories] = useState(false);
   const deleteButton = useRef<HTMLButtonElement>(null);
   const cancelButton = useRef<HTMLButtonElement>(null);
   const backToEditingButton = useRef<HTMLButtonElement>(null);
@@ -815,6 +821,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         zone={shownZone}
         counts={tabCounts}
         onZoneChange={changeZone}
+        onOpenCategories={() => setManagingCategories(true)}
         search={{
           text: searchText,
           onChange: changeSearch,
@@ -1038,6 +1045,15 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         >
           <p className="dialog-body">{appStrings.deleteEntryBody}</p>
         </Dialog>
+      )}
+      {managingCategories && (
+        <CategoryManager
+          categories={state.categories}
+          entries={state.entries}
+          api={api}
+          write={store.write}
+          onClose={() => setManagingCategories(false)}
+        />
       )}
       <ToastHost />
     </>

@@ -504,6 +504,40 @@ describe('catalog store: own writes', () => {
     expect(h.store.getState()).toBe(before);
   });
 
+  it('replaces the category list with the one a category write answers, even with no entry changed', async () => {
+    const h = await loaded();
+    const listener = vi.fn();
+    h.store.subscribe(listener);
+    const renamed = { ...tools, name: 'Foto' };
+
+    await h.store.write(() =>
+      Promise.resolve({
+        ok: true as const,
+        data: { changed: [], categories: [renamed, learn] },
+      }),
+    );
+
+    expect(ready(h.store).categories).toEqual([renamed, learn]);
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('applies the entries and the category list of one write together', async () => {
+    const h = await loaded();
+    const merged = entry('a', { revision: 2, categories: [] });
+
+    await h.store.write(() =>
+      Promise.resolve({
+        ok: true as const,
+        data: { changed: [merged], categories: [learn] },
+      }),
+    );
+
+    const state = ready(h.store);
+    expect(state.categories).toEqual([learn]);
+    expect(state.entries[0]?.categories).toEqual([]);
+    expect(state.entries[0]?.revision).toBe(2);
+  });
+
   it('answers a failed write as it is and changes nothing', async () => {
     const h = await loaded();
     const before = h.store.getState();

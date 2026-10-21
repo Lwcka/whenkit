@@ -1,4 +1,9 @@
 import { catalogSnapshot } from '../../core/catalog-snapshot';
+import {
+  deleteCategory,
+  mergeCategories,
+  renameCategory,
+} from '../../core/categories';
 import { deleteEntry } from '../../core/delete-entry';
 import type {
   CatalogSnapshotDto,
@@ -180,6 +185,87 @@ export function deleteEntryResult(
       const { removed, changed } = deleteEntry(store, id);
       return { changed, removed: [removed] };
     },
+    emit,
+    logError,
+  );
+}
+
+/**
+ * The `categories:rename` answer (AD-3, AD-5, AD-18): renames a category and
+ * answers with the entries that carry it and the full category list. Ids and
+ * names that are not strings are `ARGUMENTS_INVALID`. After the write `emit`
+ * tells the window. Never throws.
+ */
+export function renameCategoryResult(
+  opened: DesktopCatalog,
+  id: unknown,
+  name: unknown,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<WriteResult>> {
+  if (typeof id !== 'string' || typeof name !== 'string') {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  return runWrite(
+    opened,
+    (store) => renameCategory(store, { id, name }),
+    emit,
+    logError,
+  );
+}
+
+/**
+ * The `categories:merge` answer (AD-3, AD-5, AD-18): merges the source into
+ * the target of the same zone. Ids that are not strings are
+ * `ARGUMENTS_INVALID`. After the write `emit` tells the window. Never throws.
+ */
+export function mergeCategoriesResult(
+  opened: DesktopCatalog,
+  sourceId: unknown,
+  targetId: unknown,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<WriteResult>> {
+  if (typeof sourceId !== 'string' || typeof targetId !== 'string') {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  return runWrite(
+    opened,
+    (store) => mergeCategories(store, { sourceId, targetId }),
+    emit,
+    logError,
+  );
+}
+
+/**
+ * The `categories:delete` answer (AD-3, AD-5, AD-18): deletes a category,
+ * merging its entries into `targetId` when one is given (required when some
+ * entry has only this category). An id that is not a string, or a target that
+ * is neither a string nor absent, is `ARGUMENTS_INVALID`. After the write
+ * `emit` tells the window. Never throws.
+ */
+export function deleteCategoryResult(
+  opened: DesktopCatalog,
+  id: unknown,
+  targetId: unknown,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<WriteResult>> {
+  if (
+    typeof id !== 'string' ||
+    (targetId !== undefined &&
+      targetId !== null &&
+      typeof targetId !== 'string')
+  ) {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  return runWrite(
+    opened,
+    (store) =>
+      deleteCategory(store, {
+        id,
+        ...(typeof targetId === 'string' ? { targetId } : {}),
+      }),
     emit,
     logError,
   );

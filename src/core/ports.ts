@@ -211,6 +211,10 @@ export interface CatalogReader {
   searchEntryIds(text: string): string[];
   /** Every category of both zones, by zone and then `name_key`. */
   allCategories(): StoredCategory[];
+  /** The category with this id, or undefined when the owner has none. */
+  categoryById(id: string): StoredCategory | undefined;
+  /** The ids of the entries that carry the category, sorted. */
+  entryIdsWithCategory(categoryId: string): string[];
   entryIdByDedupKey(dedupKey: string): string | undefined;
   /** The umbrellas of an entry (`parent` links ending at it); sorted by id. */
   parentIdsOf(id: string): string[];
@@ -235,6 +239,20 @@ export interface CatalogWriter extends CatalogReader {
   setEntryNotes(id: string, notes: string): boolean;
   /** Replaces every category of an entry with `categoryIds`. */
   replaceEntryCategories(entryId: string, categoryIds: readonly string[]): void;
+  /**
+   * Renames a category: sets `name` and `name_key`. Never touches `revision`
+   * (AD-5). The caller guarantees the unique `(zone, name_key)`. False when the
+   * owner has no such category.
+   */
+  renameCategory(id: string, name: string, nameKey: string): boolean;
+  /**
+   * Deletes the category row. Its `entry_categories` rows must already be
+   * moved or removed (there is no cascade). False when the owner has no such
+   * category.
+   */
+  deleteCategory(id: string): boolean;
+  /** Increments `revision` of each entry (a category change, AD-5). */
+  bumpRevisions(entryIds: readonly string[]): void;
   /**
    * Inserts a link; a `related` link is stored canonically (smaller id
    * first). Inserting a link that exists is a no-op. The caller guarantees the

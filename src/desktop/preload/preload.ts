@@ -28,6 +28,12 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.entriesDelete, id),
   patchEntry: (input: EntryPatchInput) =>
     ipcRenderer.invoke(IPC_CHANNELS.entriesPatch, input),
+  renameCategory: (id: string, name: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.categoriesRename, id, name),
+  mergeCategories: (sourceId: string, targetId: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.categoriesMerge, sourceId, targetId),
+  deleteCategory: (id: string, targetId?: string) =>
+    ipcRenderer.invoke(IPC_CHANNELS.categoriesDelete, id, targetId),
   onFlushNotes: (flush: () => Promise<void>) => {
     // Main waits for the answer (with a time limit): it is sent whether the
     // flush worked or not.

@@ -8,7 +8,10 @@ import type {
 } from '../../core/ports';
 import { runWrite } from './catalog-watch';
 import {
+  deleteCategoryResult,
   deleteEntryResult,
+  mergeCategoriesResult,
+  renameCategoryResult,
   errorDtoOf,
   openDesktopCatalog,
   searchResult,
@@ -381,6 +384,159 @@ describe('deleteEntryResult', () => {
   it('keeps the startup code when the catalog is not open', async () => {
     await expect(
       deleteEntryResult({ ok: false, code: 'DATABASE_TOO_NEW' }, 'a', vi.fn()),
+    ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
+  });
+});
+
+describe('category handlers', () => {
+  /** Two toolbox categories and one entry `e` that carries `src` only. */
+  const fake = () => {
+    const categories = new Map([
+      ['src', { id: 'src', zone: 'toolbox', name: 'Sursa', nameKey: 'sursa' }],
+      ['dst', { id: 'dst', zone: 'toolbox', name: 'Ținta', nameKey: 'tinta' }],
+    ]);
+    let carried = ['src'];
+    const writer = {
+      categoryById: (id: string) => categories.get(id),
+      categoriesInZone: () => [...categories.values()],
+      allCategories: () => [...categories.values()],
+      entryIdsWithCategory: (id: string) => (carried.includes(id) ? ['e'] : []),
+      entryById: (id: string) =>
+        id === 'e'
+          ? {
+              id: 'e',
+              kind: 'tool',
+              categories: carried.map((c) => categories.get(c)),
+              relatedIds: [],
+              parentIds: [],
+              childIds: [],
+              situations: [],
+              keywords: [],
+              sources: [],
+              verificationNotes: [],
+              revision: 1,
+            }
+          : undefined,
+      renameCategory: (id: string, name: string, nameKey: string) => {
+        categories.set(id, { ...categories.get(id)!, name, nameKey });
+        return true;
+      },
+      replaceEntryCategories: (_id: string, ids: string[]) => {
+        carried = ids;
+      },
+      bumpRevisions: () => {},
+      deleteCategory: (id: string) => categories.delete(id),
+    };
+    return {
+      writeTransaction: (fn: (writer: unknown) => unknown) => fn(writer),
+    } as unknown as CatalogStore;
+  };
+  const opened = (store: CatalogStore) =>
+    ({ ok: true, store, workspace: 'D:ws' }) as const;
+
+  it('categories:rename answers the entries and the full category list, and emits', async () => {
+    const emit = vi.fn();
+    const result = await renameCategoryResult(
+      opened(fake()),
+      'src',
+      'Nou',
+      emit,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        changed: [{ id: 'e', categories: [{ id: 'src', name: 'Nou' }] }],
+        categories: [
+          { id: 'src', zone: 'toolbox', name: 'Nou' },
+          { id: 'dst', zone: 'toolbox', name: 'Ținta' },
+        ],
+      },
+    });
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('categories:rename answers CATEGORY_NAME_TAKEN without emitting', async () => {
+    const emit = vi.fn();
+    await expect(
+      renameCategoryResult(opened(fake()), 'src', 'tinta', emit),
+    ).resolves.toEqual({ ok: false, error: { code: 'CATEGORY_NAME_TAKEN' } });
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('categories:merge moves the entries and lists the categories left', async () => {
+    const emit = vi.fn();
+    const result = await mergeCategoriesResult(
+      opened(fake()),
+      'src',
+      'dst',
+      emit,
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: {
+        changed: [{ id: 'e', categories: [{ id: 'dst' }] }],
+        categories: [{ id: 'dst' }],
+      },
+    });
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('categories:delete without a target refuses a category some entry holds alone', async () => {
+    const emit = vi.fn();
+    await expect(
+      deleteCategoryResult(opened(fake()), 'src', undefined, emit),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: 'CATEGORY_TARGET_REQUIRED' },
+    });
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('categories:delete with a target merges', async () => {
+    const result = await deleteCategoryResult(
+      opened(fake()),
+      'src',
+      'dst',
+      vi.fn(),
+    );
+    expect(result).toMatchObject({
+      ok: true,
+      data: { categories: [{ id: 'dst' }] },
+    });
+  });
+
+  it('refuses arguments that are not strings without touching the store', async () => {
+    const store = {
+      writeTransaction: () => {
+        throw new Error('must not be asked');
+      },
+    } as unknown as CatalogStore;
+    const invalid = { ok: false, error: { code: 'ARGUMENTS_INVALID' } };
+    await expect(
+      renameCategoryResult(opened(store), 1, 'x', vi.fn()),
+    ).resolves.toEqual(invalid);
+    await expect(
+      renameCategoryResult(opened(store), 'a', undefined, vi.fn()),
+    ).resolves.toEqual(invalid);
+    await expect(
+      mergeCategoriesResult(opened(store), 'a', {}, vi.fn()),
+    ).resolves.toEqual(invalid);
+    await expect(
+      deleteCategoryResult(opened(store), 'a', 5, vi.fn()),
+    ).resolves.toEqual(invalid);
+    await expect(
+      deleteCategoryResult(opened(store), null, undefined, vi.fn()),
+    ).resolves.toEqual(invalid);
+  });
+
+  it('keeps the startup code when the catalog is not open', async () => {
+    await expect(
+      renameCategoryResult(
+        { ok: false, code: 'DATABASE_TOO_NEW' },
+        'a',
+        'b',
+        vi.fn(),
+      ),
     ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
   });
 });

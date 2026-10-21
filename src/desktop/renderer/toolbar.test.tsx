@@ -19,6 +19,7 @@ describe('Toolbar zone tabs', () => {
         zone="toolbox"
         counts={{ toolbox: 53, learn: 1234 }}
         onZoneChange={() => {}}
+        onOpenCategories={() => {}}
         search={search()}
       />,
     );
@@ -39,6 +40,7 @@ describe('Toolbar zone tabs', () => {
         zone="toolbox"
         counts={{ toolbox: 1, learn: 0 }}
         onZoneChange={onZoneChange}
+        onOpenCategories={() => {}}
         search={search()}
       />,
     );
@@ -55,6 +57,7 @@ describe('Toolbar search box', () => {
         zone="toolbox"
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
+        onOpenCategories={() => {}}
         search={search()}
       />,
     );
@@ -72,6 +75,7 @@ describe('Toolbar search box', () => {
         zone="learn"
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
+        onOpenCategories={() => {}}
         search={search()}
       />,
     );
@@ -86,6 +90,7 @@ describe('Toolbar search box', () => {
         zone="toolbox"
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
+        onOpenCategories={() => {}}
         search={search({ text: 'fundal', onChange, inputRef })}
       />,
     );
@@ -95,5 +100,43 @@ describe('Toolbar search box', () => {
     expect(inputRef.current).toBe(field);
     fireEvent.change(field, { target: { value: 'fundal v' } });
     expect(onChange).toHaveBeenCalledWith('fundal v');
+  });
+});
+
+describe('Toolbar „Categorii”', () => {
+  it('is a button with a tooltip that asks to open the category manager', () => {
+    const onOpenCategories = vi.fn();
+    render(
+      <Toolbar
+        zone="toolbox"
+        counts={{ toolbox: 1, learn: 1 }}
+        onZoneChange={() => {}}
+        onOpenCategories={onOpenCategories}
+        search={search()}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: 'Categorii' });
+    expect(button.getAttribute('title')).toBe('Categorii');
+    fireEvent.click(button);
+    expect(onOpenCategories).toHaveBeenCalledTimes(1);
+  });
+
+  it('is inactive with the rest of the toolbar', () => {
+    render(
+      <Toolbar
+        zone="toolbox"
+        counts={{ toolbox: 1, learn: 1 }}
+        onZoneChange={() => {}}
+        onOpenCategories={() => {}}
+        search={search()}
+        disabled
+      />,
+    );
+    expect(
+      screen
+        .getByRole('button', { name: 'Categorii' })
+        .hasAttribute('disabled'),
+    ).toBe(true);
   });
 });

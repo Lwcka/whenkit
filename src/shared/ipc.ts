@@ -1,5 +1,6 @@
 import type {
   CatalogSnapshotDto,
+  CategoryDto,
   EntryDto,
   EntryPatchInput,
   ErrorDto,
@@ -26,6 +27,9 @@ export const IPC_CHANNELS = {
   entriesSetNotes: 'entries:setNotes',
   entriesDelete: 'entries:delete',
   entriesPatch: 'entries:patch',
+  categoriesRename: 'categories:rename',
+  categoriesMerge: 'categories:merge',
+  categoriesDelete: 'categories:delete',
   windowSetTheme: 'window:setTheme',
   shellOpenExternal: 'shell:openExternal',
   /** Main to renderer: save the pending notes now (AD-20). */
@@ -84,6 +88,11 @@ export interface WriteResult {
   changed: readonly EntryDto[];
   /** Ids of entries the write removed from the database (a delete). */
   removed?: readonly string[];
+  /**
+   * Every category after the write (category management): the store replaces
+   * its list with it, so a renamed or removed category shows at once.
+   */
+  categories?: readonly CategoryDto[];
 }
 
 /** The bridge preload exposes as `window.whenkit`. */
@@ -114,6 +123,28 @@ export interface WhenkitApi {
    * `ARGUMENTS_INVALID` (with `issues`).
    */
   patchEntry(input: EntryPatchInput): Promise<IpcResult<WriteResult>>;
+  /**
+   * Renames a category (AD-5): `revision` of its entries does not change.
+   * Errors: `CATEGORY_NOT_FOUND`, `CATEGORY_NAME_TAKEN`, `ARGUMENTS_INVALID`.
+   */
+  renameCategory(id: string, name: string): Promise<IpcResult<WriteResult>>;
+  /**
+   * Merges a category into another of the same zone (AD-5): its entries
+   * carry the target, `revision` + 1 on them, the source is deleted.
+   */
+  mergeCategories(
+    sourceId: string,
+    targetId: string,
+  ): Promise<IpcResult<WriteResult>>;
+  /**
+   * Deletes a category (AD-5). `targetId` is required when some entry has
+   * only this category (`CATEGORY_TARGET_REQUIRED` otherwise); the delete is
+   * then a merge.
+   */
+  deleteCategory(
+    id: string,
+    targetId?: string,
+  ): Promise<IpcResult<WriteResult>>;
   /**
    * Registers what saves the notes still pending when the window closes
    * (AD-20). Main asks through `window:flushNotes`; preload awaits `flush`

@@ -37,7 +37,10 @@ import {
   patchEntryResult,
   searchResult,
   setNotesResult,
+  deleteCategoryResult,
   deleteEntryResult,
+  mergeCategoriesResult,
+  renameCategoryResult,
   snapshotResult,
 } from './catalog';
 import { watchCatalog, type CatalogWatcher } from './catalog-watch';
@@ -281,6 +284,39 @@ function main(): void {
       );
       ipcMain.handle(IPC_CHANNELS.entriesDelete, (_event, id: unknown) =>
         deleteEntryResult(catalog, id, notifyCatalogChanged, reporter.log),
+      );
+      ipcMain.handle(
+        IPC_CHANNELS.categoriesRename,
+        (_event, id: unknown, name: unknown) =>
+          renameCategoryResult(
+            catalog,
+            id,
+            name,
+            notifyCatalogChanged,
+            reporter.log,
+          ),
+      );
+      ipcMain.handle(
+        IPC_CHANNELS.categoriesMerge,
+        (_event, sourceId: unknown, targetId: unknown) =>
+          mergeCategoriesResult(
+            catalog,
+            sourceId,
+            targetId,
+            notifyCatalogChanged,
+            reporter.log,
+          ),
+      );
+      ipcMain.handle(
+        IPC_CHANNELS.categoriesDelete,
+        (_event, id: unknown, targetId: unknown) =>
+          deleteCategoryResult(
+            catalog,
+            id,
+            targetId,
+            notifyCatalogChanged,
+            reporter.log,
+          ),
       );
       // The same link checks as the CLI's import (AD-3), created once.
       const patchDeps = {

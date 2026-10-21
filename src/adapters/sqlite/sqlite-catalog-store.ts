@@ -364,6 +364,26 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     ).map(toCategory);
   }
 
+  categoryById(id: string): StoredCategory | undefined {
+    const row = this.get<CategoryRow>(
+      'SELECT id, zone, name, name_key FROM categories WHERE owner_id = ? AND id = ?',
+      this.owner,
+      id,
+    );
+    return row === undefined ? undefined : toCategory(row);
+  }
+
+  entryIdsWithCategory(categoryId: string): string[] {
+    return this.all<{ entry_id: string }>(
+      `SELECT ec.entry_id FROM entry_categories ec
+       JOIN entries e ON e.id = ec.entry_id
+       WHERE e.owner_id = ? AND ec.category_id = ?
+       ORDER BY ec.entry_id`,
+      this.owner,
+      categoryId,
+    ).map((row) => row.entry_id);
+  }
+
   entryIdByDedupKey(dedupKey: string): string | undefined {
     return this.get<{ id: string }>(
       'SELECT id FROM entries WHERE owner_id = ? AND dedup_key = ?',
@@ -513,6 +533,29 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     for (const categoryId of categoryIds) {
       this.addEntryCategory(entryId, categoryId);
     }
+  }
+
+  renameCategory(id: string, name: string, nameKey: string): boolean {
+    const result = this.db
+      .prepare(
+        'UPDATE categories SET name = ?, name_key = ? WHERE owner_id = ? AND id = ?',
+      )
+      .run(name, nameKey, this.owner, id);
+    return Number(result.changes) > 0;
+  }
+
+  deleteCategory(id: string): boolean {
+    const result = this.db
+      .prepare('DELETE FROM categories WHERE owner_id = ? AND id = ?')
+      .run(this.owner, id);
+    return Number(result.changes) > 0;
+  }
+
+  bumpRevisions(entryIds: readonly string[]): void {
+    const statement = this.db.prepare(
+      'UPDATE entries SET revision = revision + 1 WHERE owner_id = ? AND id = ?',
+    );
+    for (const id of entryIds) statement.run(this.owner, id);
   }
 
   insertLink(type: LinkType, fromId: string, toId: string): void {
