@@ -63,6 +63,38 @@ describe('parseWindowState', () => {
     ).toEqual({ theme: 'dark', bounds: BOUNDS });
   });
 
+  it('reads a maximized window', () => {
+    expect(
+      parseWindowState(file({ version: 1, bounds: BOUNDS, maximized: true }), [
+        SCREEN,
+      ]),
+    ).toEqual({ bounds: BOUNDS, maximized: true });
+  });
+
+  it('reads a file without the maximized field as not maximized', () => {
+    const state = parseWindowState(file({ version: 1, bounds: BOUNDS }), [
+      SCREEN,
+    ]);
+    expect(state.maximized).toBeUndefined();
+  });
+
+  it('reads maximized: false as not maximized', () => {
+    const state = parseWindowState(
+      file({ version: 1, bounds: BOUNDS, maximized: false }),
+      [SCREEN],
+    );
+    expect(state.maximized).toBeUndefined();
+  });
+
+  it('keeps maximized when the bounds are off every screen', () => {
+    const text = file({
+      version: 1,
+      bounds: { x: 9000, y: 9000, width: 800, height: 600 },
+      maximized: true,
+    });
+    expect(parseWindowState(text, [SCREEN])).toEqual({ maximized: true });
+  });
+
   it('reads a file with only a theme', () => {
     expect(
       parseWindowState(file({ version: 1, theme: 'light' }), [SCREEN]),
@@ -81,6 +113,10 @@ describe('parseWindowState', () => {
     ['not an object', '[1]'],
     ['a missing version', file({ theme: 'dark', bounds: BOUNDS })],
     ['a wrong version', file({ version: 2, theme: 'dark', bounds: BOUNDS })],
+    [
+      'a non-boolean maximized',
+      file({ version: 1, theme: 'dark', bounds: BOUNDS, maximized: 'yes' }),
+    ],
     ['a bad theme', file({ version: 1, theme: 'blue', bounds: BOUNDS })],
     [
       'bounds of the wrong shape',
@@ -141,6 +177,31 @@ describe('window-state.json on disk', () => {
       bounds: BOUNDS,
     });
     expect(readdirSync(dir)).toEqual(['window-state.json']);
+  });
+
+  it('round-trips a maximized window', () => {
+    const target = path.join(dir, 'window-state.json');
+    writeWindowState(target, { bounds: BOUNDS, maximized: true });
+
+    expect(readWindowState(target, [SCREEN])).toEqual({
+      bounds: BOUNDS,
+      maximized: true,
+    });
+    expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual({
+      version: 1,
+      bounds: BOUNDS,
+      maximized: true,
+    });
+  });
+
+  it('does not write maximized for a normal window', () => {
+    const target = path.join(dir, 'window-state.json');
+    writeWindowState(target, { bounds: BOUNDS, maximized: false });
+
+    expect(JSON.parse(readFileSync(target, 'utf8'))).toEqual({
+      version: 1,
+      bounds: BOUNDS,
+    });
   });
 
   it('replaces an earlier state and omits what is absent', () => {

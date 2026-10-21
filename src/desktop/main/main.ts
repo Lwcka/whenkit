@@ -183,6 +183,9 @@ function main(): void {
     const window = new BrowserWindow({
       ...(saved.bounds ?? { width: DEFAULT_WIDTH, height: DEFAULT_HEIGHT }),
       center: saved.bounds === undefined,
+      // Shown after the maximize below, so a maximized window never flashes
+      // at its normal size.
+      show: false,
       minWidth: WINDOW_MIN_WIDTH,
       minHeight: WINDOW_MIN_HEIGHT,
       title: appStrings.productName,
@@ -206,6 +209,16 @@ function main(): void {
       },
     });
     mainWindow = window;
+    // The saved normal bounds stay the restore size and pick the screen.
+    if (saved.maximized === true) window.maximize();
+    window.show();
+    // Kept current from the events: a minimized maximized window stays so.
+    window.on('maximize', () => {
+      saved.maximized = true;
+    });
+    window.on('unmaximize', () => {
+      delete saved.maximized;
+    });
     // AD-20: the first `close` is held back until the renderer has saved its
     // pending notes (or the wait ran out); the second one saves the window
     // state and lets the window go.
