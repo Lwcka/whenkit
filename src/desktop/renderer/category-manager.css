@@ -1,0 +1,129 @@
+/* category-manager (DESIGN, category-manager): the list scrolls inside the
+   wide dialog; the title, the intro and the buttons stay. */
+.category-manager-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-2);
+  margin: 0 calc(-1 * var(--spacing-7));
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--spacing-7);
+}
+
+.category-manager-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-1);
+}
+
+.category-manager-section-label {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--category-manager-section-label);
+  gap: var(--spacing-3);
+  letter-spacing: var(--ls-label);
+  margin: var(--spacing-2) 0 var(--spacing-1);
+}
+
+.category-manager-section-label::after {
+  border-top: 1px solid var(--line);
+  content: '';
+  flex: 1;
+}
+
+.category-manager-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--category-manager-gap);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.category-manager-empty {
+  color: var(--muted);
+  font: var(--typography-caption);
+  margin: 0;
+}
+
+.category-manager-row {
+  align-items: center;
+  border: 1px solid transparent;
+  border-radius: var(--rounded-lg);
+  display: flex;
+  gap: var(--category-manager-row-gap);
+  min-height: var(--category-manager-row-min-height);
+  padding: var(--spacing-1) var(--category-manager-gap) var(--spacing-1)
+    var(--spacing-3);
+}
+
+.category-manager-row:hover {
+  background: var(--hover-overlay);
+}
+
+/* The row in rename: the field takes the place of the name; the count and the
+   actions are hidden. */
+.category-manager-row[data-renaming] {
+  background: var(--category-manager-rename-background);
+  border-color: var(--line);
+}
+
+.category-manager-row[data-renaming] .text-field {
+  flex: 1;
+}
+
+.category-manager-dot {
+  background: var(--category);
+  border-radius: 50%;
+  flex: none;
+  height: var(--category-chip-dot-size);
+  width: var(--category-chip-dot-size);
+}
+
+.category-manager-name {
+  color: var(--ink);
+  flex: 1;
+  font: var(--typography-body);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.category-manager-count {
+  color: var(--muted);
+  font: var(--category-manager-row-count);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.category-manager-actions {
+  display: flex;
+  gap: var(--category-manager-gap);
+}
+
+.category-manager-button {
+  font: var(--category-manager-row-button-typography);
+  height: var(--category-manager-row-button-height);
+  padding: 0 var(--category-manager-row-button-padding-x);
+}
+
+.category-manager-button[data-danger] {
+  color: var(--danger);
+}
+
+.category-manager-hints {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font: var(--typography-caption);
+  gap: var(--category-manager-gap);
+  white-space: nowrap;
+}
+
+.category-manager-consequence {
+  color: var(--ink);
+  font: var(--typography-body);
+  margin: 0;
+}

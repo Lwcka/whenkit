@@ -66,6 +66,11 @@ export const errorMessages: Record<ErrorCode, string> = {
   ENTRY_REJECTED: 'Modificarea nu a trecut verificarea.',
   CONFLICT:
     'Fișa s-a schimbat din terminal între timp. Modificarea nu s-a salvat.',
+  CATEGORY_NOT_FOUND:
+    'Categoria nu mai există. Poate a fost unificată sau ștearsă între timp.',
+  CATEGORY_NAME_TAKEN: 'Există deja o categorie cu acest nume în zonă.',
+  CATEGORY_TARGET_REQUIRED:
+    'Unele fișe au doar această categorie. Alege categoria în care le muți.',
   REJECTION_NOT_FOUND:
     'Nu există niciun rând în jurnalul de respinse cu acest id. Nu s-a șters nimic.',
   MIGRATION_MISMATCH:
@@ -456,6 +461,54 @@ export const appStrings = {
     urlScheme: 'Linkul trebuie să înceapă cu http:// sau https://.',
     content: 'Scrie conținutul.',
   },
+  /** Category management (CAP-11, EXPERIENCE Flow 5). */
+  categoriesButton: 'Categorii',
+  categoryManagerTitle: 'Categorii',
+  categoryManagerIntro: 'Categoriile noi apar doar din import.',
+  categoryManagerClose: 'Închide',
+  categoryRename: 'Redenumește',
+  categoryMerge: 'Unifică…',
+  categoryDelete: 'Șterge',
+  categoryNameLabel: 'Numele categoriei',
+  categoryRenameSave: 'salvează',
+  categoryRenameCancel: 'renunță',
+  /** „Există deja „Mockup-uri” în Toolbox. Folosește „Unifică…”.” */
+  categoryNameTaken: (name: string, zone: string): string =>
+    `Există deja „${name}” în ${zone}. Folosește „Unifică…”.`,
+  categoryZoneEmpty: 'Nicio categorie.',
+  /** The accessible name of a row button: „Redenumește Imagini & video”. */
+  categoryActionLabel: (action: string, name: string): string =>
+    `${action} ${name}`,
+  categoryChoose: 'Alege o categorie',
+  categoryMoveTo: 'Mut fișele în',
+  categoryMergeTitle: (name: string): string => `Unifică „${name}”`,
+  categoryMergeConfirm: 'Unifică',
+  categoryMergeBusy: 'Se unifică…',
+  /** The consequence of a merge, by how many entries the source holds. */
+  categoryMergeConsequence: (
+    count: number,
+    source: string,
+    target: string,
+  ): string => {
+    if (count === 0) return `Șterg „${source}”. Nu are fișe.`;
+    return count === 1
+      ? `Mut fișa în „${target}” și șterg „${source}”?`
+      : `Mut cele ${entryCount(count)} în „${target}” și șterg „${source}”?`;
+  },
+  categoryDeleteTitle: (name: string): string => `Ștergi „${name}”?`,
+  categoryDeleteBusy: 'Se șterge…',
+  /** The delete of a category some entries hold alone: they need a new home. */
+  categorySoleEntries: (count: number): string =>
+    count === 1
+      ? '1 fișă are doar categoria asta. Alege unde o muți, ca să nu rămână fără categorie.'
+      : `${entryCount(count)} au doar categoria asta. Alege unde le muți, ca să nu rămână fără categorie.`,
+  categoryDeleteShared: (count: number): string =>
+    count === 1
+      ? 'Fișa care o are rămâne cu cealaltă categorie.'
+      : `Cele ${entryCount(count)} care o au rămân cu cealaltă categorie.`,
+  categoryDeleteBlocked:
+    'Unele fișe au doar categoria asta și nu există alta în zonă.',
+  categoryDeleteEmpty: 'Categoria nu are fișe.',
   sheetCrumbsLabel: 'Poziția fișei',
   sheetLabel: (name: string): string => `Fișa ${name}`,
   /** „Când o folosesc · 4”. */

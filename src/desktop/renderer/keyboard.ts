@@ -52,6 +52,8 @@ export interface Binding {
 
 /** Esc priorities, highest first: the first active one is the only one that runs. */
 export const ESCAPE_PRIORITY = {
+  /** The rename row of the category manager: Esc cancels only the rename. */
+  renaming: 6,
   dialog: 5,
   editing: 4,
   searchWithText: 3,

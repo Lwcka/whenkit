@@ -19,8 +19,8 @@ export interface DialogProps {
   actions: ReactNode;
   /** Esc closes the dialog like its „Renunță” button does. */
   onCancel: () => void;
-  /** The width: `confirm` is the small confirmation; wider sizes are added with their users. */
-  size?: 'confirm';
+  /** The width: `confirm` is the small confirmation, `wide` the category manager's. */
+  size?: 'confirm' | 'wide';
   /** What takes the focus when the dialog opens; the first button when absent. */
   initialFocusRef?: RefObject<HTMLElement | null>;
 }

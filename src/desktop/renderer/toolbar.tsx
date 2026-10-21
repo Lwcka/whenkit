@@ -1,4 +1,4 @@
-import { Search } from 'lucide-react';
+import { Layers, Search } from 'lucide-react';
 import type { RefObject } from 'react';
 import type { EntryDto } from '../../shared/ipc';
 import { appStrings, formatCompact, zoneLabels } from '../../shared/strings.ro';
@@ -19,15 +19,21 @@ export interface ToolbarProps {
     onChange: (text: string) => void;
     inputRef: RefObject<HTMLInputElement | null>;
   };
-  /** The zone tabs and the search box are inactive (an entry is being edited). */
+  /** „Categorii” was pressed: the owner opens the category manager. */
+  onOpenCategories: () => void;
+  /** The zone tabs, the search box and „Categorii” are inactive (an entry is being edited). */
   disabled?: boolean;
 }
 
-/** The toolbar: the two zone tabs, each with its live counter, and the search box. */
+/**
+ * The toolbar: the two zone tabs, each with its live counter, the search box
+ * and „Categorii”, which opens the category manager.
+ */
 export function Toolbar({
   zone,
   counts,
   onZoneChange,
+  onOpenCategories,
   search,
   disabled = false,
 }: ToolbarProps) {
@@ -69,6 +75,19 @@ export function Toolbar({
         />
         <kbd className="kbd">{appStrings.searchShortcut}</kbd>
       </div>
+      <button
+        type="button"
+        className="toolbar-button"
+        title={appStrings.categoriesButton}
+        aria-label={appStrings.categoriesButton}
+        disabled={disabled}
+        onClick={onOpenCategories}
+      >
+        <Layers aria-hidden="true" />
+        <span className="toolbar-button-text">
+          {appStrings.categoriesButton}
+        </span>
+      </button>
     </div>
   );
 }

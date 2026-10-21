@@ -7,6 +7,8 @@ export interface SelectFieldProps {
   label: string;
   value: string;
   options: readonly { value: string; label: string }[];
+  /** An unchosen first option (value `''`), muted while it shows. */
+  placeholder?: string;
   onChange: (value: string) => void;
   disabled?: boolean;
   error?: string;
@@ -17,6 +19,7 @@ export function SelectField({
   label,
   value,
   options,
+  placeholder,
   onChange,
   disabled,
   error,
@@ -26,7 +29,12 @@ export function SelectField({
     <div className="text-field">
       <label className="text-field-label">
         <span className="text-field-label-text">{label}</span>
-        <span className="select">
+        <span
+          className="select"
+          data-placeholder={
+            placeholder !== undefined && value === '' ? '' : undefined
+          }
+        >
           <select
             className="select-input"
             value={value}
@@ -35,6 +43,9 @@ export function SelectField({
             aria-describedby={error !== undefined ? errorId : undefined}
             onChange={(event) => onChange(event.target.value)}
           >
+            {placeholder !== undefined && (
+              <option value="">{placeholder}</option>
+            )}
             {options.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}

@@ -42,6 +42,10 @@
   width: var(--dialog-confirm-width);
 }
 
+.dialog[data-size='wide'] {
+  width: var(--category-manager-width);
+}
+
 .dialog-content {
   display: flex;
   flex-direction: column;

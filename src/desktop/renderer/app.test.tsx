@@ -30,6 +30,9 @@ function fakeApi(overrides: Partial<FrameApi> = {}): FrameApi {
     patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
     setTheme: () => Promise.resolve({ ok: true, data: null }),
     setZoomFactor: () => {},
+    renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
+    mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
+    deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
     openExternal: () => Promise.resolve({ ok: true, data: null }),
     ...overrides,
   };

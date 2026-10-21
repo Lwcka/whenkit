@@ -102,6 +102,12 @@ class FakeStore implements CatalogStore {
   allCategories(): never {
     throw new Error('not used by import');
   }
+  categoryById(): never {
+    throw new Error('not used by import');
+  }
+  entryIdsWithCategory(): never {
+    throw new Error('not used by import');
+  }
   readTransaction(): never {
     throw new Error('not used by import');
   }
@@ -132,6 +138,13 @@ class FakeStore implements CatalogStore {
       allEntries: () => this.allEntries(),
       searchEntryIds: () => this.searchEntryIds(),
       allCategories: () => this.allCategories(),
+      categoryById: () => this.categoryById(),
+      entryIdsWithCategory: () => this.entryIdsWithCategory(),
+      // Category management is not part of this fake: no import renames,
+      // merges or deletes categories.
+      renameCategory: () => false,
+      deleteCategory: () => false,
+      bumpRevisions: () => {},
       entryIdByDedupKey: (key) => this.entryIdByDedupKey(key),
       parentIdsOf: (id) => this.parentIdsOf(id),
       rejections: () => this.rejections(),
