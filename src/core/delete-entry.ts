@@ -1,5 +1,5 @@
-import { toEntryDto, type EntryDto } from './dto';
-import { WhenkitError } from './errors';
+import { toEntryDtos, type EntryDto } from './dto';
+import { vanishedError, WhenkitError } from './errors';
 import type { CatalogStore } from './ports';
 
 /**
@@ -25,13 +25,8 @@ export function deleteEntry(
     ].sort();
     writer.deleteUpdateRejections(id);
     if (!writer.deleteEntry(id)) {
-      throw new WhenkitError('INTERNAL', { detail: `entry ${id} vanished` });
+      throw vanishedError('entry', id);
     }
-    const changed: EntryDto[] = [];
-    for (const linkedId of linkedIds) {
-      const linked = writer.entryById(linkedId);
-      if (linked !== undefined) changed.push(toEntryDto(linked));
-    }
-    return { removed: id, changed };
+    return { removed: id, changed: toEntryDtos(writer, linkedIds) };
   });
 }

@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
+    // Without a cap Vitest starts one worker per core, and some crash at start with out-of-memory.
+    maxWorkers: 2,
     projects: [
       {
         test: {

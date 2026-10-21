@@ -38,6 +38,16 @@ export interface ErrorIssue {
   message: string;
 }
 
+/** The issues of a failed zod parse as `ErrorIssue`s; JSON input never yields symbol keys. */
+export function toErrorIssues(
+  issues: readonly { path: readonly PropertyKey[]; message: string }[],
+): ErrorIssue[] {
+  return issues.map(({ path, message }) => ({
+    path: path.map((key) => (typeof key === 'number' ? key : String(key))),
+    message,
+  }));
+}
+
 /**
  * A program or configuration error identified by its code. Expected outcomes
  * (verdicts, rejections) are values, never exceptions.
@@ -69,4 +79,23 @@ export class WhenkitError extends Error {
 
 export function isWhenkitError(value: unknown): value is WhenkitError {
   return value instanceof WhenkitError;
+}
+
+/** An invalid input, with every issue found; the detail joins their messages. */
+export function issuesError(
+  code: 'ARGUMENTS_INVALID' | 'BATCH_INVALID',
+  issues: ErrorIssue[],
+): WhenkitError {
+  return new WhenkitError(code, {
+    issues,
+    detail: issues.map((issue) => issue.message).join('; '),
+  });
+}
+
+/** A row that was just there and is gone inside the same transaction. */
+export function vanishedError(
+  what: 'entry' | 'category',
+  id: string,
+): WhenkitError {
+  return new WhenkitError('INTERNAL', { detail: `${what} ${id} vanished` });
 }

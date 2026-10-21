@@ -2,7 +2,9 @@ import { Pencil } from 'lucide-react';
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 import type { IpcResult, WriteResult } from '../../shared/ipc';
 import { appStrings, entryStrings } from '../../shared/strings.ro';
+import { INTERNAL_FAILURE } from './catalog-store';
 import { registerNotesFlush } from './notes-flush';
+import { useLatest } from './use-latest';
 import './my-notes.css';
 
 /** DESIGN motion.notes-autosave (600 ms), mirrored from tokens.css for the timer. */
@@ -55,12 +57,8 @@ export function MyNotes({ entryId, notes, onSave }: MyNotesProps) {
   const autosaveTimer = useRef<Timer>(undefined);
   const retryTimer = useRef<Timer>(undefined);
   const savedTimer = useRef<Timer>(undefined);
-  const onSaveRef = useRef(onSave);
-  const entryIdRef = useRef(entryId);
-  useEffect(() => {
-    onSaveRef.current = onSave;
-    entryIdRef.current = entryId;
-  });
+  const onSaveRef = useLatest(onSave);
+  const entryIdRef = useLatest(entryId);
 
   // What removes this field from the window's flush registry (notes-flush.ts).
   const unregisterFlush = useRef<(() => void) | undefined>(undefined);
@@ -102,7 +100,7 @@ export function MyNotes({ entryId, notes, onSave }: MyNotesProps) {
       try {
         result = await onSaveRef.current(entryIdRef.current, toSave);
       } catch {
-        result = { ok: false, error: { code: 'INTERNAL' } };
+        result = INTERNAL_FAILURE;
       }
       if (result.ok) {
         lastSaved.current = toSave;

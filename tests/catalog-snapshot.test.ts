@@ -7,7 +7,6 @@ import {
   bundledMigrations,
   type Migration,
 } from '../src/adapters/sqlite/migrate';
-import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
 import { catalogSnapshot } from '../src/core/catalog-snapshot';
 import { catalogSnapshotDtoSchema } from '../src/core/dto';
 import type { CatalogStore, OpenStoreOptions } from '../src/core/ports';
@@ -17,8 +16,10 @@ import {
 } from '../src/desktop/main/catalog';
 import {
   batch,
+  concept,
   importReport,
   initialized,
+  material,
   tool,
   type CliSetup,
 } from './cli-harness';
@@ -26,8 +27,8 @@ import {
   errorCodeOf,
   fakeEnvironment,
   fixedClock,
-  sequentialIds,
   tempDir,
+  testStoreOpener,
 } from './helpers';
 
 // The window's read path: core's catalogSnapshot, the `migrate: false` open
@@ -42,40 +43,23 @@ const v2: Migration = {
   sql: 'CREATE TABLE extra (id INTEGER PRIMARY KEY) STRICT;',
 };
 
-function material(ref: string) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'material',
-    name: `Material ${ref}`,
-    url: `https://${ref}.dev`,
-    resourceType: 'site',
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Învață ceva.',
-    situations: ['Când studiez'],
-  };
-}
-
-function concept(ref: string) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'concept',
-    name: `Concept ${ref}`,
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Explică o idee.',
-    situations: ['Când aleg o arhitectură'],
-    content: `# ${ref}\n\nText lung.`,
-  };
-}
-
 /** A workspace with a first batch (a, b, m1) and a newer one (c, k1). */
 async function catalogWithTwoBatches(): Promise<CliSetup> {
   const s = await initialized();
   s.deps.clock = fixedClock(new Date(FIRST_BATCH_AT));
   await importReport(s, batch([tool('a'), tool('b'), material('m1')]));
   s.deps.clock = fixedClock(new Date(SECOND_BATCH_AT));
-  await importReport(s, batch([tool('c'), concept('k1')]));
+  await importReport(
+    s,
+    batch([
+      tool('c'),
+      concept('k1', {
+        whatItDoes: 'Explică o idee.',
+        situations: ['Când aleg o arhitectură'],
+        content: '# k1\n\nText lung.',
+      }),
+    ]),
+  );
   return s;
 }
 
@@ -84,13 +68,7 @@ function open(
   options: OpenStoreOptions,
   migrations?: Migration[],
 ) {
-  return openCatalogStore(dbPath, {
-    ...options,
-    clock: fixedClock(),
-    ids: sequentialIds('9000'),
-    busyTimeoutMs: 100,
-    migrations,
-  });
+  return testStoreOpener({ migrations })(dbPath, options);
 }
 
 /** File names next to the catalog plus its bytes: any write shows up. */

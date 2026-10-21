@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { createPortal } from 'react-dom';
 import { ESCAPE_PRIORITY, registerEscape } from './keyboard';
+import { useLatest } from './use-latest';
 import './dialog.css';
 
 export interface DialogProps {
@@ -50,10 +51,7 @@ export function Dialog({
   const bodyId = useId();
 
   // The Esc handler is registered once and calls through a ref.
-  const cancelNow = useRef(onCancel);
-  useEffect(() => {
-    cancelNow.current = onCancel;
-  });
+  const cancelNow = useLatest(onCancel);
   useEffect(
     () =>
       registerEscape(

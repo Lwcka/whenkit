@@ -7,6 +7,7 @@ import {
 } from 'react';
 import type { EntryDto } from '../../shared/ipc';
 import { appStrings } from '../../shared/strings.ro';
+import { hasModifier } from './keyboard';
 import {
   entrySlot,
   isGridKey,
@@ -21,7 +22,7 @@ import './card-grid.css';
 const STAGGER_MAX = 8;
 
 /** How many columns the browser laid the grid out in (1 when unknown). */
-export function gridColumns(grid: HTMLElement): number {
+function gridColumns(grid: HTMLElement): number {
   const tracks = getComputedStyle(grid).gridTemplateColumns.match(/[\d.]+px/g);
   return tracks === null ? 1 : tracks.length;
 }
@@ -57,7 +58,7 @@ export interface CardGridProps {
 const NONE: ReadonlyMap<string, number> = new Map();
 
 /** The duration of DESIGN motion.slide, read from the token (0 with animations off). */
-export function slideDuration(): number {
+function slideDuration(): number {
   const raw = getComputedStyle(document.documentElement)
     .getPropertyValue('--motion-slide')
     .trim();
@@ -172,8 +173,7 @@ function Cards({
   const active = found < 0 ? 0 : found;
 
   const onKeyDown = (event: KeyboardEvent<HTMLUListElement>) => {
-    if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey)
-      return;
+    if (hasModifier(event)) return;
     if (!isGridKey(event.code) || list.current === null) return;
     event.preventDefault();
     const next = nextGridIndex(
@@ -273,8 +273,11 @@ function tapeOf(
     : undefined;
 }
 
+/** How many placeholder cards the skeleton shows. */
+const SKELETON_CARD_COUNT = 6;
+
 /** The placeholder grid shown when the first load is slow. */
-export function SkeletonGrid({ count = 6 }: { count?: number }) {
+export function SkeletonGrid() {
   return (
     <div
       className="card-grid"
@@ -283,7 +286,7 @@ export function SkeletonGrid({ count = 6 }: { count?: number }) {
       aria-busy="true"
       aria-label={appStrings.loadingLabel}
     >
-      {Array.from({ length: count }, (_, index) => (
+      {Array.from({ length: SKELETON_CARD_COUNT }, (_, index) => (
         <div key={index} className="card-grid-item">
           <EntryCardSkeleton />
         </div>

@@ -1,11 +1,9 @@
-import type { CatalogStore } from '../../core/ports';
-import type { IpcResult, WriteResult } from '../../shared/ipc';
-import { errorDtoOf, failure, type DesktopCatalog } from './catalog';
+import { logQuietly } from './catalog';
 
 // How the window learns the catalog changed (AD-10), electron-free so tests
 // can drive it: a poll of SQLite's data_version for what other processes
-// write, and a helper that emits the same event after the window's own writes
-// (data_version does not see writes of its own connection).
+// write. The window's own writes emit the same event from runWrite
+// (catalog.ts), since data_version does not see writes of its own connection.
 
 /** The timer functions the watcher uses; the global ones unless a test injects. */
 export interface WatchTimers {
@@ -50,13 +48,8 @@ export function watchCatalog({
   let last: number | undefined;
   let failing = false;
 
-  const report = (error: unknown) => {
-    try {
-      logError(error);
-    } catch {
-      // A broken logger must not stop the polling.
-    }
-  };
+  // A broken logger must not stop the polling.
+  const report = (error: unknown) => logQuietly(logError, error);
 
   const poll = () => {
     let version: number;
@@ -91,37 +84,4 @@ export function watchCatalog({
       timers.clearInterval(handle);
     },
   };
-}
-
-/**
- * Runs a write for a future IPC handler: `fn` gets the window's store and
- * answers what it changed. After a successful write it calls `emit`, so the
- * window reloads even though data_version cannot see its own connection's
- * writes. A failure becomes `{ ok: false, error }` with the `ErrorDto` of errorDtoOf:
- * the code, plus the `reasons` and `issues` of a WhenkitError; a failing emit
- * is logged and does not turn the saved write into an error. Never throws.
- */
-export async function runWrite<T extends WriteResult>(
-  opened: DesktopCatalog,
-  fn: (store: CatalogStore) => T | Promise<T>,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
-): Promise<IpcResult<T>> {
-  if (!opened.ok) return failure(opened.code);
-  let data: T;
-  try {
-    data = await fn(opened.store);
-  } catch (error) {
-    return { ok: false, error: errorDtoOf(error, logError) };
-  }
-  try {
-    emit();
-  } catch (error) {
-    try {
-      logError(error);
-    } catch {
-      // The write is saved; nothing more to do.
-    }
-  }
-  return { ok: true, data };
 }

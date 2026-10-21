@@ -8,6 +8,7 @@ import {
   type WheelEvent,
 } from 'react';
 import { appStrings, formatCompact } from '../../shared/strings.ro';
+import { hasModifier } from './keyboard';
 import './category-bar.css';
 
 export interface CategoryBarItem {
@@ -109,8 +110,7 @@ export function CategoryBar({
 
   // ← and → move the selection, and the focus with it (a radio group).
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.ctrlKey || event.altKey || event.metaKey || event.shiftKey)
-      return;
+    if (hasModifier(event)) return;
     const delta =
       event.code === 'ArrowRight' ? 1 : event.code === 'ArrowLeft' ? -1 : 0;
     if (delta === 0) return;

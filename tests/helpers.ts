@@ -3,6 +3,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach } from 'vitest';
 import { nodeFileSystem } from '../src/adapters/fs/node-file-system';
+import type { Migration } from '../src/adapters/sqlite/migrate';
 import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
 import { main } from '../src/cli/main';
 import { WhenkitError } from '../src/core/errors';
@@ -54,13 +55,22 @@ export function sequentialIds(series = '8000'): IdGenerator {
  * categories) come from their own series, so they never collide with the
  * ids core generates through the CLI's IdGenerator.
  */
-export function testStoreOpener(): CatalogStoreOpener {
+export function testStoreOpener({
+  idSeries = '9000',
+  migrations,
+}: {
+  /** The series of the store's own ids; another one for a second store on the same file. */
+  idSeries?: string;
+  /** Replaces the bundled migrations. */
+  migrations?: Migration[];
+} = {}): CatalogStoreOpener {
   return (dbPath, options) =>
     openCatalogStore(dbPath, {
       ...options,
       clock: fixedClock(),
-      ids: sequentialIds('9000'),
+      ids: sequentialIds(idSeries),
       busyTimeoutMs: 100,
+      migrations,
     });
 }
 

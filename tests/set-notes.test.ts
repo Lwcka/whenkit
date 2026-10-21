@@ -4,12 +4,12 @@ import {
   batch,
   importReport,
   initialized,
+  onStore,
   runCli,
   show,
   tool,
-  type CliSetup,
 } from './cli-harness';
-import { errorCodeOf, testStoreOpener } from './helpers';
+import { errorCodeOf } from './helpers';
 
 // `setNotes` (AD-3, AD-16) on the real store, in a temp development
 // workspace: the one write of `my_notes`, which no import touches.
@@ -18,19 +18,6 @@ async function withTool() {
   const s = await initialized();
   const report = await importReport(s, batch([tool('a')]));
   return { s, id: String(report.items[0].id) };
-}
-
-/** Runs `fn` on the workspace's catalog, opened for writing and closed after. */
-function onStore<T>(
-  s: CliSetup,
-  fn: (store: ReturnType<ReturnType<typeof testStoreOpener>>) => T,
-): T {
-  const store = testStoreOpener()(s.dbPath, {});
-  try {
-    return fn(store);
-  } finally {
-    store.close();
-  }
 }
 
 describe('setNotes', () => {

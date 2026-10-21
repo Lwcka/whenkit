@@ -5,7 +5,12 @@ import {
   type BatchItem,
 } from './batch-schema';
 import { zoneOf, type EntryKind, type Zone } from './entry';
-import { WhenkitError, type ErrorIssue } from './errors';
+import {
+  issuesError,
+  toErrorIssues,
+  WhenkitError,
+  type ErrorIssue,
+} from './errors';
 import {
   importReportSchema,
   type ImportReport,
@@ -32,15 +37,7 @@ import { BATCH_SCHEMA_VERSION, IMPORT_REPORT_VERSION } from './versions';
 // transaction.
 
 function invalid(issues: ErrorIssue[]): WhenkitError {
-  return new WhenkitError('BATCH_INVALID', {
-    issues,
-    detail: issues.map((issue) => issue.message).join('; '),
-  });
-}
-
-/** Zod paths may hold symbols; JSON input never produces them. */
-function issuePath(path: readonly PropertyKey[]): (string | number)[] {
-  return path.map((key) => (typeof key === 'number' ? key : String(key)));
+  return issuesError('BATCH_INVALID', issues);
 }
 
 /**
@@ -76,12 +73,7 @@ export function parseBatch(text: string): Batch {
 
   const result = batchSchema.safeParse(data);
   if (!result.success) {
-    throw invalid(
-      result.error.issues.map((issue) => ({
-        path: issuePath(issue.path),
-        message: issue.message,
-      })),
-    );
+    throw invalid(toErrorIssues(result.error.issues));
   }
   return result.data;
 }

@@ -27,7 +27,6 @@ import { searchEntries } from '../../core/search-entries';
 import { setNotes } from '../../core/set-notes';
 import { catalogPath, resolveWorkspace } from '../../core/workspace';
 import type { ExportResultDto, IpcResult, WriteResult } from '../../shared/ipc';
-import { runWrite } from './catalog-watch';
 
 // The window's catalog (AD-10): opened once by main, for writing but without
 // migrating, and read through core. Electron-free so tests can drive it.
@@ -44,17 +43,25 @@ export interface DesktopCatalogPorts {
   logError?: (error: unknown) => void;
 }
 
-/** The code of a failure; anything but a WhenkitError is logged and is INTERNAL. */
-export function codeOf(
-  error: unknown,
+/**
+ * Records an error through `logError`. A logger that throws is ignored:
+ * logging must not turn an answer into a throw (AD-18).
+ */
+export function logQuietly(
   logError: (error: unknown) => void,
-): ErrorCode {
-  if (isWhenkitError(error)) return error.code;
+  error: unknown,
+): void {
   try {
     logError(error);
   } catch {
-    // Logging must not turn an answer into a throw (AD-18).
+    // Nothing more can be done about a broken logger.
   }
+}
+
+/** The code of a failure; anything but a WhenkitError is logged and is INTERNAL. */
+function codeOf(error: unknown, logError: (error: unknown) => void): ErrorCode {
+  if (isWhenkitError(error)) return error.code;
+  logQuietly(logError, error);
   return 'INTERNAL';
 }
 
@@ -158,11 +165,7 @@ export function exportCatalogResult(
     // codeOf logs only unexpected errors; the disk error behind a failed
     // write (EACCES, ENOSPC, …) is the only trace of why it failed (AD-19).
     if (isWhenkitError(error) && error.code === 'EXPORT_WRITE_FAILED') {
-      try {
-        logError(error.cause);
-      } catch {
-        // Logging must not turn an answer into a throw (AD-18).
-      }
+      logQuietly(logError, error.cause);
     }
     return failure(codeOf(error, logError));
   }
@@ -211,26 +214,83 @@ export function searchResult(
 }
 
 /**
+ * Runs a write for an IPC handler: `fn` gets the window's store (and the
+ * resolved workspace) and answers what it changed. After a successful write
+ * it calls `emit`, so the window reloads even though data_version cannot see
+ * its own connection's writes. A failure becomes `{ ok: false, error }` with
+ * the `ErrorDto` of errorDtoOf: the code, plus the `reasons` and `issues` of
+ * a WhenkitError; a failing emit is logged and does not turn the saved write
+ * into an error. Never throws.
+ */
+export async function runWrite<T extends WriteResult>(
+  opened: DesktopCatalog,
+  fn: (store: CatalogStore, workspace: string) => T | Promise<T>,
+  emit: () => void,
+  logError: (error: unknown) => void = console.error,
+): Promise<IpcResult<T>> {
+  if (!opened.ok) return failure(opened.code);
+  let data: T;
+  try {
+    data = await fn(opened.store, opened.workspace);
+  } catch (error) {
+    return { ok: false, error: errorDtoOf(error, logError) };
+  }
+  try {
+    emit();
+  } catch (error) {
+    // The write is saved; the failure is only recorded.
+    logQuietly(logError, error);
+  }
+  return { ok: true, data };
+}
+
+/** What every write handler shares: the catalog, and what follows a write. */
+export interface WriteContext {
+  opened: DesktopCatalog;
+  /** Tells the window the catalog changed (AD-10). */
+  emit: () => void;
+  /** Where unexpected failures are recorded; default console.error. */
+  logError?: (error: unknown) => void;
+}
+
+/**
+ * The shape of the six write handlers: `args` is the validated payload, or
+ * `undefined` when it is not valid (`ARGUMENTS_INVALID`, the store is not
+ * asked); otherwise `fn` runs through runWrite. Never throws.
+ */
+function guardedWrite<A, T extends WriteResult>(
+  { opened, emit, logError }: WriteContext,
+  args: A | undefined,
+  fn: (store: CatalogStore, args: A, workspace: string) => T | Promise<T>,
+): Promise<IpcResult<T>> {
+  if (args === undefined) {
+    return Promise.resolve(failure('ARGUMENTS_INVALID'));
+  }
+  return runWrite(
+    opened,
+    (store, workspace) => fn(store, args, workspace),
+    emit,
+    logError,
+  );
+}
+
+/**
  * The `entries:setNotes` answer (AD-16, AD-18): replaces the notes of an
  * entry and answers with the entry as stored. An id or text that is not a
  * string is `ARGUMENTS_INVALID`. After the write `emit` tells the window
  * (AD-10). Never throws.
  */
 export function setNotesResult(
-  opened: DesktopCatalog,
+  context: WriteContext,
   id: unknown,
   notes: unknown,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<WriteResult>> {
-  if (typeof id !== 'string' || typeof notes !== 'string') {
-    return Promise.resolve(failure('ARGUMENTS_INVALID'));
-  }
-  return runWrite(
-    opened,
-    (store) => ({ changed: [setNotes(store, id, notes)] }),
-    emit,
-    logError,
+  return guardedWrite(
+    context,
+    typeof id === 'string' && typeof notes === 'string'
+      ? { id, notes }
+      : undefined,
+    (store, args) => ({ changed: [setNotes(store, args.id, args.notes)] }),
   );
 }
 
@@ -241,22 +301,16 @@ export function setNotesResult(
  * After the write `emit` tells the window. Never throws.
  */
 export function deleteEntryResult(
-  opened: DesktopCatalog,
+  context: WriteContext,
   id: unknown,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<WriteResult>> {
-  if (typeof id !== 'string') {
-    return Promise.resolve(failure('ARGUMENTS_INVALID'));
-  }
-  return runWrite(
-    opened,
-    (store) => {
-      const { removed, changed } = deleteEntry(store, id);
+  return guardedWrite(
+    context,
+    typeof id === 'string' ? id : undefined,
+    (store, entryId) => {
+      const { removed, changed } = deleteEntry(store, entryId);
       return { changed, removed: [removed] };
     },
-    emit,
-    logError,
   );
 }
 
@@ -267,20 +321,16 @@ export function deleteEntryResult(
  * tells the window. Never throws.
  */
 export function renameCategoryResult(
-  opened: DesktopCatalog,
+  context: WriteContext,
   id: unknown,
   name: unknown,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<WriteResult>> {
-  if (typeof id !== 'string' || typeof name !== 'string') {
-    return Promise.resolve(failure('ARGUMENTS_INVALID'));
-  }
-  return runWrite(
-    opened,
-    (store) => renameCategory(store, { id, name }),
-    emit,
-    logError,
+  return guardedWrite(
+    context,
+    typeof id === 'string' && typeof name === 'string'
+      ? { id, name }
+      : undefined,
+    (store, args) => renameCategory(store, args),
   );
 }
 
@@ -290,20 +340,16 @@ export function renameCategoryResult(
  * `ARGUMENTS_INVALID`. After the write `emit` tells the window. Never throws.
  */
 export function mergeCategoriesResult(
-  opened: DesktopCatalog,
+  context: WriteContext,
   sourceId: unknown,
   targetId: unknown,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<WriteResult>> {
-  if (typeof sourceId !== 'string' || typeof targetId !== 'string') {
-    return Promise.resolve(failure('ARGUMENTS_INVALID'));
-  }
-  return runWrite(
-    opened,
-    (store) => mergeCategories(store, { sourceId, targetId }),
-    emit,
-    logError,
+  return guardedWrite(
+    context,
+    typeof sourceId === 'string' && typeof targetId === 'string'
+      ? { sourceId, targetId }
+      : undefined,
+    (store, args) => mergeCategories(store, args),
   );
 }
 
@@ -315,29 +361,18 @@ export function mergeCategoriesResult(
  * `emit` tells the window. Never throws.
  */
 export function deleteCategoryResult(
-  opened: DesktopCatalog,
+  context: WriteContext,
   id: unknown,
   targetId: unknown,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<WriteResult>> {
-  if (
-    typeof id !== 'string' ||
-    (targetId !== undefined &&
-      targetId !== null &&
-      typeof targetId !== 'string')
-  ) {
-    return Promise.resolve(failure('ARGUMENTS_INVALID'));
-  }
-  return runWrite(
-    opened,
-    (store) =>
-      deleteCategory(store, {
-        id,
-        ...(typeof targetId === 'string' ? { targetId } : {}),
-      }),
-    emit,
-    logError,
+  const targetValid =
+    targetId === undefined || targetId === null || typeof targetId === 'string';
+  return guardedWrite(
+    context,
+    typeof id === 'string' && targetValid
+      ? { id, ...(typeof targetId === 'string' ? { targetId } : {}) }
+      : undefined,
+    (store, args) => deleteCategory(store, args),
   );
 }
 
@@ -365,30 +400,23 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
  * (AD-10). Never throws.
  */
 export function patchEntryResult(
-  opened: DesktopCatalog,
+  context: WriteContext,
   input: unknown,
   deps: PatchEntryDeps,
-  emit: () => void,
-  logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<WriteResult>> {
-  if (
-    !isPlainObject(input) ||
-    typeof input.id !== 'string' ||
-    typeof input.expectedRevision !== 'number' ||
-    !Number.isInteger(input.expectedRevision)
-  ) {
-    return Promise.resolve(failure('ARGUMENTS_INVALID'));
-  }
-  const { id, expectedRevision, changes } = input as {
-    id: string;
-    expectedRevision: number;
-    changes: unknown;
-  };
-  if (!opened.ok) return Promise.resolve(failure(opened.code));
-  const { workspace } = opened;
-  return runWrite(
-    opened,
-    async (store) => ({
+  return guardedWrite(
+    context,
+    isPlainObject(input) &&
+      typeof input.id === 'string' &&
+      typeof input.expectedRevision === 'number' &&
+      Number.isInteger(input.expectedRevision)
+      ? {
+          id: input.id,
+          expectedRevision: input.expectedRevision,
+          changes: input.changes as EntryPatch,
+        }
+      : undefined,
+    async (store, edit, workspace) => ({
       changed: [
         await patchEntry(
           store,
@@ -402,11 +430,9 @@ export function patchEntryResult(
             }),
             clock: deps.clock,
           },
-          { id, expectedRevision, changes: changes as EntryPatch },
+          edit,
         ),
       ],
     }),
-    emit,
-    logError,
   );
 }

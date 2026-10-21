@@ -1,9 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { openCatalogStore } from '../src/adapters/sqlite/sqlite-catalog-store';
 import type { CatalogStore } from '../src/core/ports';
 import { watchCatalog } from '../src/desktop/main/catalog-watch';
 import { batch, importReport, initialized, tool } from './cli-harness';
-import { fixedClock, sequentialIds } from './helpers';
+import { testStoreOpener } from './helpers';
 
 // AD-10 end to end: the window's connection notices what the CLI writes on
 // another connection, and does not notice what it writes itself.
@@ -16,11 +15,8 @@ afterEach(() => {
 
 /** The window's own connection: opened for writing, without migrating. */
 function windowStore(dbPath: string): CatalogStore {
-  const store = openCatalogStore(dbPath, {
+  const store = testStoreOpener({ idSeries: '9100' })(dbPath, {
     migrate: false,
-    clock: fixedClock(),
-    ids: sequentialIds('9100'),
-    busyTimeoutMs: 100,
   });
   stores.push(store);
   return store;

@@ -10,11 +10,6 @@ export interface NotesFlushOptions {
   onReply: (callback: () => void) => () => void;
   /** The longest wait for the answer. */
   timeoutMs: number;
-  /** Injectable timers; the global ones unless a test provides them. */
-  timers?: {
-    setTimeout(callback: () => void, ms: number): unknown;
-    clearTimeout(handle: unknown): void;
-  };
 }
 
 /**
@@ -26,21 +21,20 @@ export function waitForNotesFlush({
   request,
   onReply,
   timeoutMs,
-  timers = { setTimeout, clearTimeout },
 }: NotesFlushOptions): Promise<'flushed' | 'timeout'> {
   return new Promise((resolve) => {
     let settled = false;
-    let handle: unknown;
+    let handle: ReturnType<typeof setTimeout>;
     const finish = (outcome: 'flushed' | 'timeout') => {
       if (settled) return;
       settled = true;
-      timers.clearTimeout(handle);
+      clearTimeout(handle);
       unsubscribe();
       resolve(outcome);
     };
     // Listen before asking, so an immediate answer is not missed.
     const unsubscribe = onReply(() => finish('flushed'));
-    handle = timers.setTimeout(() => finish('timeout'), timeoutMs);
+    handle = setTimeout(() => finish('timeout'), timeoutMs);
     try {
       request();
     } catch {

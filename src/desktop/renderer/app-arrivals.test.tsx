@@ -1,45 +1,26 @@
-import {
-  act,
-  cleanup,
-  fireEvent,
-  render,
-  screen,
-} from '@testing-library/react';
+import { act, cleanup, fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { CatalogSnapshotDto, EntryDto, IpcResult } from '../../shared/ipc';
-import { App, type FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
 import { TAPE_LIFETIME_MS } from './catalog-view';
 import { applyTheme } from './theme';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  backend,
+  imagini,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+  securitate,
+} from './test-fixtures';
 import { toasts } from './toast-store';
 
 // The window while imports land (EXPERIENCE, „Sosire din import”): the real
 // store and the real App, with the snapshots a reload would bring.
 
-const imagini = makeCategory('c-img', 'Imagini & video');
-const securitate = makeCategory('c-sec', 'Securitate');
-const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
 const categories = [imagini, securitate, backend];
 
-const api: FrameApi = {
-  workspacePath: 'C:\\ws',
-  searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
-  setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  setTheme: () => Promise.resolve({ ok: true, data: null }),
-  setZoomFactor: () => {},
-  renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  openExternal: () => Promise.resolve({ ok: true, data: null }),
-  exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-  openExportFolder: () => Promise.resolve({ ok: true, data: null }),
-};
-
 function snapshot(...entries: EntryDto[]): IpcResult<CatalogSnapshotDto> {
-  return { ok: true, data: { entries, categories } };
+  return okSnapshot(entries, categories);
 }
 
 const tool = (id: string, overrides = {}) =>
@@ -71,9 +52,7 @@ afterEach(() => {
 
 async function open(first: IpcResult<CatalogSnapshotDto>) {
   answers.push(first);
-  const view = render(<App store={store} api={api} />);
-  await act(() => store.load());
-  return view;
+  return renderApp(store);
 }
 
 /** The terminal imported: the next snapshot is `next`. */

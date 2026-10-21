@@ -11,6 +11,7 @@ import {
   type ImportReport,
 } from '../src/core/import-report-schema';
 import type {
+  CatalogStore,
   CatalogStoreOpener,
   Clock,
   GitHubClient,
@@ -125,6 +126,37 @@ export function batch(items: unknown[], extra: Record<string, unknown> = {}) {
   return { schemaVersion: 1, items, ...extra };
 }
 
+/** A Learn concept of the `Backend & API-uri` category, as a batch item. */
+export function concept(ref: string, overrides: Record<string, unknown> = {}) {
+  return {
+    ref,
+    op: 'add',
+    kind: 'concept',
+    name: `Concept ${ref}`,
+    categories: ['Backend & API-uri'],
+    whatItDoes: 'Explică ceva.',
+    situations: ['Când aleg'],
+    content: `# ${ref}`,
+    ...overrides,
+  };
+}
+
+/** A Learn material of the `Backend & API-uri` category, as a batch item. */
+export function material(ref: string, overrides: Record<string, unknown> = {}) {
+  return {
+    ref,
+    op: 'add',
+    kind: 'material',
+    name: `Material ${ref}`,
+    url: `https://${ref}.dev`,
+    resourceType: 'site',
+    categories: ['Backend & API-uri'],
+    whatItDoes: 'Învață ceva.',
+    situations: ['Când studiez'],
+    ...overrides,
+  };
+}
+
 export function tool(ref: string, overrides: Record<string, unknown> = {}) {
   return {
     ref,
@@ -139,6 +171,23 @@ export function tool(ref: string, overrides: Record<string, unknown> = {}) {
     keywords: ['util'],
     ...overrides,
   };
+}
+
+/** The id of every item of a report, by ref. */
+export function idsByRef(report: ImportReport): Record<string, string> {
+  return Object.fromEntries(
+    report.items.map((item) => [item.ref, String(item.id)]),
+  );
+}
+
+/** Runs `fn` on the workspace's catalog, opened for writing and closed after. */
+export function onStore<T>(s: CliSetup, fn: (store: CatalogStore) => T): T {
+  const store = testStoreOpener()(s.dbPath, {});
+  try {
+    return fn(store);
+  } finally {
+    store.close();
+  }
 }
 
 /** Runs `import <batch> --json` and parses the stdout. */

@@ -8,7 +8,7 @@ import type {
   WriteResult,
 } from '../../shared/ipc';
 import { appStrings } from '../../shared/strings.ro';
-import { TAPE_LIFETIME_MS } from './catalog-view';
+import { isNew } from './catalog-view';
 import { toasts as windowToasts, type ToastStore } from './toast-store';
 
 // The renderer's single catalog store (AD-10): a framework-free external
@@ -71,7 +71,8 @@ export interface CatalogStoreOptions {
   toasts?: Pick<ToastStore, 'push'>;
 }
 
-const INTERNAL: { ok: false; error: ErrorDto } = {
+/** The answer the window invents when the bridge itself fails. */
+export const INTERNAL_FAILURE: { ok: false; error: ErrorDto } = {
   ok: false,
   error: { code: 'INTERNAL' },
 };
@@ -96,7 +97,7 @@ export function createCatalogStore(
       return await api.catalogSnapshot();
     } catch {
       // The bridge itself failed: the handler contract says it never throws.
-      return INTERNAL;
+      return INTERNAL_FAILURE;
     }
   };
 
@@ -118,7 +119,7 @@ export function createCatalogStore(
     const at = now();
     const arrivals = new Map<string, number>();
     for (const [id, arrivedAt] of state.arrivals) {
-      if (present.has(id) && at - arrivedAt < TAPE_LIFETIME_MS) {
+      if (present.has(id) && isNew(arrivedAt, at)) {
         arrivals.set(id, arrivedAt);
       }
     }
@@ -261,7 +262,7 @@ export function createCatalogStore(
         if (result.ok) applyChanged(result.data);
         return result;
       } catch {
-        return INTERNAL;
+        return INTERNAL_FAILURE;
       } finally {
         pendingWrites--;
         if (pendingWrites === 0) {

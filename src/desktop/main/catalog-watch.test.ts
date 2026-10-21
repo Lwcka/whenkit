@@ -1,8 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { WhenkitError } from '../../core/errors';
-import type { CatalogStore } from '../../core/ports';
-import type { EntryDto } from '../../shared/ipc';
-import { runWrite, watchCatalog } from './catalog-watch';
+import { watchCatalog } from './catalog-watch';
 
 describe('watchCatalog', () => {
   beforeEach(() => {
@@ -146,95 +143,5 @@ describe('watchCatalog', () => {
     expect(emit).toHaveBeenCalledTimes(1);
     watcher.stop();
     expect(cleared).toEqual(['handle']);
-  });
-});
-
-describe('runWrite', () => {
-  const store = {} as CatalogStore;
-  const opened = { ok: true, store, workspace: 'D:\\ws' } as const;
-  const changed: readonly EntryDto[] = [];
-
-  it('emits after a successful write and answers with its result', async () => {
-    const emit = vi.fn();
-    const fn = vi.fn((given: CatalogStore) => {
-      expect(given).toBe(store);
-      return { changed };
-    });
-    await expect(runWrite(opened, fn, emit)).resolves.toEqual({
-      ok: true,
-      data: { changed },
-    });
-    expect(emit).toHaveBeenCalledTimes(1);
-  });
-
-  it('awaits an asynchronous write before it emits', async () => {
-    const order: string[] = [];
-    const result = await runWrite(
-      opened,
-      async () => {
-        await Promise.resolve();
-        order.push('written');
-        return { changed };
-      },
-      () => order.push('emitted'),
-    );
-    expect(result.ok).toBe(true);
-    expect(order).toEqual(['written', 'emitted']);
-  });
-
-  it('answers the code of a WhenkitError and does not emit', async () => {
-    const emit = vi.fn();
-    const logError = vi.fn();
-    await expect(
-      runWrite(
-        opened,
-        () => {
-          throw new WhenkitError('ARGUMENTS_INVALID');
-        },
-        emit,
-        logError,
-      ),
-    ).resolves.toEqual({ ok: false, error: { code: 'ARGUMENTS_INVALID' } });
-    expect(emit).not.toHaveBeenCalled();
-    expect(logError).not.toHaveBeenCalled();
-  });
-
-  it('answers INTERNAL for any other throw, logged, without emitting', async () => {
-    const emit = vi.fn();
-    const logError = vi.fn();
-    const failure = new Error('disk on fire');
-    await expect(
-      runWrite(opened, () => Promise.reject(failure), emit, logError),
-    ).resolves.toEqual({ ok: false, error: { code: 'INTERNAL' } });
-    expect(emit).not.toHaveBeenCalled();
-    expect(logError).toHaveBeenCalledWith(failure);
-  });
-
-  it('answers the startup code when the catalog did not open', async () => {
-    const fn = vi.fn(() => ({ changed }));
-    const emit = vi.fn();
-    await expect(
-      runWrite({ ok: false, code: 'DATABASE_NEEDS_MIGRATION' }, fn, emit),
-    ).resolves.toEqual({
-      ok: false,
-      error: { code: 'DATABASE_NEEDS_MIGRATION' },
-    });
-    expect(fn).not.toHaveBeenCalled();
-    expect(emit).not.toHaveBeenCalled();
-  });
-
-  it('keeps a saved write an answer when emit throws', async () => {
-    const logError = vi.fn();
-    await expect(
-      runWrite(
-        opened,
-        () => ({ changed }),
-        () => {
-          throw new Error('window gone');
-        },
-        logError,
-      ),
-    ).resolves.toEqual({ ok: true, data: { changed } });
-    expect(logError).toHaveBeenCalledTimes(1);
   });
 });

@@ -3,46 +3,22 @@ import { deleteEntry } from '../src/core/delete-entry';
 import { searchEntries } from '../src/core/search-entries';
 import {
   batch,
+  concept,
   count,
+  idsByRef,
   importReport,
   initialized,
+  onStore,
   runCli,
   show,
   tool,
   type CliSetup,
 } from './cli-harness';
-import { errorCodeOf, testStoreOpener } from './helpers';
+import { errorCodeOf } from './helpers';
 
 // `deleteEntry` (AD-3, AD-5) on the real store, in a temp development
 // workspace: the row, its links, its categories and its journaled updates go;
 // the entries it was linked to come back as stored.
-
-function concept(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'concept',
-    name: `Concept ${ref}`,
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Explică ceva.',
-    situations: ['Când aleg'],
-    content: `# ${ref}`,
-    ...overrides,
-  };
-}
-
-/** Runs `fn` on the workspace's catalog, opened for writing and closed after. */
-function onStore<T>(
-  s: CliSetup,
-  fn: (store: ReturnType<ReturnType<typeof testStoreOpener>>) => T,
-): T {
-  const store = testStoreOpener()(s.dbPath, {});
-  try {
-    return fn(store);
-  } finally {
-    store.close();
-  }
-}
 
 /**
  * Concept `mid` sits under umbrella `top`, has a child `kid`, is related to
@@ -64,9 +40,7 @@ async function withLinkedEntry() {
       tool('tool'),
     ]),
   );
-  const ids = Object.fromEntries(
-    report.items.map((item) => [item.ref, String(item.id)]),
-  );
+  const ids = idsByRef(report);
   await importReport(
     s,
     batch([

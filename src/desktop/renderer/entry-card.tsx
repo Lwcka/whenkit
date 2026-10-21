@@ -7,6 +7,7 @@ import {
   resourceTypeLabels,
 } from '../../shared/strings.ro';
 import { cardHost } from './catalog-view';
+import { hasModifier } from './keyboard';
 import './entry-card.css';
 
 /** How many situations a card lists: two in Toolbox, one in Learn. */
@@ -136,10 +137,7 @@ export function EntryCard({
         if (
           (event.code !== 'Enter' && event.code !== 'NumpadEnter') ||
           event.target !== event.currentTarget ||
-          event.ctrlKey ||
-          event.altKey ||
-          event.metaKey ||
-          event.shiftKey
+          hasModifier(event)
         )
           return;
         event.preventDefault();

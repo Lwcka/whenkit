@@ -2,11 +2,12 @@ import { readFileSync } from 'node:fs';
 import { Ajv2020 } from 'ajv/dist/2020';
 import { describe, expect, it } from 'vitest';
 import { errorOutputSchema } from '../src/core/cli-schemas';
-import type { ImportReport } from '../src/core/import-report-schema';
 import type { HttpClient } from '../src/core/ports';
 import {
   batch,
+  concept,
   count,
+  idsByRef,
   importReport,
   initialized as baseInitialized,
   runCli,
@@ -55,27 +56,6 @@ function tool(ref: string, overrides: Record<string, unknown> = {}) {
   };
 }
 
-function concept(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'concept',
-    name: `Concept ${ref}`,
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Explică ceva.',
-    situations: ['Când aleg'],
-    content: `# ${ref}`,
-    ...overrides,
-  };
-}
-
-/** The ids of the items of a report, by ref. */
-function idsOf(report: ImportReport): Record<string, string> {
-  return Object.fromEntries(
-    report.items.map((item) => [item.ref, String(item.id)]),
-  );
-}
-
 describe('whenkit import with links', () => {
   it('hangs the children under an umbrella listed before them', async () => {
     const s = await initialized();
@@ -88,7 +68,7 @@ describe('whenkit import with links', () => {
       ]),
     );
     expect(report.ignoredLinks).toEqual([]);
-    const ids = idsOf(report);
+    const ids = idsByRef(report);
 
     expect((await show(s, ids.api)).childIds).toEqual(
       [ids.rest, ids.graphql].sort(),
@@ -104,7 +84,7 @@ describe('whenkit import with links', () => {
 
   it('lists the id lists in `list --json` too', async () => {
     const s = await initialized();
-    const ids = idsOf(
+    const ids = idsByRef(
       await importReport(
         s,
         batch([concept('u', { children: ['c'] }), concept('c')]),
@@ -121,8 +101,8 @@ describe('whenkit import with links', () => {
 
   it('relates a new entry to an existing one by id', async () => {
     const s = await initialized();
-    const { a } = idsOf(await importReport(s, batch([tool('a')])));
-    const { b } = idsOf(
+    const { a } = idsByRef(await importReport(s, batch([tool('a')])));
+    const { b } = idsByRef(
       await importReport(s, batch([tool('b', { related: [a] })])),
     );
     expect((await show(s, a)).relatedIds).toEqual([b]);
@@ -136,7 +116,7 @@ describe('whenkit import with links', () => {
       s,
       batch([tool('a', { related: ['b'] }), tool('b', { related: ['a'] })]),
     );
-    const ids = idsOf(report);
+    const ids = idsByRef(report);
     expect(count(s.dbPath, 'links')).toBe(1);
     expect((await show(s, ids.a)).relatedIds).toEqual([ids.b]);
     expect((await show(s, ids.b)).relatedIds).toEqual([ids.a]);
@@ -193,7 +173,7 @@ describe('whenkit import with links', () => {
 
   it('skips a child that is the id of a tool, and says so in the text output', async () => {
     const s = await initialized();
-    const { a } = idsOf(await importReport(s, batch([tool('a')])));
+    const { a } = idsByRef(await importReport(s, batch([tool('a')])));
     const result = await runCli(s, [
       'import',
       writeBatch(s, batch([concept('u', { children: [a] })])),
@@ -218,7 +198,7 @@ describe('whenkit import with links', () => {
 
   it('never writes a link that closes a cycle', async () => {
     const s = await initialized();
-    const ids = idsOf(
+    const ids = idsByRef(
       await importReport(
         s,
         batch([concept('x', { children: ['y'] }), concept('y')]),
@@ -242,7 +222,7 @@ describe('whenkit import with links', () => {
 
   it('replaces the related set of an update', async () => {
     const s = await initialized();
-    const ids = idsOf(
+    const ids = idsByRef(
       await importReport(
         s,
         batch([
@@ -265,7 +245,7 @@ describe('whenkit import with links', () => {
 
   it('keeps the child links of an update that omits children', async () => {
     const s = await initialized();
-    const ids = idsOf(
+    const ids = idsByRef(
       await importReport(
         s,
         batch([concept('u', { children: ['c'] }), concept('c')]),
@@ -285,7 +265,7 @@ describe('whenkit import with links', () => {
 
   it('removes the parent links of a concept turned into a tool', async () => {
     const s = await initialized();
-    const ids = idsOf(
+    const ids = idsByRef(
       await importReport(
         s,
         batch([concept('u', { children: ['c'] }), concept('c')]),

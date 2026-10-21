@@ -2,22 +2,28 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  CatalogSnapshotDto,
   CategoryDto,
   EntryDto,
   IpcResult,
   WriteResult,
 } from '../../shared/ipc';
 import { errorMessages } from '../../shared/strings.ro';
-import { App, type FrameApi } from './app';
+import type { FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  backend,
+  fakeFrameApi,
+  imagini,
+  makeCategory,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+} from './test-fixtures';
 import { applyTheme } from './theme';
 import { toasts } from './toast-store';
 
@@ -25,9 +31,7 @@ import { toasts } from './toast-store';
 // bridge that answers like main's `categories:*` channels (CAP-11, Flow 5).
 
 const mockups = makeCategory('c-mock', 'Mockup-uri & capturi de cod');
-const imagini = makeCategory('c-img', 'Imagini & video');
 const design = makeCategory('c-des', 'Design & UI');
-const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
 const initialCategories: CategoryDto[] = [mockups, imagini, design, backend];
 
 const initialEntries: EntryDto[] = [
@@ -111,27 +115,13 @@ beforeEach(() => {
       data: { changed: [], categories: [...categories] },
     });
   });
-  api = {
-    workspacePath: 'C:\\ws',
-    openExternal: () => Promise.resolve({ ok: true, data: null }),
-    exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-    openExportFolder: () => Promise.resolve({ ok: true, data: null }),
-    searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
-    setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    setTheme: () => Promise.resolve({ ok: true, data: null }),
-    setZoomFactor: () => {},
+  api = fakeFrameApi({
     renameCategory: rename,
     mergeCategories: merge,
     deleteCategory: remove,
-  };
+  });
   store = createCatalogStore({
-    catalogSnapshot: () =>
-      Promise.resolve({
-        ok: true,
-        data: { entries, categories },
-      } satisfies IpcResult<CatalogSnapshotDto>),
+    catalogSnapshot: () => Promise.resolve(okSnapshot(entries, categories)),
   });
 });
 
@@ -142,8 +132,7 @@ afterEach(() => {
 });
 
 async function open() {
-  render(<App store={store} api={api} />);
-  await act(() => store.load());
+  await renderApp(store, api);
 }
 
 const toolbarButton = () => screen.getByRole('button', { name: 'Categorii' });

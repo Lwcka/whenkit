@@ -1,4 +1,4 @@
-import type { CategoryDto, EntryDto } from '../../shared/ipc';
+import type { CategoryDto, EntryDto, Zone } from '../../shared/ipc';
 import { appStrings, zoneLabels } from '../../shared/strings.ro';
 import type { ToastInput } from './toast-store';
 
@@ -7,10 +7,13 @@ import type { ToastInput } from './toast-store';
 // which color slot a category gets. Pure functions; nothing here re-sorts the
 // entries, so every view keeps the snapshot order.
 
-export type Zone = EntryDto['zone'];
+export type { Zone };
+
+/** The order of the zones everywhere: tabs, manager, toasts. */
+export const ZONE_ORDER: readonly Zone[] = ['toolbox', 'learn'];
 
 /** DESIGN, Colors: the category colors are nine slots, then they start over. */
-export const CATEGORY_SLOT_COUNT = 9;
+const CATEGORY_SLOT_COUNT = 9;
 
 const collator = new Intl.Collator('ro');
 
@@ -23,8 +26,7 @@ export function categorySlots(
   categories: readonly CategoryDto[],
 ): Map<string, number> {
   const slots = new Map<string, number>();
-  const zones: Zone[] = ['toolbox', 'learn'];
-  for (const zone of zones) {
+  for (const zone of ZONE_ORDER) {
     const ids = categories
       .filter((category) => category.zone === zone)
       .map((category) => category.id)
@@ -189,8 +191,6 @@ export const TAPE_LIFETIME_MS = 600_000;
 export function isNew(arrivedAt: number, now: number): boolean {
   return now - arrivedAt < TAPE_LIFETIME_MS;
 }
-
-const ZONE_ORDER: readonly Zone[] = ['toolbox', 'learn'];
 
 /**
  * The toasts of an arrival, one per zone and Toolbox first (EXPERIENCE,

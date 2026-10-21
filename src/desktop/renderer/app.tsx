@@ -30,6 +30,7 @@ import {
   searchHits,
   sheetCrumbs,
   viewCategoryId,
+  ZONE_ORDER,
   type Zone,
 } from './catalog-view';
 import { CategoryBar, type CategoryBarItem } from './category-bar';
@@ -62,12 +63,13 @@ import {
 import './kbd.css';
 import { useSearch } from './search';
 import { SectionHeader } from './section-header';
-import { SheetBar } from './sheet-bar';
+import { SheetBar, type SavingPhase } from './sheet-bar';
 import { StatusBar } from './status-bar';
 import { TitleBar } from './title-bar';
 import { ToastHost } from './toast';
-import { toasts } from './toast-store';
-import { Toolbar, ZONE_ORDER } from './toolbar';
+import { toastError, toasts } from './toast-store';
+import { Toolbar } from './toolbar';
+import { useLatest } from './use-latest';
 
 /** What the frame needs from the bridge. */
 export type FrameApi = Pick<
@@ -88,7 +90,7 @@ export type FrameApi = Pick<
 >;
 
 /** DESIGN motion.skeleton-delay (200 ms), mirrored from tokens.css for the timer. */
-export const SKELETON_DELAY_MS = 200;
+const SKELETON_DELAY_MS = 200;
 
 /** The arrival tape's clock ticks once a second (EXPERIENCE: „acum 3 s” → „acum 4 s”). */
 const TAPE_TICK_MS = 1000;
@@ -135,7 +137,7 @@ interface EditState {
   /** The banner was on screen when the save began: it stays while the save runs. */
   bannerHeld: boolean;
   /** A save is running; 'links' when core verifies the links first. */
-  saving: 'text' | 'links' | null;
+  saving: SavingPhase | null;
   /** The confirmation on screen over the form. */
   confirm: 'cancel' | 'reload' | null;
 }
@@ -207,7 +209,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
       setExporting(false);
     }
     if (!result.ok) {
-      toasts.push({ kind: 'error', message: errorMessages[result.error.code] });
+      toastError(errorMessages[result.error.code]);
       return;
     }
     // Cancelled in the folder dialog: nothing to say.
@@ -221,10 +223,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         run: () => {
           void api.openExportFolder(folderPath).then((opened) => {
             if (!opened.ok) {
-              toasts.push({
-                kind: 'error',
-                message: errorMessages[opened.error.code],
-              });
+              toastError(errorMessages[opened.error.code]);
             }
           });
         },
@@ -326,24 +325,9 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const goBack = () => setStack(liveStack.slice(0, -1));
   // The long-lived listeners (toasts, Esc, keys, mouse) call through refs that
   // always hold the current closures.
-  const openRef = useRef(openEntry);
-  const backRef = useRef(goBack);
-  const sheetOpenRef = useRef(sheetOpen);
-  const requestDeleteRef = useRef(() => {});
-  const editingRef = useRef(false);
-  const startEditRef = useRef(() => {});
-  const saveEditRef = useRef(() => {});
-  const requestCancelRef = useRef(() => {});
-  useEffect(() => {
-    openRef.current = openEntry;
-    backRef.current = goBack;
-    sheetOpenRef.current = sheetOpen;
-    requestDeleteRef.current = requestDelete;
-    editingRef.current = editing;
-    startEditRef.current = startEdit;
-    saveEditRef.current = () => void saveEdit();
-    requestCancelRef.current = requestCancel;
-  });
+  const openRef = useLatest(openEntry);
+  const backRef = useLatest(goBack);
+  const sheetOpenRef = useLatest(sheetOpen);
 
   // „Șterge” in the sheet-bar and the Delete key only open the confirmation. The
   // focus goes to the button first, so Esc and „Renunță” bring it back there.
@@ -383,7 +367,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     if (!result.ok) {
       // The sheet stays; the toast says why.
       setLeaving(null);
-      toasts.push({ kind: 'error', message: errorMessages[result.error.code] });
+      toastError(errorMessages[result.error.code]);
       return;
     }
     // The entry left the store, so it left the stack: back from it lands on the
@@ -532,8 +516,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
     else if (error.code === 'OFFLINE') errors = { url: appStrings.editOffline };
     const conflict = error.code === 'CONFLICT';
     // Anything the form cannot show under a field or in the banner is a toast.
-    if (!conflict && !hasErrors(errors))
-      toasts.push({ kind: 'error', message: errorMessages[error.code] });
+    if (!conflict && !hasErrors(errors)) toastError(errorMessages[error.code]);
     setEdit((previous) =>
       previous?.entryId === entryId
         ? {
@@ -582,6 +565,14 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         .querySelector<HTMLElement>('.entry-sheet')
         ?.focus({ preventScroll: true });
   }, [editing]);
+
+  // More current closures for the long-lived listeners, read through refs;
+  // they point at handlers defined above.
+  const requestDeleteRef = useLatest(requestDelete);
+  const editingRef = useLatest(editing);
+  const startEditRef = useLatest(startEdit);
+  const saveEditRef = useLatest(() => void saveEdit());
+  const requestCancelRef = useLatest(requestCancel);
 
   // Every import that lands makes one toast per zone; „Vezi” opens that zone
   // at Toate, and a single arrival's „Deschide” opens its sheet.
@@ -655,10 +646,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   // Esc clears the search: first from the box (priority 3), then from
   // anywhere in the list (priority 1). The handlers read the text through a
   // ref, so they are registered once.
-  const searchTextNow = useRef(searchText);
-  useEffect(() => {
-    searchTextNow.current = searchText;
-  });
+  const searchTextNow = useLatest(searchText);
   useEffect(() => {
     const clear = () => setSearchText('');
     const hasText = () => searchTextNow.current !== '';
@@ -719,10 +707,7 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   // The last sheet closed: the list is back as it was left, with the same
   // scroll and the card the sheet was opened from focused.
   const wasOpen = useRef(false);
-  const leavingRef = useRef(leaving);
-  useEffect(() => {
-    leavingRef.current = leaving;
-  });
+  const leavingRef = useLatest(leaving);
   useLayoutEffect(() => {
     const was = wasOpen.current;
     wasOpen.current = sheetOpen;

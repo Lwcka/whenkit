@@ -2,7 +2,6 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
 } from '@testing-library/react';
@@ -13,18 +12,23 @@ import type {
   IpcResult,
   SearchResultDto,
 } from '../../shared/ipc';
-import { App, type FrameApi } from './app';
+import type { FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  backend,
+  fakeFrameApi,
+  imagini,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+  securitate,
+} from './test-fixtures';
 import { applyTheme } from './theme';
 import { toasts } from './toast-store';
 
 // The search of the window (CAP-9, EXPERIENCE: search-box): the real store and
 // the real App, with a search api that matches words in the snapshot's text.
 
-const imagini = makeCategory('c-img', 'Imagini & video');
-const securitate = makeCategory('c-sec', 'Securitate');
-const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
 const categories = [imagini, securitate, backend];
 
 const tool = (id: string, whatItDoes: string, category = imagini) =>
@@ -52,22 +56,10 @@ let asked: string[];
 let failing: boolean;
 
 function snapshot(entries: readonly EntryDto[]): IpcResult<CatalogSnapshotDto> {
-  return { ok: true, data: { entries: [...entries], categories } };
+  return okSnapshot(entries, categories);
 }
 
-const api: FrameApi = {
-  workspacePath: 'C:\\ws',
-  setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  setTheme: () => Promise.resolve({ ok: true, data: null }),
-  setZoomFactor: () => {},
-  renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  openExternal: () => Promise.resolve({ ok: true, data: null }),
-  exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-  openExportFolder: () => Promise.resolve({ ok: true, data: null }),
+const api: FrameApi = fakeFrameApi({
   searchEntries: (text) => {
     asked.push(text);
     if (failing) {
@@ -85,7 +77,7 @@ const api: FrameApi = {
     const result: IpcResult<SearchResultDto> = { ok: true, data: { ids } };
     return Promise.resolve(result);
   },
-};
+});
 
 let store: CatalogStore;
 
@@ -104,8 +96,7 @@ async function open(entries: readonly EntryDto[] = catalog) {
   store = createCatalogStore({
     catalogSnapshot: () => Promise.resolve(snapshot(current)),
   });
-  render(<App store={store} api={api} />);
-  await act(() => store.load());
+  await renderApp(store, api);
 }
 
 const box = () => screen.getByRole<HTMLInputElement>('searchbox');

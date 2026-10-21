@@ -73,14 +73,6 @@
   flex: 1;
 }
 
-.category-manager-dot {
-  background: var(--category);
-  border-radius: 50%;
-  flex: none;
-  height: var(--category-chip-dot-size);
-  width: var(--category-chip-dot-size);
-}
-
 .category-manager-name {
   color: var(--ink);
   flex: 1;

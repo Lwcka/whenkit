@@ -7,8 +7,8 @@ import type {
   FileSystem,
   StoredEntry,
 } from '../../core/ports';
-import type { ExportDeps } from './catalog';
-import { runWrite } from './catalog-watch';
+import type { EntryDto } from '../../shared/ipc';
+import type { ExportDeps, WriteContext } from './catalog';
 import {
   deleteCategoryResult,
   deleteEntryResult,
@@ -18,6 +18,7 @@ import {
   exportCatalogResult,
   openDesktopCatalog,
   openExportFolderResult,
+  runWrite,
   searchResult,
   setNotesResult,
   snapshotResult,
@@ -28,6 +29,53 @@ const env: Environment = {
   appRoot: () => 'C:\\app',
 };
 const fs = { joinPath: (...parts: string[]) => parts.join('\\') } as FileSystem;
+
+const opened = (store: CatalogStore) =>
+  ({ ok: true, store, workspace: 'D:ws' }) as const;
+
+/** What a write handler is given: the open catalog and the emit that follows a write. */
+const writeContext = (
+  store: CatalogStore,
+  emit: () => void = vi.fn(),
+): WriteContext => ({ opened: opened(store), emit });
+
+/** A write context for a catalog that did not open. */
+const closedContext = (): WriteContext => ({
+  opened: { ok: false, code: 'DATABASE_TOO_NEW' },
+  emit: vi.fn(),
+});
+
+/** A stored entry: a tool with no links, notes or categories. */
+function storedEntry(overrides: Partial<StoredEntry> = {}): StoredEntry {
+  return {
+    id: 'e1',
+    ownerId: 'o',
+    kind: 'tool',
+    name: 'Tool',
+    url: null,
+    resourceType: null,
+    categories: [],
+    relatedIds: [],
+    parentIds: [],
+    childIds: [],
+    whatItDoes: '',
+    situations: [],
+    keywords: [],
+    sources: [],
+    content: null,
+    myNotes: '',
+    githubStars: null,
+    githubPushedAt: null,
+    githubArchived: null,
+    verificationNotes: [],
+    forced: false,
+    dedupKey: 'e1',
+    revision: 1,
+    addedAt: '2026-10-13T12:00:00.000Z',
+    verifiedAt: null,
+    ...overrides,
+  };
+}
 
 describe('openDesktopCatalog', () => {
   it('returns the resolved workspace with the store', () => {
@@ -173,33 +221,12 @@ describe('searchResult', () => {
 });
 
 describe('setNotesResult', () => {
-  const stored = {
-    id: 'e1',
-    ownerId: 'o',
-    kind: 'tool',
-    name: 'Tool',
+  const stored = storedEntry({
     url: 'https://tool.dev',
     resourceType: 'site',
-    categories: [],
-    relatedIds: [],
-    parentIds: [],
-    childIds: [],
-    whatItDoes: '',
-    situations: [],
-    keywords: [],
-    sources: [],
-    content: null,
-    myNotes: '',
-    githubStars: null,
-    githubPushedAt: null,
-    githubArchived: null,
-    verificationNotes: [],
-    forced: false,
     dedupKey: 'url:tool.dev',
     revision: 3,
-    addedAt: '2026-10-13T12:00:00.000Z',
-    verifiedAt: null,
-  } satisfies StoredEntry;
+  });
 
   /** A store whose one entry is `stored`; the notes it is given are kept. */
   const storing = () => {
@@ -216,16 +243,13 @@ describe('setNotesResult', () => {
         }),
     } as unknown as CatalogStore;
   };
-  const opened = (store: CatalogStore) =>
-    ({ ok: true, store, workspace: 'D:ws' }) as const;
 
   it('answers the changed entry and emits', async () => {
     const emit = vi.fn();
     const result = await setNotesResult(
-      opened(storing()),
+      writeContext(storing(), emit),
       'e1',
       ' ce notez\n',
-      emit,
     );
     expect(result).toEqual({
       ok: true,
@@ -258,7 +282,7 @@ describe('setNotesResult', () => {
         },
       } as unknown as CatalogStore;
       await expect(
-        setNotesResult(opened(store), id, notes, emit),
+        setNotesResult(writeContext(store, emit), id, notes),
       ).resolves.toEqual({
         ok: false,
         error: { code: 'ARGUMENTS_INVALID' },
@@ -270,53 +294,22 @@ describe('setNotesResult', () => {
   it('answers ENTRY_NOT_FOUND for an unknown id and does not emit', async () => {
     const emit = vi.fn();
     await expect(
-      setNotesResult(opened(storing()), 'ghost', 'x', emit),
+      setNotesResult(writeContext(storing(), emit), 'ghost', 'x'),
     ).resolves.toEqual({ ok: false, error: { code: 'ENTRY_NOT_FOUND' } });
     expect(emit).not.toHaveBeenCalled();
   });
 
   it('keeps the startup code when the catalog is not open', async () => {
-    await expect(
-      setNotesResult(
-        { ok: false, code: 'DATABASE_TOO_NEW' },
-        'e1',
-        'x',
-        vi.fn(),
-      ),
-    ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
+    await expect(setNotesResult(closedContext(), 'e1', 'x')).resolves.toEqual({
+      ok: false,
+      error: { code: 'DATABASE_TOO_NEW' },
+    });
   });
 });
 
 describe('deleteEntryResult', () => {
   const row = (id: string, links: Partial<StoredEntry> = {}) =>
-    ({
-      id,
-      ownerId: 'o',
-      kind: 'tool',
-      name: id,
-      url: null,
-      resourceType: null,
-      categories: [],
-      relatedIds: [],
-      parentIds: [],
-      childIds: [],
-      whatItDoes: '',
-      situations: [],
-      keywords: [],
-      sources: [],
-      content: null,
-      myNotes: '',
-      githubStars: null,
-      githubPushedAt: null,
-      githubArchived: null,
-      verificationNotes: [],
-      forced: false,
-      dedupKey: id,
-      revision: 1,
-      addedAt: '2026-10-13T12:00:00.000Z',
-      verifiedAt: null,
-      ...links,
-    }) satisfies StoredEntry;
+    storedEntry({ id, name: id, dedupKey: id, ...links });
 
   /** Entry a is linked to b; deleting a leaves b without the link. */
   const linked = () => {
@@ -342,12 +335,10 @@ describe('deleteEntryResult', () => {
         }),
     } as unknown as CatalogStore;
   };
-  const opened = (store: CatalogStore) =>
-    ({ ok: true, store, workspace: 'D:ws' }) as const;
 
   it('answers the linked entries as changed and the id as removed, and emits', async () => {
     const emit = vi.fn();
-    const result = await deleteEntryResult(opened(linked()), 'a', emit);
+    const result = await deleteEntryResult(writeContext(linked(), emit), 'a');
     expect(result).toEqual({
       ok: true,
       data: {
@@ -367,12 +358,12 @@ describe('deleteEntryResult', () => {
           throw new Error('must not be asked');
         },
       } as unknown as CatalogStore;
-      await expect(deleteEntryResult(opened(store), id, emit)).resolves.toEqual(
-        {
-          ok: false,
-          error: { code: 'ARGUMENTS_INVALID' },
-        },
-      );
+      await expect(
+        deleteEntryResult(writeContext(store, emit), id),
+      ).resolves.toEqual({
+        ok: false,
+        error: { code: 'ARGUMENTS_INVALID' },
+      });
       expect(emit).not.toHaveBeenCalled();
     },
   );
@@ -380,15 +371,16 @@ describe('deleteEntryResult', () => {
   it('answers ENTRY_NOT_FOUND for an unknown id and does not emit', async () => {
     const emit = vi.fn();
     await expect(
-      deleteEntryResult(opened(linked()), 'ghost', emit),
+      deleteEntryResult(writeContext(linked(), emit), 'ghost'),
     ).resolves.toEqual({ ok: false, error: { code: 'ENTRY_NOT_FOUND' } });
     expect(emit).not.toHaveBeenCalled();
   });
 
   it('keeps the startup code when the catalog is not open', async () => {
-    await expect(
-      deleteEntryResult({ ok: false, code: 'DATABASE_TOO_NEW' }, 'a', vi.fn()),
-    ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
+    await expect(deleteEntryResult(closedContext(), 'a')).resolves.toEqual({
+      ok: false,
+      error: { code: 'DATABASE_TOO_NEW' },
+    });
   });
 });
 
@@ -435,16 +427,13 @@ describe('category handlers', () => {
       writeTransaction: (fn: (writer: unknown) => unknown) => fn(writer),
     } as unknown as CatalogStore;
   };
-  const opened = (store: CatalogStore) =>
-    ({ ok: true, store, workspace: 'D:ws' }) as const;
 
   it('categories:rename answers the entries and the full category list, and emits', async () => {
     const emit = vi.fn();
     const result = await renameCategoryResult(
-      opened(fake()),
+      writeContext(fake(), emit),
       'src',
       'Nou',
-      emit,
     );
     expect(result).toMatchObject({
       ok: true,
@@ -462,7 +451,7 @@ describe('category handlers', () => {
   it('categories:rename answers CATEGORY_NAME_TAKEN without emitting', async () => {
     const emit = vi.fn();
     await expect(
-      renameCategoryResult(opened(fake()), 'src', 'tinta', emit),
+      renameCategoryResult(writeContext(fake(), emit), 'src', 'tinta'),
     ).resolves.toEqual({ ok: false, error: { code: 'CATEGORY_NAME_TAKEN' } });
     expect(emit).not.toHaveBeenCalled();
   });
@@ -470,10 +459,9 @@ describe('category handlers', () => {
   it('categories:merge moves the entries and lists the categories left', async () => {
     const emit = vi.fn();
     const result = await mergeCategoriesResult(
-      opened(fake()),
+      writeContext(fake(), emit),
       'src',
       'dst',
-      emit,
     );
     expect(result).toMatchObject({
       ok: true,
@@ -488,7 +476,7 @@ describe('category handlers', () => {
   it('categories:delete without a target refuses a category some entry holds alone', async () => {
     const emit = vi.fn();
     await expect(
-      deleteCategoryResult(opened(fake()), 'src', undefined, emit),
+      deleteCategoryResult(writeContext(fake(), emit), 'src', undefined),
     ).resolves.toEqual({
       ok: false,
       error: { code: 'CATEGORY_TARGET_REQUIRED' },
@@ -498,10 +486,9 @@ describe('category handlers', () => {
 
   it('categories:delete with a target merges', async () => {
     const result = await deleteCategoryResult(
-      opened(fake()),
+      writeContext(fake()),
       'src',
       'dst',
-      vi.fn(),
     );
     expect(result).toMatchObject({
       ok: true,
@@ -517,30 +504,25 @@ describe('category handlers', () => {
     } as unknown as CatalogStore;
     const invalid = { ok: false, error: { code: 'ARGUMENTS_INVALID' } };
     await expect(
-      renameCategoryResult(opened(store), 1, 'x', vi.fn()),
+      renameCategoryResult(writeContext(store), 1, 'x'),
     ).resolves.toEqual(invalid);
     await expect(
-      renameCategoryResult(opened(store), 'a', undefined, vi.fn()),
+      renameCategoryResult(writeContext(store), 'a', undefined),
     ).resolves.toEqual(invalid);
     await expect(
-      mergeCategoriesResult(opened(store), 'a', {}, vi.fn()),
+      mergeCategoriesResult(writeContext(store), 'a', {}),
     ).resolves.toEqual(invalid);
     await expect(
-      deleteCategoryResult(opened(store), 'a', 5, vi.fn()),
+      deleteCategoryResult(writeContext(store), 'a', 5),
     ).resolves.toEqual(invalid);
     await expect(
-      deleteCategoryResult(opened(store), null, undefined, vi.fn()),
+      deleteCategoryResult(writeContext(store), null, undefined),
     ).resolves.toEqual(invalid);
   });
 
   it('keeps the startup code when the catalog is not open', async () => {
     await expect(
-      renameCategoryResult(
-        { ok: false, code: 'DATABASE_TOO_NEW' },
-        'a',
-        'b',
-        vi.fn(),
-      ),
+      renameCategoryResult(closedContext(), 'a', 'b'),
     ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
   });
 });
@@ -751,5 +733,95 @@ describe('openExportFolderResult', () => {
       ),
     ).toEqual({ ok: false, error: { code: 'INTERNAL' } });
     expect(logged).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('runWrite', () => {
+  const store = {} as CatalogStore;
+  const open = { ok: true, store, workspace: 'D:\\ws' } as const;
+  const changed: readonly EntryDto[] = [];
+
+  it('emits after a successful write and answers with its result', async () => {
+    const emit = vi.fn();
+    const fn = vi.fn((given: CatalogStore) => {
+      expect(given).toBe(store);
+      return { changed };
+    });
+    await expect(runWrite(open, fn, emit)).resolves.toEqual({
+      ok: true,
+      data: { changed },
+    });
+    expect(emit).toHaveBeenCalledTimes(1);
+  });
+
+  it('awaits an asynchronous write before it emits', async () => {
+    const order: string[] = [];
+    const result = await runWrite(
+      open,
+      async () => {
+        await Promise.resolve();
+        order.push('written');
+        return { changed };
+      },
+      () => order.push('emitted'),
+    );
+    expect(result.ok).toBe(true);
+    expect(order).toEqual(['written', 'emitted']);
+  });
+
+  it('answers the code of a WhenkitError and does not emit', async () => {
+    const emit = vi.fn();
+    const logError = vi.fn();
+    await expect(
+      runWrite(
+        open,
+        () => {
+          throw new WhenkitError('ARGUMENTS_INVALID');
+        },
+        emit,
+        logError,
+      ),
+    ).resolves.toEqual({ ok: false, error: { code: 'ARGUMENTS_INVALID' } });
+    expect(emit).not.toHaveBeenCalled();
+    expect(logError).not.toHaveBeenCalled();
+  });
+
+  it('answers INTERNAL for any other throw, logged, without emitting', async () => {
+    const emit = vi.fn();
+    const logError = vi.fn();
+    const failure = new Error('disk on fire');
+    await expect(
+      runWrite(open, () => Promise.reject(failure), emit, logError),
+    ).resolves.toEqual({ ok: false, error: { code: 'INTERNAL' } });
+    expect(emit).not.toHaveBeenCalled();
+    expect(logError).toHaveBeenCalledWith(failure);
+  });
+
+  it('answers the startup code when the catalog did not open', async () => {
+    const fn = vi.fn(() => ({ changed }));
+    const emit = vi.fn();
+    await expect(
+      runWrite({ ok: false, code: 'DATABASE_NEEDS_MIGRATION' }, fn, emit),
+    ).resolves.toEqual({
+      ok: false,
+      error: { code: 'DATABASE_NEEDS_MIGRATION' },
+    });
+    expect(fn).not.toHaveBeenCalled();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('keeps a saved write an answer when emit throws', async () => {
+    const logError = vi.fn();
+    await expect(
+      runWrite(
+        open,
+        () => ({ changed }),
+        () => {
+          throw new Error('window gone');
+        },
+        logError,
+      ),
+    ).resolves.toEqual({ ok: true, data: { changed } });
+    expect(logError).toHaveBeenCalledTimes(1);
   });
 });

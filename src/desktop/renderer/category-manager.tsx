@@ -4,9 +4,7 @@ import type {
   CategoryDto,
   EntryDto,
   ErrorDto,
-  IpcResult,
   WhenkitApi,
-  WriteResult,
 } from '../../shared/ipc';
 import {
   appStrings,
@@ -15,17 +13,20 @@ import {
   zoneLabels,
 } from '../../shared/strings.ro';
 import { Button } from './button';
+import type { CatalogStore } from './catalog-store';
 import {
   barCategories,
   categoryCounts,
   categorySlots,
-  type Zone,
+  ZONE_ORDER,
 } from './catalog-view';
 import { Dialog } from './dialog';
 import { ESCAPE_PRIORITY, registerEscape } from './keyboard';
 import { SelectField } from './select-field';
 import { TextField } from './text-field';
-import { toasts } from './toast-store';
+import { toastError } from './toast-store';
+import { useLatest } from './use-latest';
+import './category-bar.css';
 import './category-manager.css';
 import './kbd.css';
 
@@ -41,14 +42,10 @@ export interface CategoryManagerProps {
   entries: readonly EntryDto[];
   api: CategoryManagerApi;
   /** Runs a write through the catalog store, so its answer is applied first. */
-  write: <T extends WriteResult>(
-    run: () => Promise<IpcResult<T>>,
-  ) => Promise<IpcResult<T>>;
+  write: CatalogStore['write'];
   /** „Închide” and Esc. */
   onClose: () => void;
 }
-
-const ZONES: readonly Zone[] = ['toolbox', 'learn'];
 
 /** The rename in progress: one row at a time. */
 interface Renaming {
@@ -172,10 +169,7 @@ export function CategoryManager({
   });
 
   // Esc cancels only the rename (a second Esc closes the manager).
-  const renamingNow = useRef(false);
-  useEffect(() => {
-    renamingNow.current = renaming !== null;
-  });
+  const renamingNow = useLatest(renaming !== null);
   useEffect(
     () =>
       registerEscape(
@@ -205,7 +199,7 @@ export function CategoryManager({
   }, [renamingId]);
 
   const fail = (code: ErrorDto['code']) => {
-    toasts.push({ kind: 'error', message: errorMessages[code] });
+    toastError(errorMessages[code]);
   };
 
   const startRename = (category: CategoryDto) => {
@@ -383,7 +377,7 @@ export function CategoryManager({
     >
       <p className="dialog-body">{appStrings.categoryManagerIntro}</p>
       <div className="category-manager-list">
-        {ZONES.map((zone) => {
+        {ZONE_ORDER.map((zone) => {
           const rows = barCategories(categories, zone);
           const counts = categoryCounts(entries, zone);
           return (

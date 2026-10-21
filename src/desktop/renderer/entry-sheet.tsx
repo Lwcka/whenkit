@@ -9,8 +9,6 @@ import {
   isExternalUrl,
   type CategoryDto,
   type EntryDto,
-  type IpcResult,
-  type WriteResult,
 } from '../../shared/ipc';
 import {
   appStrings,
@@ -19,6 +17,7 @@ import {
   formatDate,
   reasonTexts,
   resourceTypeLabels,
+  rowNumber,
   zoneLabels,
 } from '../../shared/strings.ro';
 import { entrySlot, pulseParity, sheetLinks, shortId } from './catalog-view';
@@ -26,7 +25,7 @@ import type { Draft, FieldErrors } from './edit-draft';
 import { EntryEditForm } from './entry-edit-form';
 import { ExternalLink } from './external-link';
 import { MarkdownContent } from './markdown-content';
-import { MyNotes } from './my-notes';
+import { MyNotes, type MyNotesProps } from './my-notes';
 import './entry-sheet.css';
 
 /** The edit mode of the sheet: the form takes the place of the main column's fields. */
@@ -55,7 +54,7 @@ export interface EntrySheetProps {
   /** Opens a link in the default browser (AD-9); main checks it again. */
   onOpenExternal: (url: string) => void;
   /** Saves the author's notes of an entry (AD-16); the store applies the answer. */
-  onSaveNotes: (id: string, notes: string) => Promise<IpcResult<WriteResult>>;
+  onSaveNotes: MyNotesProps['onSave'];
   /** Present while the entry is edited. */
   edit?: SheetEdit;
 }
@@ -339,7 +338,7 @@ export function EntrySheet({
                   {entry.situations.map((situation, index) => (
                     <li key={index} className="situation-callout">
                       <b className="situation-callout-number">
-                        {String(index + 1).padStart(2, '0')}
+                        {rowNumber(index)}
                       </b>
                       {situation}
                     </li>

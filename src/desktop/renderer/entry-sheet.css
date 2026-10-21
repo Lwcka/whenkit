@@ -134,7 +134,9 @@
   gap: var(--spacing-2);
 }
 
-.sheet-category-dot {
+/* The dot is also the related link's. */
+.sheet-category-dot,
+.related-link-dot {
   background: var(--category, var(--ink-2));
   border-radius: 50%;
   height: var(--entry-card-footer-dot-size);
@@ -428,13 +430,6 @@
 .related-link:disabled {
   cursor: default;
   opacity: var(--disabled-opacity);
-}
-
-.related-link-dot {
-  background: var(--category, var(--ink-2));
-  border-radius: 50%;
-  height: var(--entry-card-footer-dot-size);
-  width: var(--entry-card-footer-dot-size);
 }
 
 .related-link-text {

@@ -295,6 +295,9 @@ export function relativeTime(elapsedMs: number): string {
 
 const pad2 = (n: number): string => String(n).padStart(2, '0');
 
+/** The number of a list row, from its zero-based index: `01`, `02`, … */
+export const rowNumber = (index: number): string => pad2(index + 1);
+
 function asDate(value: Date | string): Date {
   return typeof value === 'string' ? new Date(value) : value;
 }
@@ -405,7 +408,7 @@ export const appStrings = {
   /** „5 fișe noi în Toolbox”. */
   arrivalToastMany: (count: number, zone: string): RichText => [
     {
-      strong: `${plural(count, { one: 'fișă', few: 'fișe', other: 'de fișe' })} noi`,
+      strong: `${entryCount(count)} noi`,
     },
     ` în ${zone}`,
   ],

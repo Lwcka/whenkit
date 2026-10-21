@@ -1,10 +1,5 @@
-import {
-  toCategoryDto,
-  toEntryDto,
-  type CatalogExport,
-  type EntryDto,
-  type LinkDto,
-} from './dto';
+import { catalogSnapshot } from './catalog-snapshot';
+import type { CatalogExport, EntryDto, ExportResult, LinkDto } from './dto';
 import type { EntryKind } from './entry';
 import { WhenkitError } from './errors';
 import { fileTimestamp } from './file-stamp';
@@ -44,10 +39,7 @@ export interface ExportRequest {
   labels: ExportLabels;
 }
 
-export interface ExportResult {
-  folderName: string;
-  folderPath: string;
-}
+export type { ExportResult };
 
 /** Every link once: `related` canonical, `parent` from the umbrella (AD-5). */
 function linksOf(entries: readonly EntryDto[]): LinkDto[] {
@@ -171,10 +163,7 @@ export function exportCatalog(
   { fs, clock }: ExportPorts,
   { parentDir, labels }: ExportRequest,
 ): ExportResult {
-  const { entries, categories } = store.readTransaction((reader) => ({
-    entries: reader.allEntries().map(toEntryDto),
-    categories: reader.allCategories().map(toCategoryDto),
-  }));
+  const { entries, categories } = catalogSnapshot(store);
   const now = clock.now();
 
   const catalog: CatalogExport = {

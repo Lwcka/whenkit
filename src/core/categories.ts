@@ -1,10 +1,10 @@
 import {
   toCategoryDto,
-  toEntryDto,
+  toEntryDtos,
   type CategoryDto,
   type EntryDto,
 } from './dto';
-import { WhenkitError } from './errors';
+import { issuesError, vanishedError, WhenkitError } from './errors';
 import { nameKey } from './name-key';
 import type { CatalogStore, CatalogWriter, StoredCategory } from './ports';
 
@@ -22,10 +22,7 @@ export interface CategoryWriteResult {
 }
 
 function invalid(path: string, message: string): WhenkitError {
-  return new WhenkitError('ARGUMENTS_INVALID', {
-    issues: [{ path: [path], message }],
-    detail: message,
-  });
+  return issuesError('ARGUMENTS_INVALID', [{ path: [path], message }]);
 }
 
 function requireId(path: string, value: unknown): string {
@@ -47,12 +44,10 @@ function finish(
   writer: CatalogWriter,
   entryIds: string[],
 ): CategoryWriteResult {
-  const changed: EntryDto[] = [];
-  for (const id of entryIds) {
-    const entry = writer.entryById(id);
-    if (entry !== undefined) changed.push(toEntryDto(entry));
-  }
-  return { changed, categories: writer.allCategories().map(toCategoryDto) };
+  return {
+    changed: toEntryDtos(writer, entryIds),
+    categories: writer.allCategories().map(toCategoryDto),
+  };
 }
 
 /** Moves every entry of `source` to `target` (same zone) and deletes `source`. */
@@ -80,9 +75,7 @@ function mergeInto(
   }
   writer.bumpRevisions(entryIds);
   if (!writer.deleteCategory(source.id)) {
-    throw new WhenkitError('INTERNAL', {
-      detail: `category ${source.id} vanished`,
-    });
+    throw vanishedError('category', source.id);
   }
   return finish(writer, entryIds);
 }
@@ -111,7 +104,7 @@ export function renameCategory(
       .some((other) => other.id !== id && other.nameKey === key);
     if (taken) throw new WhenkitError('CATEGORY_NAME_TAKEN', { detail: name });
     if (!writer.renameCategory(id, name, key)) {
-      throw new WhenkitError('INTERNAL', { detail: `category ${id} vanished` });
+      throw vanishedError('category', id);
     }
     return finish(writer, writer.entryIdsWithCategory(id));
   });
@@ -177,7 +170,7 @@ export function deleteCategory(
     }
     writer.bumpRevisions(entryIds);
     if (!writer.deleteCategory(id)) {
-      throw new WhenkitError('INTERNAL', { detail: `category ${id} vanished` });
+      throw vanishedError('category', id);
     }
     return finish(writer, entryIds);
   });

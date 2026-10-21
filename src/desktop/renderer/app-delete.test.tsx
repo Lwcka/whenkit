@@ -2,29 +2,29 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  CatalogSnapshotDto,
-  EntryDto,
-  IpcResult,
-  WriteResult,
-} from '../../shared/ipc';
+import type { EntryDto, IpcResult, WriteResult } from '../../shared/ipc';
 import { errorMessages } from '../../shared/strings.ro';
-import { App, type FrameApi } from './app';
+import type { FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  backend,
+  fakeFrameApi,
+  imagini,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+  securitate,
+} from './test-fixtures';
 import { applyTheme } from './theme';
 import { toasts } from './toast-store';
 
 // Deleting a sheet (CAP-10, Flow 4): the real store and the real App, with a
 // fake bridge that answers like main's `entries:delete`.
 
-const imagini = makeCategory('c-img', 'Imagini & video');
-const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
 const categories = [imagini, backend];
 
 const removeBg = makeEntry('removebg', {
@@ -56,7 +56,6 @@ const graphql = makeEntry('graphql', {
   categories: [backend],
   parentIds: ['umbrella'],
 });
-const securitate = makeCategory('c-sec', 'Securitate');
 const lonely = makeEntry('lonely', {
   name: 'Singura',
   categories: [securitate],
@@ -98,25 +97,8 @@ beforeEach(() => {
   applyTheme('light');
   toasts.clear();
   deleteEntry = vi.fn((id: string) => Promise.resolve(answerFor(id)));
-  api = {
-    workspacePath: 'C:\\ws',
-    openExternal: () => Promise.resolve({ ok: true, data: null }),
-    exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-    openExportFolder: () => Promise.resolve({ ok: true, data: null }),
-    searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
-    setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteEntry,
-    patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    setTheme: () => Promise.resolve({ ok: true, data: null }),
-    setZoomFactor: () => {},
-    renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  };
-  const snapshot: IpcResult<CatalogSnapshotDto> = {
-    ok: true,
-    data: { entries: catalog, categories },
-  };
+  api = fakeFrameApi({ deleteEntry });
+  const snapshot = okSnapshot(catalog, categories);
   store = createCatalogStore({
     catalogSnapshot: () => Promise.resolve(snapshot),
   });
@@ -129,8 +111,7 @@ afterEach(() => {
 });
 
 async function open() {
-  render(<App store={store} api={api} />);
-  await act(() => store.load());
+  await renderApp(store, api);
 }
 
 const card = (name: string) => screen.getByRole('button', { name });
@@ -513,10 +494,7 @@ describe('App: deleting a sheet', () => {
       let current = entries;
       store = createCatalogStore({
         catalogSnapshot: () =>
-          Promise.resolve({
-            ok: true,
-            data: { entries: current, categories: [...categories, securitate] },
-          }),
+          Promise.resolve(okSnapshot(current, [...categories, securitate])),
       });
       // Animations on, so a collapsing card would be drawn.
       const original = window.getComputedStyle.bind(window);
