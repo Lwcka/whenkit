@@ -405,7 +405,7 @@ describe('Browsing by category', () => {
 
     expect(screen.getByText('Catalogul e gol.')).toBeTruthy();
     expect(screen.getByText('Spune-i lui Claude ce ai găsit:')).toBeTruthy();
-    expect(screen.getByText('/importa')).toBeTruthy();
+    expect(screen.getByText('/adauga')).toBeTruthy();
     expect(chipTexts()).toEqual([
       'Toate 0',
       'AI & LLM 0',

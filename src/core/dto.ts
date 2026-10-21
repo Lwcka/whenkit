@@ -79,7 +79,7 @@ export const linkDtoSchema = z.strictObject({
 
 export type LinkDto = z.infer<typeof linkDtoSchema>;
 
-/** A journaled rejection (AD-5): what /importa needs to retry the item. */
+/** A journaled rejection (AD-5): what /adauga needs to retry the item. */
 export const rejectionDtoSchema = z.strictObject({
   id: z.string(),
   op: z.enum(['add', 'update']),

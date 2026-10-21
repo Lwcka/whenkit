@@ -38,7 +38,7 @@ describe('SKILL.md', () => {
       '--json',
       'situations',
       'reguli-fise.md',
-      '/importa',
+      '/adauga',
     ]) {
       expect(skill).toContain(needle);
     }
@@ -68,11 +68,11 @@ describe('SKILL.md', () => {
       ['whenkit show <id> --json', '`kind: "concept"`', '`content`'],
     ],
     [
-      'no match: says so plainly, invents nothing, suggests /importa',
+      'no match: says so plainly, invents nothing, suggests /adauga',
       [
         'nu am găsit nimic în catalog',
         'fără nicio resursă inventată',
-        '/importa <link>',
+        '/adauga <link>',
       ],
     ],
     [

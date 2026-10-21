@@ -94,6 +94,48 @@ function planTemplate(
   }
 }
 
+/**
+ * Template files that shipped in an earlier TEMPLATE_VERSION and no longer do
+ * (AD-17), relative to the workspace root with `/` separators. `init` deletes
+ * them, even when the user edited them. Append-only: keep an entry for as long
+ * as a workspace that still has the file may exist.
+ */
+const RETIRED_TEMPLATE_PATHS: readonly string[] = [
+  // The skill was renamed to /adauga (template version 8).
+  '.claude/skills/importa/SKILL.md',
+  '.claude/skills/importa/exemplu-lot.json',
+];
+
+/**
+ * Deletes the retired template files the workspace still has, then the folder
+ * of each one that is left without any file (a file of the user's keeps its
+ * folder). Missing files are not an error.
+ */
+function retireTemplateFiles(workspace: string, fs: FileSystem): void {
+  const folders = new Set<string>();
+  for (const retired of RETIRED_TEMPLATE_PATHS) {
+    const segments = retired.split('/');
+    fs.removeFile(fs.joinPath(workspace, ...segments));
+    folders.add(segments.slice(0, -1).join('/'));
+  }
+  // Deepest first, so a nested folder empties before its parent is checked.
+  const ordered = [...folders].sort(
+    (a, b) => b.split('/').length - a.split('/').length,
+  );
+  for (const folder of ordered) {
+    const dir = fs.joinPath(workspace, ...folder.split('/'));
+    if (folder !== '' && isEmptyOfFiles(fs, dir)) fs.removeDir(dir);
+  }
+}
+
+function isEmptyOfFiles(fs: FileSystem, dir: string): boolean {
+  try {
+    return fs.exists(dir) && fs.listFiles(dir).length === 0;
+  } catch {
+    return false;
+  }
+}
+
 /** Writes the planned template files into the workspace. */
 function writeTemplate(
   workspace: string,
@@ -346,10 +388,12 @@ export interface InitWorkspacePorts {
  * `whenkit init` (AD-17): creates the folders and the migrated catalog,
  * copies `workspace-template/` (template-managed files are overwritten, the
  * user's files under `data/` and `input/` are created only when missing),
- * writes `batch.schema.json` and, last, `.whenkit-template.json`, then
- * records the path in config.json unless WHENKIT_WORKSPACE is set (a
- * development run never moves the real configuration). Re-running keeps the
- * catalog and the user's files. Returns the workspace path.
+ * deletes the retired template files (RETIRED_TEMPLATE_PATHS, plus their
+ * folder when it is left without files), writes `batch.schema.json` and,
+ * last, `.whenkit-template.json`, then records the path in config.json unless
+ * WHENKIT_WORKSPACE is set (a development run never moves the real
+ * configuration). Re-running keeps the catalog and the user's files. Returns
+ * the workspace path.
  */
 export function initWorkspace(
   options: { path?: string },
@@ -383,6 +427,7 @@ export function initWorkspace(
   // The only place that may create the catalog file.
   openStore(catalogPath(fs, workspace), { create: true }).close();
   writeTemplate(workspace, fs, plan);
+  retireTemplateFiles(workspace, fs);
   fs.writeText(
     fs.joinPath(workspace, BATCH_SCHEMA_FILE),
     batchJsonSchemaText(),

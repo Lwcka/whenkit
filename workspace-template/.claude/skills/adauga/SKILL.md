@@ -1,13 +1,13 @@
 ---
-name: importa
+name: adauga
 description: Transformă materialele din input/ (screenshot-uri, fișiere text cu linkuri), un link dat direct sau elementele respinse din jurnal în fișe de catalog, prin loturi importate cu whenkit. Folosește-l când utilizatorul vrea să adauge resurse în catalog.
 argument-hint: '[link | text | respinse]'
 allowed-tools: Bash(whenkit:*), WebFetch, Read
 ---
 
-# /importa
+# /adauga
 
-Transformi materiale în fișe de catalog, în română. Tu documentezi, clasifici și scrii; aplicația verifică și salvează. Nu scrii niciodată în `data/` și nu atingi „Notițele mele”: catalogul se modifică doar prin `whenkit import`. Citește `.claude/skills/reguli-fise.md` înainte să scrii prima fișă și respectă-le; forma unui lot valid o vezi în `.claude/skills/importa/exemplu-lot.json` (contractul complet e `batch.schema.json`).
+Transformi materiale în fișe de catalog, în română. Tu documentezi, clasifici și scrii; aplicația verifică și salvează. Nu scrii niciodată în `data/` și nu atingi „Notițele mele”: catalogul se modifică doar prin `whenkit import`. Citește `.claude/skills/reguli-fise.md` înainte să scrii prima fișă și respectă-le; forma unui lot valid o vezi în `.claude/skills/adauga/exemplu-lot.json` (contractul complet e `batch.schema.json`).
 
 Argumentul primit: `$ARGUMENTS`
 
@@ -76,14 +76,14 @@ Din documentul de la cod 0 citești `items` după `ref` și spui, pentru fiecare
 - `added` (adăugată), `updated` (actualizată), `warned` (adăugată cu avertisment, cu motivul), `duplicate` (există deja în catalog: numești fișa existentă din `reasons[].params.name`), `rejected` (respinsă, cu motivul).
 - Explici motivele (`reasons[].code`) pe înțelesul utilizatorului: `invalid_url` (linkul nu e un URL valid), `http_error` (linkul dă eroare), `dns_not_found` (domeniul nu există), `tls_error` (certificat invalid), `connection_error` (conexiune refuzată), `blocked_domain` (domeniu interzis), `flagged_by_claude` (semnalată de tine, cu motivul), `unknown_category` (categorie inexistentă), `source_link_removed` (o sursă moartă a fost scoasă), `link_target_not_written` (o legătură nu s-a creat, fiindcă ținta nu a fost scrisă), `blocks_automation` și `no_response_at_import` (linkul n-a putut fi verificat complet), `github_archived` (repo arhivat), `github_abandoned` (repo abandonat: fără push de peste 24 de luni, cu data din `params.pushedAt`), `unknown_id` (în catalog nu există fișa cu acel id), `duplicate` (există deja: `params.name` e numele fișei existente sau, cu `params.ref`, al elementului din lot pe care îl repetă), `source_blocked_domain` (o sursă a conceptului e pe un domeniu interzis; la reluare scoți sursa aceea), `parent_requires_concept` și `parent_cycle` (legătura părinte–copil nu s-a creat: ținta nu e concept, sau ar face un ciclu), `forced_by_user` (verificare ocolită la cererea utilizatorului).
 - Spui ce categorii noi s-au creat (`newCategories`), ce legături au fost ignorate (`ignoredLinks`) și ce domenii ai propus (`proposedBlockedDomains`): utilizatorul le adaugă singur în `data/blocked-domains.txt`, dacă vrea.
-- Elementele respinse sunt în jurnal; spune-i că le poate relua cu `/importa respinse`.
+- Elementele respinse sunt în jurnal; spune-i că le poate relua cu `/adauga respinse`.
 - Numești fiecare fișă **nedocumentată** (`whatItDoes` începe cu „Nedocumentată:”) care a intrat în catalog (`added`, `updated` sau `warned`) și îi spui utilizatorului că o poate rescrie ulterior cu un `update` (de exemplu „rescrie fișa X după regulile noi”), când site-ul se încarcă.
 
 ## 8. Curăță, doar după cod 0
 
 Abia după ce import-ul a ieșit cu **cod 0** ștergi lotul din `batches/` și fișierul de input din `input/` (și celelalte fișiere ale grupului, la un subfolder, apoi subfolderul însuși dacă a rămas gol). Cod 0 consumă fișierul chiar dacă unele elemente au fost respinse, fiindcă respinsele sunt în jurnal. La orice alt cod nu ștergi nimic. La linkul dat direct, textul dat direct și reluare ștergi doar lotul.
 
-## 9. `/importa respinse`
+## 9. `/adauga respinse`
 
 1. Rulează `whenkit rejections --json` și citește `rejections`. Dacă e gol, spui asta și te oprești.
 2. Pentru fiecare rând pregătești o propunere din `element` și `reasons`: linkul corectat (de exemplu `httpss://gutenberg.org` → `https://gutenberg.org`), o categorie lipsă, sau elementul rescris după schema curentă.

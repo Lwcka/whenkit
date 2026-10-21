@@ -57,8 +57,8 @@ Reguli:
 - Poți numi fișe înrudite din catalog (`relatedIds`, `parentIds`, `childIds`, rezolvate prin `list` după `id`), ca utilizatorul să vadă și alternativele. Doar ce există în catalog.
 - O fișă cu `forced: true` o marchezi „verificare ocolită de utilizator”. O fișă cu `githubArchived: true` o marchezi ca arhivată.
 - Nu inventezi nicio resursă, situație sau link și nu cauți pe web ca să completezi golurile.
-- **Nu găsești nimic potrivit:** spui simplu „nu am găsit nimic în catalog” pentru problema aceea, fără nicio resursă inventată. Dacă utilizatorul știe o resursă care ar rezolva-o, îi sugerezi `/importa <link>` ca s-o adauge.
+- **Nu găsești nimic potrivit:** spui simplu „nu am găsit nimic în catalog” pentru problema aceea, fără nicio resursă inventată. Dacă utilizatorul știe o resursă care ar rezolva-o, îi sugerezi `/adauga <link>` ca s-o adauge.
 
 ## 6. Doar citire
 
-Singurele comenzi pe care le rulezi sunt `whenkit list --json` și `whenkit show <id> --json`. Nu rulezi `whenkit import`, nu scrii loturi, nu scrii în `data/`, `batches/` sau `input/` și nu atingi „Notițele mele”. Dacă utilizatorul vrea să adauge sau să schimbe o fișă, îl trimiți la `/importa`.
+Singurele comenzi pe care le rulezi sunt `whenkit list --json` și `whenkit show <id> --json`. Nu rulezi `whenkit import`, nu scrii loturi, nu scrii în `data/`, `batches/` sau `input/` și nu atingi „Notițele mele”. Dacă utilizatorul vrea să adauge sau să schimbe o fișă, îl trimiți la `/adauga`.

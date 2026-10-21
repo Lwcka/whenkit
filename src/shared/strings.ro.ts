@@ -384,7 +384,7 @@ export const appStrings = {
   moreSituations: (count: number): string =>
     `+${plural(count, { one: 'situație', few: 'situații', other: 'de situații' })}`,
   emptyCatalogText: 'Spune-i lui Claude ce ai găsit:',
-  emptyCatalogCommand: '/importa',
+  emptyCatalogCommand: '/adauga',
   emptyCatalogCommandRest: 'în terminal.',
   emptyViewTitle: (name: string): string => `Nicio fișă în „${name}” încă.`,
   /** The header's count: „8 fișe”, or „8 fișe · 1 nouă” after an arrival. */

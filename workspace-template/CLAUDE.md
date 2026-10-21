@@ -9,7 +9,7 @@ Acesta e workspace-ul aplicației **whenkit**: un catalog personal de resurse pe
 | `input/` | materialele de importat (screenshot-uri, fișiere `.txt` cu linkuri); consumabile, ale utilizatorului |
 | `batches/` | loturile JSON scrise de tine; **aici** scrii loturile, niciodată în `input/` |
 | `data/` | catalogul (`catalog.sqlite`), copiile de siguranță și `blocked-domains.txt`; **nu scrii niciodată aici** |
-| `.claude/skills/importa/` | skill-ul `/importa`: transformă materiale în fișe |
+| `.claude/skills/adauga/` | skill-ul `/adauga`: transformă materiale în fișe |
 | `.claude/skills/gaseste/` | skill-ul `/gaseste`: caută în catalog după problemă |
 | `.claude/skills/reguli-fise.md` | regulile de scriere a fișelor (limbă, câmpuri, ton); citește-le înainte să scrii orice fișă |
 | `batch.schema.json` | JSON Schema a lotului de import (aceeași cu `whenkit schema`) |
@@ -25,7 +25,7 @@ Singura cale de a citi și de a scrie în catalog e CLI-ul `whenkit`. Cu `--json
 | `whenkit show <id> [--json]` | o fișă completă |
 | `whenkit categories [--json]` | categoriile fiecărei zone; folosește-le pe acestea, nu inventa altele |
 | `whenkit rejections [--json]` | jurnalul respinselor: elementele respinse, cu motive |
-| `whenkit rejections --remove <id> [--json]` | șterge din jurnal un rând, după `id`-ul lui din `rejections --json`; un id care nu e în jurnal iese cu cod 1. Îl folosește `/importa respinse`, nu îl rulezi din inițiativă |
+| `whenkit rejections --remove <id> [--json]` | șterge din jurnal un rând, după `id`-ul lui din `rejections --json`; un id care nu e în jurnal iese cu cod 1. Îl folosește `/adauga respinse`, nu îl rulezi din inițiativă |
 | `whenkit schema` | schema JSON a lotului |
 | `whenkit init [cale]` | actualizează fișierele acestui workspace (CLAUDE.md, skill-uri, reguli, schema lotului); în `data/` și `input/` nu suprascrie și nu șterge nimic, doar creează ce lipsește. Rulează-l fără `[cale]`: o cale diferită mută workspace-ul configurat |
 

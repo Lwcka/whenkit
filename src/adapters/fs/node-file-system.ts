@@ -28,6 +28,9 @@ export const nodeFileSystem: FileSystem = {
   removeDir: (target) => {
     rmSync(target, { recursive: true, force: true });
   },
+  removeFile: (target) => {
+    rmSync(target, { force: true });
+  },
   readText: (target) => readFileSync(target, 'utf8'),
   writeText: (target, text) => {
     writeFileSync(target, text, 'utf8');
