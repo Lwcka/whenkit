@@ -32,6 +32,6 @@ Zona rezultă din fel.
 
 **Unealtă și material:** link; tip (repo / site / aplicație); pentru repo GitHub: stele, data ultimului commit, arhivat.
 
-**Concept:** conținut (Markdown, inclusiv tabele); surse (linkuri); link opțional. Umbrela are în plus legături spre conceptele-copil.
+**Concept:** conținut (Markdown, inclusiv tabele); surse (linkuri); link opțional. Umbrela are în plus legături spre conceptele-copil. „Umbrelă” și „copil” sunt termenii tehnici (spec, CLI, skill-uri); fereastra și exportul spun **colecție** („colecție · N concepte” pe card, „Face parte din” pentru părinți).
 
 **Scoase intenționat:** Nivel, Status (revine cu re-verificarea), Sursă (fișierul de input se șterge după import).

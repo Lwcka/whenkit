@@ -177,8 +177,8 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 ### AD-17 — Workspace gestionat
 
 - **Binds:** CAP-1, CAP-6, CAP-12
-- **Prevents:** un `init` repetat care șterge editările utilizatorului; skill-uri și schemă din workspace rămase în urma codului; loturi luate drept materiale de input.
-- **Rule:** Fișierele **gestionate de șablon** (`CLAUDE.md`, `.claude/skills/**`, fișierul de reguli, `batch.schema.json`) sunt suprascrise de fiecare `whenkit init`, care scrie și `.whenkit-template.json { templateVersion, batchSchemaVersion }`. Fișierele **utilizatorului** (`data/**`, inclusiv `blocked-domains.txt`, și `input/`) sunt create doar dacă lipsesc. Orice comandă CLI avertizează pe stderr când `templateVersion` din workspace e mai vechi decât al codului. Skill-urile scriu loturile în `<workspace>/batches/`, nu în `input/`, și le șterg doar după cod 0.
+- **Prevents:** un `init` repetat care șterge editările utilizatorului; skill-uri și schemă din workspace rămase în urma codului; loturi luate drept materiale de input; un skill redenumit care rămâne și sub numele vechi.
+- **Rule:** Fișierele **gestionate de șablon** (`CLAUDE.md`, `.claude/skills/**`, fișierul de reguli, `batch.schema.json`) sunt suprascrise de fiecare `whenkit init`, care scrie și `.whenkit-template.json { templateVersion, batchSchemaVersion }`. Fișierele **utilizatorului** (`data/**`, inclusiv `blocked-domains.txt`, și `input/`) sunt create doar dacă lipsesc. Orice comandă CLI avertizează pe stderr când `templateVersion` din workspace e mai vechi decât al codului. Skill-urile scriu loturile în `<workspace>/batches/`, nu în `input/`, și le șterg doar după cod 0. O cale scoasă din șablon (ex. `.claude/skills/importa/**`, devenit `adauga`) intră în lista căilor retrase din cod: `init` șterge fișierele de pe listă, chiar modificate, și folderul lor doar dacă rămâne gol; nu atinge niciodată `data/`, `input/`, `batches/` sau fișiere care nu sunt pe listă. Retragerea crește `templateVersion`.
 
 ### AD-18 — Un singur set de DTO-uri și erori ca valori
 
@@ -194,20 +194,21 @@ Săgeata înseamnă „poate importa”. `core` nu importă nimic din afara lui 
 
 ### AD-20 — Ciclul de viață și preferințele ferestrei au un singur proprietar: main-ul
 
-- **Binds:** epic-fereastra-whenkit (pornirea și închiderea ferestrei, tema, poziția și dimensiunea)
-- **Prevents:** tema și poziția salvate în locuri diferite de tichete diferite; scrieri ale ferestrei în `config.json`-ul lui `whenkit init`; cache-urile Chromium în folderul CLI-ului; `npm start` și `WhenKit.exe` instalat cu același profil și același lock; mecanisme diferite de temă; fereastra care clipește în tema greșită; notițe pierdute la închidere.
+- **Binds:** epic-fereastra-whenkit (pornirea și închiderea ferestrei, tema, poziția, dimensiunea, starea maximizată și zoomul)
+- **Prevents:** tema și poziția salvate în locuri diferite de tichete diferite; scrieri ale ferestrei în `config.json`-ul lui `whenkit init`; cache-urile Chromium în folderul CLI-ului; `npm start` și `WhenKit.exe` instalat cu același profil și același lock; mecanisme diferite de temă; fereastra care clipește în tema greșită; notițe pierdute la închidere; zoomul ținut în două locuri sau nepotrivit cu bara de titlu nativă.
 - **Rule:**
   - **Pornire.** Primul lucru din main, după ieșirea Squirrel și înainte de `requestSingleInstanceLock` și `ready`: creează (`mkdirSync`, `recursive`) și setează cu `app.setPath('userData', …)` folderul `<folderul de configurare din AD-8>\desktop\` când `app.isPackaged`, altfel `desktop-dev\`, calculat din aceeași funcție ca `config.json`. Fișierele Electron și Chromium nu stau niciodată lângă `config.json`.
-  - **Preferințe.** Stau doar în `userData/window-state.json` (`{ version, theme?: 'light' | 'dark', bounds? }`), citit de main înainte de a crea fereastra și scris doar de main. `theme` lipsă = urmează tema aplicațiilor din Windows; fișier corupt = valori implicite; `bounds` în afara oricărui ecran se ignoră. Niciodată în `config.json`, în workspace sau în `localStorage`. Vederea nu se păstrează: fereastra pornește mereu pe Toolbox → Toate.
+  - **Preferințe.** Stau doar în `userData/window-state.json` (`{ version, theme?: 'light' | 'dark', bounds?, maximized?: boolean, zoom?: number }`), citit de main înainte de a crea fereastra și scris doar de main. Câmpurile noi sunt opționale și `version` nu crește. `theme` lipsă = urmează tema aplicațiilor din Windows; fișier corupt = valori implicite; `bounds` în afara oricărui ecran se ignoră. `bounds` e mereu dimensiunea normală (`getNormalBounds`); cu `maximized`, fereastra se maximizează înainte de `show`, iar restaurarea revine la `bounds`. `zoom` lipsă = 1; în afara 0,8–2 se aduce la limita cea mai apropiată. Niciodată în `config.json`, în workspace sau în `localStorage`. Vederea nu se păstrează: fereastra pornește mereu pe Toolbox → Toate.
   - **Tema.** Main-ul o aplică părților native (`nativeTheme.themeSource`, `backgroundColor`, `titleBarOverlay`). Renderer-ul o ia din `matchMedia('(prefers-color-scheme: dark)')`, pe care Electron o leagă de `nativeTheme.themeSource`: o citește înainte de `createRoot` și pune `data-theme` pe `<html>` (deci e corectă și după o reîncărcare), o urmărește live prin evenimentul `change` (fără temă salvată, urmează Windows), iar CSS-ul citește doar `[data-theme]`. Schimbarea trece prin `window:setTheme`. Fără temă în `additionalArguments`.
-  - **Fereastra și renderer-ul.** Main-ul rezolvă workspace-ul o dată la pornire și îl dă prin `additionalArguments` (`--whenkit-workspace=`), expus ca `window.whenkit.workspacePath` (`null` dacă nu s-a rezolvat). Zoomul trece prin `window.whenkit.setZoomFactor` (`webFrame` în preload, fără IPC, nepersistat). Meniul aplicației lipsește (`Menu.setApplicationMenu(null)`): stratul de tastatură al renderer-ului e singurul proprietar al scurtăturilor Ctrl+=/−/0.
+  - **Fereastra și renderer-ul.** Main-ul rezolvă workspace-ul o dată la pornire și îl dă prin `additionalArguments` (`--whenkit-workspace=`), expus ca `window.whenkit.workspacePath` (`null` dacă nu s-a rezolvat). Meniul aplicației lipsește (`Menu.setApplicationMenu(null)`): stratul de tastatură al renderer-ului e singurul proprietar al scurtăturilor Ctrl+=/−/0.
+  - **Zoomul.** Îl deține main-ul. Renderer-ul trimite doar intenția, `window:zoom` (`'in' | 'out' | 'reset'`); main-ul ține pașii 80–200 %, aplică `webContents.setZoomFactor`, pune înălțimea barei native la `round(TITLE_BAR_HEIGHT × zoom)` (`setTitleBarOverlay`; orice apel al lui, inclusiv la schimbarea temei, folosește zoomul curent), îl reaplică la pornire și după o reîncărcare și îl scrie în `window-state.json`. Preload-ul nu expune zoom și nu folosește `webFrame`.
   - **Închidere.** Main-ul interceptează `close`, cere renderer-ului să salveze notițele în așteptare, așteaptă confirmarea (cu limită de timp), apoi scrie `window-state.json` și închide.
 
 ## Consistency Conventions
 
 | Concern | Convention |
 | --- | --- |
-| Denumiri | fișiere `kebab-case`; tipuri și componente `PascalCase`; funcții `camelCase`; coloane SQL `snake_case`; canale IPC `domeniu:acțiune` (`entries:patch`, `entries:setNotes`, `categories:merge`, `catalog:snapshot`, `entries:search`, `catalog:export`, `catalog:changed`, `window:setTheme`) |
+| Denumiri | fișiere `kebab-case`; tipuri și componente `PascalCase`; funcții `camelCase`; coloane SQL `snake_case`; canale IPC `domeniu:acțiune` (`entries:patch`, `entries:setNotes`, `categories:merge`, `catalog:snapshot`, `entries:search`, `catalog:export`, `catalog:changed`, `window:setTheme`, `window:zoom`) |
 | Formate | JSON extern în `camelCase`; id UUID v4; fiecare format extern sau persistent are propria constantă de versiune în `src/core/versions.ts` |
 | Timp | toate momentele vin din portul `Clock` ca `toISOString()` (UTC, cu milisecunde); niciun `DEFAULT` temporal în SQL; numele de foldere/fișiere folosesc data locală `YYYY-MM-DD_HHmmss` |
 | Mapare | `snake_case` ↔ `camelCase` doar în `SqliteCatalogStore` |
@@ -252,7 +253,7 @@ flowchart TB
     subgraph app["WhenKit.exe (Electron)"]
       R["renderer: React UI"] <-->|IPC| M["main: core + adapters"]
     end
-    C["terminal: Claude Code"] -->|"/importa, /gaseste"| CLI["whenkit CLI (Node, dist/cli)"]
+    C["terminal: Claude Code"] -->|"/adauga, /gaseste"| CLI["whenkit CLI (Node, dist/cli)"]
     CLI --> DB[("workspace/data/catalog.sqlite")]
     M --> DB
     M -->|HTTP| NET(("site-uri, GitHub API"))
@@ -291,7 +292,7 @@ whenkit/
       main/            # fereastra, handleri IPC, polling data_version, window-state.json
       preload/         # window.whenkit
       renderer/        # React
-  workspace-template/  # CLAUDE.md runtime, .claude/skills/importa|gaseste, reguli, blocked-domains.txt inițial
+  workspace-template/  # CLAUDE.md runtime, .claude/skills/adauga|gaseste, reguli, blocked-domains.txt inițial
   tests/               # fixture-uri sintetice, server HTTP local
 ```
 
@@ -306,7 +307,7 @@ whenkit/
 | CAP-3 verificare | `core/verification` + `adapters/http` | AD-2, AD-7, AD-15 |
 | CAP-4 jurnal respinse, --force | `core` + tabel `rejections` | AD-5, AD-7, AD-11, AD-14 |
 | CAP-5 metadate GitHub | `adapters/github` prin portul `GitHubClient` | AD-2, AD-7 |
-| CAP-6 /importa | `workspace-template/.claude/skills/importa` | AD-3, AD-6, AD-11, AD-14, AD-17 |
+| CAP-6 /adauga | `workspace-template/.claude/skills/adauga` | AD-3, AD-6, AD-11, AD-14, AD-17 |
 | CAP-7 concepte + umbrelă | `core` (schema, links `parent`) | AD-5, AD-6 |
 | CAP-8 navigare | `desktop/renderer` → IPC → `core` | AD-3, AD-9, AD-10, AD-18 |
 | Tema și fereastra (UX) | `desktop/main` | AD-8, AD-20 |

@@ -2,7 +2,7 @@
 name: whenkit
 status: final
 created: 2026-10-16
-updated: 2026-10-19
+updated: 2026-10-21
 sources:
   - ../spec-whenkit/spec-whenkit.md
   - ../spec-whenkit/ui-screens.md
@@ -25,7 +25,7 @@ sources:
 | Sistem UI | Niciunul preluat: componente proprii în React, după DESIGN.md. Comportamentul nativ Windows (bara de titlu, dialogul de alegere a folderului, tema aplicațiilor, „Animation effects”) e respectat. |
 | Identitate vizuală | `DESIGN.md` (tokeni și componente). Acest fișier e comportamentul; duratele și pragurile sunt tokeni din DESIGN.md (`{motion.*}`, `{spacing.*}`). |
 | Folosire | Fereastra stă **deschisă tot timpul**, ca jurnal personal; des pe jumătate de ecran, lângă terminalul cu Claude Code. Mouse-ul e intrarea principală, tastatura e scurtătură. |
-| Rolul ferestrei | Locul unde **se găsesc** lucrurile. Adăugarea trece prin Claude (`/importa`); fereastra doar afișează, corectează, adnotează, șterge, ordonează categoriile și exportă (CAP-8, CAP-9, CAP-10, CAP-11, CAP-13). |
+| Rolul ferestrei | Locul unde **se găsesc** lucrurile. Adăugarea trece prin Claude (`/adauga`); fereastra doar afișează, corectează, adnotează, șterge, ordonează categoriile și exportă (CAP-8, CAP-9, CAP-10, CAP-11, CAP-13). |
 
 Referință de compoziție: machetele ecranelor-cheie din `mockups/` ([key-toolbox](mockups/key-toolbox.html), [key-fisa](mockups/key-fisa.html), [key-learn-import](mockups/key-learn-import.html), [key-dialogs](mockups/key-dialogs.html)), descrise în DESIGN.md, „Brand & Style”, unde e și regula de conflict.
 
@@ -45,7 +45,7 @@ Referință de compoziție: machetele ecranelor-cheie din `mockups/` ([key-toolb
 | **Toast-uri** | apar oriunde | sosiri din import, rezultatul exportului, erori nefatale |
 | **Ecran de eroare** | pornire eșuată (State Patterns, „Erori de pornire”) | `app-error`, blochează restul |
 
-Model de navigare: o singură fereastră, fără ferestre secundare. Fișa **înlocuiește** grila în zona de lucru; `toolbar` rămâne, `category-bar` e înlocuită de `sheet-bar`. Navigarea între fișe (`related-link`, umbrelă ↔ copil) formează o stivă; „Înapoi” coboară un pas, iar ultimul pas readuce lista cu aceeași categorie, aceeași derulare și cardul de pe care ai plecat selectat. Comutarea tabului de zonă din fișă duce la lista acelei zone. Dialogurile au un singur nivel, niciodată dialog peste dialog (excepție: confirmarea din `category-manager`, care îl înlocuiește temporar).
+Model de navigare: o singură fereastră, fără ferestre secundare. Fișa **înlocuiește** grila în zona de lucru; `toolbar` rămâne, `category-bar` e înlocuită de `sheet-bar`. Navigarea între fișe (`related-link`, colecție ↔ conceptele ei) formează o stivă; „Înapoi” coboară un pas, iar ultimul pas readuce lista cu aceeași categorie, aceeași derulare și cardul de pe care ai plecat selectat. Comutarea tabului de zonă din fișă duce la lista acelei zone. Dialogurile au un singur nivel, niciodată dialog peste dialog (excepție: confirmarea din `category-manager`, care îl înlocuiește temporar).
 
 Categoria selectată se ține minte pe zonă cât timp aplicația e deschisă; la repornire se pierde (mereu Toolbox → Toate).
 
@@ -63,13 +63,13 @@ Microcopy. Vocea de brand e în `DESIGN.md`, „Brand & Style”. Toate textele 
 | Confirmare cu consecința: titlul e întrebarea sau acțiunea, textul e consecința. „Ștergi fișa „remove.bg”?” + „Se șterg și legăturile ei cu alte fișe. Nu se poate anula.”; „Unifică „Descoperire & arhive”” + „Mut cele 3 fișe în „Date & API-uri” și șterg „Descoperire & arhive”?”; „Ștergi „Terminal & dev tools”?” | „Sigur?” |
 | Trimitere la Claude când fereastra nu poate ajuta: „Sau cere-i lui Claude, în terminal: /gaseste …” | Promisiuni de AI în fereastră |
 
-**Glosar** (identic în UI și documente): **fișă** (o intrare), **Toolbox** / **Learn** (zonele), **categorie** (la fel pe bară, în dialog și în firimituri), **unealtă / material / concept** (felul), **Când o folosesc** / **Când îl aleg**, **Notițele mele**, **Resurse înrudite**, **notă de verificare**.
+**Glosar** (identic în UI și documente): **fișă** (o intrare), **Toolbox** / **Learn** (zonele), **categorie** (la fel pe bară, în dialog și în firimituri), **unealtă / material / concept** (felul), **Când o folosesc** / **Când îl aleg**, **Notițele mele**, **Resurse înrudite**, **notă de verificare**, **colecție** (un concept cu alte concepte legate sub el: „colecție · N concepte” pe card, „Concepte · N” în fișă; conceptele ei au „Face parte din”). Fereastra și exportul nu spun „umbrelă” sau „copii”; aceștia rămân termenii tehnici din spec, CLI și skill-uri.
 
 **Formate:**
 
 - **Date:** un singur format, `15.10.2026`; cu oră, `15.10.2026, 20:39`. Timpul relativ („acum 3 s”, „acum 2 min”) apare doar pe banda de sosire.
 - **Numere:** zecimale cu virgulă („137,7k”).
-- **Plural:** după `Intl.PluralRules('ro')`, cu trei forme în `strings.ro.ts`: *one* „1 fișă”; *few* „0 fișe”, „2 fișe” … „19 fișe”, „101 fișe”; *other* „20 de fișe”, „75 de fișe”, „100 de fișe”. La fel pentru situații, copii, fișe noi.
+- **Plural:** după `Intl.PluralRules('ro')`, cu trei forme în `strings.ro.ts`: *one* „1 fișă”; *few* „0 fișe”, „2 fișe” … „19 fișe”, „101 fișe”; *other* „20 de fișe”, „75 de fișe”, „100 de fișe”. La fel pentru situații, concepte, fișe noi.
 
 ## Component Patterns
 
@@ -97,7 +97,7 @@ Comportament. Aspectul e în `DESIGN.md`, „Components”.
 | `entry-sheet` | fișă | Arată toate câmpurile din `entry-model.md`, în ordinea din DESIGN.md. Se actualizează live dacă fișa se schimbă din terminal cât e doar citită. Golurile: fără resurse înrudite, secțiunea lipsește; repo fără date GitHub (limită de rată), rubricile Stele și Ultimul commit lipsesc; concept fără link, `open-in-browser` lipsește. |
 | `conflict-banner` | fișă în editare ([mockups/key-fisa.html](mockups/key-fisa.html)) | Apare când fișa s-a schimbat din terminal în timpul editării sau când salvarea întoarce `CONFLICT` (AD-10, AD-16). Rămâne până la ieșirea din editare. „Reîncarcă fișa” încarcă versiunea nouă în formular și rămâi în editare; dacă formularul are modificări, cere întâi confirmarea „Pierzi ce ai schimbat în fișă.”. Nu atinge `my-notes`. |
 | `open-in-browser` și orice link extern | fișă | Deschide URL-ul în **browserul implicit** (`shell.openExternal`, doar `http:`/`https:`, AD-9). Fereastra nu navighează niciodată. Linkurile cu altă schemă se afișează ca text simplu. |
-| `related-link` | fișă | Navigare internă la fișa țintă (se adaugă în stivă). La umbrelă: lista „Concepte”; la copil: „Face parte din”. |
+| `related-link` | fișă | Navigare internă la fișa țintă (se adaugă în stivă). La o colecție: lista „Concepte”; la un concept dintr-o colecție: „Face parte din”. |
 | `markdown-content` | fișă (concept) | Randat fără HTML brut și fără imagini externe (AD-9); linkurile externe se deschid în browser. |
 | `my-notes` | fișă | Editabile **direct**, mereu, fără mod de editare și fără buton de salvare. Salvare automată după {motion.notes-autosave} de pauză și la ieșirea din câmp, din fișă sau din aplicație. Antetul arată pe rând „Se salvează…” → „Salvat” (vizibil cel puțin {motion.saved-min-visible}), apoi revine la indiciu. Goale: placeholder „Scrie aici ce vrei să-ți amintești.”. La o reîmprospătare live a fișei, notițele își **păstrează textul local** cât au focus sau o salvare în așteptare. Scrierea nu e blocată de importuri (AD-16: fără `expectedRevision`). Text simplu, fără Markdown. |
 | `text-field` | fișă în editare | Nume, ce face, link (la concepte opțional), conținut (concepte, Markdown scris ca text, fără previzualizare). Fiecare câmp are o etichetă vizibilă („Nume”, „Link”, „Tip”, sau eticheta secțiunii), care e și eticheta accesibilă. **Nu se editează:** felul (ar muta fișa în altă zonă), id, date, date GitHub, nota de verificare, legăturile. Un motiv de respingere sau de invaliditate apare sub câmpul vizat. |
@@ -117,7 +117,7 @@ Comportament. Aspectul e în `DESIGN.md`, „Components”.
 | Stare | Suprafață | Tratament |
 |---|---|---|
 | Pornire | fereastra | Se deschide **mereu** pe Toolbox → Toate, fără restaurarea vederii. Peste {motion.skeleton-delay} de încărcare: `entry-card-skeleton`. |
-| Catalog gol | listă | `empty-state`: „Catalogul e gol. Spune-i lui Claude ce ai găsit: /importa în terminal.”. Categoriile din seed apar cu 0. |
+| Catalog gol | listă | `empty-state`: „Catalogul e gol. Spune-i lui Claude ce ai găsit: /adauga în terminal.”. Categoriile din seed apar cu 0. |
 | Categorie fără fișe | listă | `empty-state` mic: „Nicio fișă în „Terminal & dev tools” încă.” |
 | Căutare fără rezultat | listă | `empty-state`: „Nimic pentru „convertesc un video în gif” în Toolbox.”, „Am căutat în tot textul fișelor.” și „Sau cere-i lui Claude, în terminal: /gaseste …”; dacă cealaltă zonă are potriviri, linkul „+N în Learn”. Fără sugestii de sinonime. |
 | **Sosire din import** | oriunde ([mockups/key-learn-import.html](mockups/key-learn-import.html)) | Main-ul emite `catalog:changed` (AD-10, la câteva secunde); fereastra compară lista și găsește fișele noi. O fișă nouă care intră în vederea curentă (categoria afișată sau căutarea activă, rulată din nou) aterizează prima în grilă, cu `entry-card-new` și `arrival-tape`; celelalte carduri alunecă. **Oricum** apare un `toast` de sosire, **câte unul pe zonă**: o singură fișă, „Fișă nouă: Webhook · Learn / Backend & API-uri” cu „Deschide”; mai multe, „5 fișe noi în Toolbox” cu „Vezi” (duce la acea zonă, la Toate). Contoarele (tab, pastile, `section-header`, `status-bar`) cresc. Doar fișele intrate; respingerile rămân în raportul lui Claude și în jurnal. |
@@ -163,7 +163,7 @@ Comportament. Aspectul e în `DESIGN.md`, „Components”.
 | Ctrl+S | salvează editarea | fișă în editare |
 | Delete | șterge (deschide confirmarea) | fișă |
 | Alt+← / butonul „înapoi” al mouse-ului | înapoi | fișă |
-| Ctrl+= / Ctrl+− / Ctrl+0 | zoom pe toată interfața | oriunde |
+| Ctrl+= / Ctrl+− / Ctrl+0 | zoom pe toată interfața, inclusiv bara de titlu; se păstrează la repornire | oriunde |
 
 **Esc, în ordinea priorității** (se aplică doar prima regulă potrivită):
 
@@ -186,7 +186,7 @@ Autorul vrea o interfață cât mai animată, fără exagerări. Fiecare animaț
 | Sosirea unei fișe | cardul aterizează de sus ({motion.arrival-offset}, scara {motion.enter-scale} → 1, opacitate 0 → 1) cu {motion.arrival-ease}, banda se lipește; celelalte carduri alunecă la noul loc | {motion.arrival}; alunecarea {motion.slide} |
 | Fișă actualizată din terminal | puls de contur {colors.accent} | {motion.pulse} |
 | Toast | intră glisând de jos și apare treptat; iese prin estompare | {motion.slide} / {motion.fade} |
-| Comutarea temei | culorile trec lin; butonul glisant se mută | {motion.theme} |
+| Comutarea temei | o singură trecere lină a tuturor culorilor, grila de fundal odată cu restul, fără părți care sar înaintea celorlalte; butonul glisant se mută. Butoanele native, desenate de Windows, nu se pot estompa: își schimbă culoarea o singură dată, într-un moment ales în timpul trecerii | {motion.theme} |
 | Hover și apăsare | strat de hover, ridicarea cardului | {motion.quick} |
 | Schimbarea categoriei / căutarea | grila se estompează, cardurile intră în cascadă ({motion.stagger} între ele, cel mult primele {motion.stagger-max}) | {motion.fade} |
 | Deschiderea fișei | fișa intră prin estompare și scalare {motion.enter-scale} → 1 | {motion.slide} |
@@ -209,7 +209,7 @@ Comportament. Contrastul vizual e în `DESIGN.md`, „Colors”.
 - `focus-ring` vizibil la orice focus din tastatură, la contrast AA față de fundal.
 - Culoarea nu e niciodată singurul semnal: categoriile au nume, felul are text pe ștampilă, nota de verificare are iconiță și text, câmpul respins are mesaj.
 - Ținte de click de minimum 24×24 px (WCAG 2.2).
-- Zoom 80–200% fără tăieturi; la zoom mare se aplică regulile de lățime din „Responsive & Platform”.
+- Zoom 80–200% fără tăieturi, inclusiv în bara de titlu: marca și `theme-switch` încap și rămân aliniate cu butoanele native. Zoomul ales se păstrează între reporniri. La zoom mare se aplică regulile de lățime din „Responsive & Platform”.
 - „Animation effects” oprit în Windows ⇒ fără animații (vezi „Motion”).
 - Etichetele accesibile sunt în română, din `strings.ro.ts`.
 
@@ -225,7 +225,7 @@ Fereastra trebuie să arate bine **la orice dimensiune și lățime**, mai ales 
 | {spacing.window-min-width} – {spacing.bp-narrow} | o coloană | contoarele de pe taburi dispar; `status-bar` păstrează doar starea și numărul de fișe |
 
 - Dimensiunea minimă a ferestrei: {spacing.window-min-width} × {spacing.window-min-height}.
-- Fereastra își amintește poziția și dimensiunea între reporniri (nu și vederea: pornește mereu pe Toolbox → Toate).
+- Fereastra își amintește poziția, dimensiunea, starea maximizată și zoomul între reporniri (nu și vederea: pornește mereu pe Toolbox → Toate). Închisă maximizată, pornește maximizată, fără să apară întâi la dimensiunea normală; „Restore” o readuce la poziția și dimensiunea normale salvate.
 - **Unde persistă tema și fereastra:** în `window-state.json`, scris doar de main-ul aplicației desktop, în `%APPDATA%\whenkit\desktop\` (`desktop-dev\` pentru `npm start`); **niciodată** lângă `config.json`, care aparține lui `whenkit init` (AD-8), în workspace sau în `localStorage`. Detaliile (pornire, temă fără clipire, salvarea notițelor la închidere) sunt în AD-20.
 - `category-bar` nu se rupe pe mai multe rânduri la nicio lățime: derulare orizontală.
 - Respectă scalarea Windows 100–200% și tema aplicațiilor la prima pornire; fonturile sunt de sistem, plus Cascadia Mono inclus.
@@ -277,7 +277,7 @@ Eșec (nu găsește): căutarea „convertesc un video în gif” dă `empty-sta
 
 Machetă: pasul 3 și varianta în vedere, în [mockups/key-learn-import.html](mockups/key-learn-import.html).
 
-Luca a pus `inspire.txt` în `input/` și rulează `/importa` în terminal. WhenKit e deschis lângă, pe Learn → Backend & API-uri.
+Luca a pus `inspire.txt` în `input/` și rulează `/adauga` în terminal. WhenKit e deschis lângă, pe Learn → Backend & API-uri.
 
 1. Claude lucrează în terminal; în fereastră nu se întâmplă nimic încă (fereastra nu vede importul în curs).
 2. `whenkit import` termină; în câteva secunde main-ul observă schimbarea (AD-10).
@@ -340,9 +340,9 @@ Eșec: folderul nu se poate scrie: toast de eroare, nimic pe jumătate scris de 
 
 ### Flow 7 — Luca învață din conceptele de API (CAP-8, CAP-10)
 
-1. Pe Learn → Backend & API-uri, cardurile au ștampila „CONCEPT”; „Tipuri de API” arată „umbrelă · 5 copii”.
-2. Deschide umbrela: tabelul de comparație și „Când îl aleg”.
-3. În panoul lateral, la „Concepte”, dă click pe „REST API”; fișa copil se deschide (stiva crește).
+1. Pe Learn → Backend & API-uri, cardurile au ștampila „CONCEPT”; „Tipuri de API” arată „colecție · 5 concepte”.
+2. Deschide colecția: tabelul de comparație și „Când îl aleg”.
+3. În panoul lateral, la „Concepte”, dă click pe „REST API”; fișa conceptului se deschide (stiva crește).
 4. La „Surse”, dă click pe documentația oficială; se deschide în browser.
 5. **Climax:** apasă Esc de două ori și e înapoi pe grila Learn, pe cardul „Tipuri de API”, selectat cu colțurile de decupare.
 

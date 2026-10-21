@@ -1,11 +1,11 @@
 # Reguli de scriere a fișelor
 
-Sursa conținutului fișierului de reguli comun citit de `/importa` și `/gaseste` în workspace.
+Sursa conținutului fișierului de reguli comun citit de `/adauga` și `/gaseste` în workspace.
 
 ## Generale
 - Totul în **română**, chiar dacă sursa e în engleză. Numele resursei rămâne original.
 - Claude vizitează fiecare link înainte să scrie fișa; nu documentează din memorie un site care nu se încarcă.
-- Un site care nu se încarcă intră totuși în lot, ca verificarea să decidă (respins cu motiv în jurnal sau intrat cu notă). Fișa conține doar ce spune inputul (nume, descriere); ce inputul nu acoperă se scrie minim, iar `/importa` o semnalează în raport ca nedocumentată, de rescris ulterior cu un `update`.
+- Un site care nu se încarcă intră totuși în lot, ca verificarea să decidă (respins cu motiv în jurnal sau intrat cu notă). Fișa conține doar ce spune inputul (nume, descriere); ce inputul nu acoperă se scrie minim, iar `/adauga` o semnalează în raport ca nedocumentată, de rescris ulterior cu un `update`.
 - Nu repară tacit un URL greșit: îl trimite așa cum apare, iar verificarea îl respinge.
 
 ## Clasificare

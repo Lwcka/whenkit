@@ -12,7 +12,7 @@ Regula de bază: **în caz de dubiu, resursa nu se adaugă, iar utilizatorul pri
 | Fără internet | cod | ⏸️ importul se oprește, nimic scris, nimic respins |
 | Domeniu în lista de domenii interzise (link trimis sau final) | cod | ❌ respinsă |
 | Duplicat în catalog sau în același lot | cod | ⚠️ ignorată + mesaj „există deja: <nume>” |
-| Conținut dubios (pirateria, ocolirea paywall-urilor, conținut cu copyright distribuit ilegal) | Claude (`/importa`) | ❌ respinsă, cu motivul scris de Claude |
+| Conținut dubios (pirateria, ocolirea paywall-urilor, conținut cu copyright distribuit ilegal) | Claude (`/adauga`) | ❌ respinsă, cu motivul scris de Claude |
 | Link din „Surse” mort sau invalid | cod | ⚠️ sursa se scoate, conceptul intră cu avertizare |
 | Link din „Surse” dintr-un domeniu interzis | cod | ❌ conceptul e respins |
 | Repo GitHub arhivat / abandonat (ultimul push mai vechi de 24 de luni la import) | cod (API GitHub) | ✅ intră, cu notă în fișă |

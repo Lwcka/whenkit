@@ -3,7 +3,7 @@ name: whenkit
 description: 'WhenKit, fereastra desktop a catalogului whenkit: o planșetă de desen caldă (hârtie ivoire ziua, navy de planșă noaptea), care arată densă ca o unealtă de lucru, dar rămâne simplă și prietenoasă.'
 status: final
 created: 2026-10-16
-updated: 2026-10-17
+updated: 2026-10-21
 sources:
   - ../spec-whenkit/spec-whenkit.md
   - ../spec-whenkit/ui-screens.md
@@ -723,7 +723,7 @@ Stările, comune butoanelor, `category-chip`, `zone-tab`, `related-link` și `en
 Machete: [mockups/key-toolbox.html](mockups/key-toolbox.html) (Toolbox, `entry-card-selected`), [mockups/key-learn-import.html](mockups/key-learn-import.html) (`entry-card-learn`, `entry-card-new`, `kind-stamp`, `arrival-tape`). De sus în jos:
 
 1. `category-tab` ieșit deasupra marginii de sus, la una dintre `category-tab.positions`, alternând pe carduri vecine (ca filele unui fișier).
-2. Rândul de metadate (`meta`): gazda + pastila tipului („site” / „repo” / „aplicație”, contur `type-pill-border`, {rounded.full}); la umbrelă „umbrelă · N copii”. La un concept care nu e umbrelă (fără link, fără copii) rândul rămâne gol, dar își păstrează înălțimea. În Learn, `kind-stamp` în colțul din dreapta sus.
+2. Rândul de metadate (`meta`): gazda + pastila tipului („site” / „repo” / „aplicație”, contur `type-pill-border`, {rounded.full}); la o colecție „colecție · N concepte”. La un concept care nu e colecție (fără link, fără concepte legate sub el) rândul rămâne gol, dar își păstrează înălțimea. În Learn, `kind-stamp` în colțul din dreapta sus.
 3. Titlul (`title`).
 4. „Ce face” (`body`), tăiat la `body-lines` rânduri.
 5. Situațiile: în Toolbox eticheta „Când o folosesc” (`situations-label`) + primele 2 `situation-item`; în Learn prima situație, fără etichetă.
@@ -745,7 +745,7 @@ Machetă: [mockups/key-fisa.html](mockups/key-fisa.html), în citire și în edi
 2. „Ce face” (`lead`).
 3. Secțiuni, fiecare cu etichetă (`section-label`) urmată de o linie fină (`section-rule`): „Când o folosesc · N” / „Când îl aleg · N” (`situation-callout` pe 2 coloane); la concepte, conținutul (`markdown-content`) și „Surse”; „Cuvinte-cheie” (`keyword-tag`); `my-notes`.
 
-**Panoul lateral** (`side-*`), de sus în jos: `open-in-browser`; „Resurse înrudite · N” (`related-link`), la umbrelă „Concepte · N”, la copil „Face parte din”; nota de verificare, dacă există; `title-block` jos.
+**Panoul lateral** (`side-*`), de sus în jos: `open-in-browser`; „Resurse înrudite · N” (`related-link`), la o colecție „Concepte · N”, la un concept dintr-o colecție „Face parte din”; nota de verificare, dacă există; `title-block` jos.
 
 **În editare:** `conflict-banner` sub `sheet-bar`, când e cazul; câmpurile scrise de Claude devin `text-field`, `select`, `category-picker` și `list-editor`, pe aceleași poziții; `my-notes` și panoul lateral rămân la fel.
 
@@ -758,7 +758,7 @@ Machetă: [mockups/key-fisa.html](mockups/key-fisa.html), în citire și în edi
 | Componentă | Anatomie și aspect |
 |---|---|
 | **work-area** | {colors.canvas} cu grila milimetrică (Layout & Spacing). |
-| **title-bar** | Stânga: `app-mark` + „WhenKit”, mereu, și în fișă (numele fișei e doar în titlul ferestrei din Windows, vezi EXPERIENCE.md, `title-bar`). Dreapta: `theme-switch`, apoi butoanele native ale ferestrei, colorate pe {colors.chrome} (bară de titlu proprie peste butoanele native). |
+| **title-bar** | Stânga: `app-mark` + „WhenKit”, mereu, și în fișă (numele fișei e doar în titlul ferestrei din Windows, vezi EXPERIENCE.md, `title-bar`). Dreapta: `theme-switch`, apoi butoanele native ale ferestrei, colorate pe {colors.chrome} (bară de titlu proprie peste butoanele native). La orice zoom între 80 și 200% conținutul încape în bară și rămâne centrat vertical pe butoanele native. |
 | **theme-switch** | Pastilă cu două locuri (`sun`, `moon`) și un buton glisant. Ziua: butonul pe soare, soarele în `icon-active`. Noaptea: butonul pe lună (`knob-dark`, contur `knob-border-dark`), luna în `icon-active-dark`. |
 | **toolbar** | Ordine: `zone-tab` × 2, `search-box` (flexibil, până la `max-width`), spațiu, `toolbar-button` „Categorii”, `toolbar-button-primary` „Exportă catalogul”. |
 | **zone-tab** | „Toolbox” / „Learn” + contor-pastilă. Activ: text `foreground-active`, bară `indicator` pe marginea de jos, contor pe `count-background-active`. |

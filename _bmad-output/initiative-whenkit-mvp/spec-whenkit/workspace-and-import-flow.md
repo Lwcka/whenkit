@@ -17,11 +17,11 @@ Motivul separării: Claude Code încarcă CLAUDE.md din folderul curent **și di
 whenkit/
 ├── CLAUDE.md            ← instrucțiuni de runtime: „Cum lucrezi cu catalogul”
 ├── .claude/skills/
-│   ├── importa/         ← /importa
+│   ├── adauga/          ← /adauga
 │   ├── gaseste/         ← /gaseste
 │   └── reguli-fise.md   ← fișierul de reguli comun, construit din card-writing-rules.md
 ├── input/               ← materialele de importat (consumabile)
-├── batches/             ← loturile JSON scrise de /importa, șterse după import reușit
+├── batches/             ← loturile JSON scrise de /adauga, șterse după import reușit
 └── data/
     ├── catalog.sqlite       (fișe, categorii, legături, jurnalul de respinse)
     ├── backups/             (copii automate înainte de orice migrare)
@@ -30,13 +30,15 @@ whenkit/
 
 `whenkit init` rulat din nou actualizează fișierele șablonului (CLAUDE.md, skill-uri, reguli, schema lotului), dar nu atinge niciodată `data/` și `input/`.
 
+Un skill retras din șablon (`importa`, redenumit `/adauga`) e scos de `whenkit init`: doar fișierele lui care vin din șablon, chiar modificate, iar folderul doar dacă rămâne gol. `data/`, `input/`, `batches/` și fișierele adăugate de utilizator rămân neatinse. Un workspace cu șablon vechi primește avertismentul care cere `whenkit init`.
+
 CLAUDE.md de runtime conține: unde e fișierul de reguli, comenzile CLI ale aplicației, regula „nu suprascrii niciodată Notițele mele”, regula „nu scrii direct în `data/`”. Acoperă și cererile libere (ex. „rescrie fișa X după regulile noi”).
 
 ## Fluxul de import
 
 ```
 input/fișier  ─┐
-/importa <link|text> ─┼─► /importa (Claude Code)
+/adauga <link|text> ──┼─► /adauga (Claude Code)
 jurnal respinse ─┘        │ 1. extrage candidații (vision pe screenshot, linkuri din .txt)
                           │ 2. vizitează fiecare link, documentează
                           │    (site care nu se încarcă: fișă doar din input, tot în lot)

@@ -1,6 +1,6 @@
 # Scenarii de test din datele reale
 
-Datele stau în `C:\Users\Luca\Personal\`, în afara repo-ului. Nu se transcriu manual și nu se copiază în repo; sunt input pentru `/importa` și scenarii de acceptanță pentru tichete, nu praguri formale.
+Datele stau în `C:\Users\Luca\Personal\`, în afara repo-ului. Nu se transcriu manual și nu se copiază în repo; sunt input pentru `/adauga` și scenarii de acceptanță pentru tichete, nu praguri formale.
 
 | Input | Conținut | Rezultat așteptat |
 |---|---|---|

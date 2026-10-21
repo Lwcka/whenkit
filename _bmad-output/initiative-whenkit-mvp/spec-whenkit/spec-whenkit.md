@@ -30,7 +30,7 @@ sources:
 
 - **CAP-1**
   - **intent:** Utilizatorul poate crea workspace-ul aplicației, în afara repo-ului, gata de folosit cu Claude Code.
-  - **success:** După `whenkit init` la calea configurată, workspace-ul conține structura din `workspace-and-import-flow.md` (CLAUDE.md de runtime, `/importa`, `/gaseste`, fișierul de reguli, `input/`, `data/` cu categoriile din `categories-seed.md` și lista de domenii interzise); o sesiune Claude Code deschisă acolo nu încarcă CLAUDE.md-ul de dezvoltare al repo-ului.
+  - **success:** După `whenkit init` la calea configurată, workspace-ul conține structura din `workspace-and-import-flow.md` (CLAUDE.md de runtime, `/adauga`, `/gaseste`, fișierul de reguli, `input/`, `data/` cu categoriile din `categories-seed.md` și lista de domenii interzise); o sesiune Claude Code deschisă acolo nu încarcă CLAUDE.md-ul de dezvoltare al repo-ului.
 - **CAP-2**
   - **intent:** Claude Code poate preda aplicației un lot de intrări candidate, iar aplicația decide ce intră în catalog.
   - **success:** `whenkit import <lot>` respinge un lot invalid față de schemă fără să scrie nimic, rulează verificarea pentru fiecare candidat, salvează doar ce trece și afișează raportul: adăugate, actualizate, respinse cu motiv, avertizări, duplicate, categorii noi create. Un element de tip actualizare modifică o fișă existentă, trece prin verificare și lasă neatinse „Notițele mele”, proprietarul și data adăugării.
@@ -44,8 +44,8 @@ sources:
   - **intent:** Repo-urile GitHub primesc la import date exacte despre starea lor.
   - **success:** Un repo importat are stele, data ultimului commit și starea arhivat; un repo arhivat intră cu notă; la depășirea limitei API-ului public, resursa intră fără aceste date, nu e respinsă.
 - **CAP-6**
-  - **intent:** Utilizatorul poate transforma materialele din `input/` (screenshot-uri, `.txt`, alte fișiere text) sau un link/text dat direct în fișe complete, rulând `/importa` în workspace.
-  - **success:** Pentru fiecare fișier de input, `/importa` produce un lot cu fișe în română conforme cu `card-writing-rules.md`, își dă verdictul pe conținut dubios, rulează `whenkit import`, arată raportul și șterge fișierul doar dacă importul a reușit; `/importa <link>` și reluarea din jurnalul de respinse funcționează fără fișier în `input/`.
+  - **intent:** Utilizatorul poate transforma materialele din `input/` (screenshot-uri, `.txt`, alte fișiere text) sau un link/text dat direct în fișe complete, rulând `/adauga` în workspace.
+  - **success:** Pentru fiecare fișier de input, `/adauga` produce un lot cu fișe în română conforme cu `card-writing-rules.md`, își dă verdictul pe conținut dubios, rulează `whenkit import`, arată raportul și șterge fișierul doar dacă importul a reușit; `/adauga <link>` și reluarea din jurnalul de respinse funcționează fără fișier în `input/`.
 - **CAP-7**
   - **intent:** Materialele de tip notiță de concept devin intrări Learn utile pentru învățat, inclusiv comparații între concepte înrudite.
   - **success:** Screenshot-urile din `API/` produc câte un concept per tip de API plus conceptul-umbrelă „Tipuri de API”, cu tabel de comparație și „când alegi care”, legat de fiecare copil; fiecare concept are secțiunea „Surse”.
@@ -89,7 +89,7 @@ sources:
 
 ## Non-goals
 
-- Formular de adăugare manuală sau captură rapidă în UI (adăugarea trece prin `/importa`).
+- Formular de adăugare manuală sau captură rapidă în UI (adăugarea trece prin `/adauga`).
 - AI în aplicație: căutare semantică, embeddings, model local, `AIProvider`.
 - Re-verificarea resurselor existente, câmpul Status, ecranul de Setări.
 - Butoane Claude Code și terminal integrat în aplicație.
@@ -101,7 +101,7 @@ sources:
 
 ## Success signal
 
-- Materialele de test reale (`50 github repo/`, `20 sites.png`, `inspire.txt`, `API/`) puse în `input/` și importate cu `/importa` ajung în aplicația desktop ca fișe în română, cu rezultatele din `test-scenarios.md` (site-urile de pirateria respinse cu motiv, conceptele API cu umbrelă), `input/` rămâne gol, iar remove.bg se găsește prin bara de categorii, prin căutarea „fundal” și prin `/gaseste`. MVP-ul e declarat gata de autor când toate capabilitățile sunt implementate.
+- Materialele de test reale (`50 github repo/`, `20 sites.png`, `inspire.txt`, `API/`) puse în `input/` și importate cu `/adauga` ajung în aplicația desktop ca fișe în română, cu rezultatele din `test-scenarios.md` (site-urile de pirateria respinse cu motiv, conceptele API cu umbrelă), `input/` rămâne gol, iar remove.bg se găsește prin bara de categorii, prin căutarea „fundal” și prin `/gaseste`. MVP-ul e declarat gata de autor când toate capabilitățile sunt implementate.
 
 ## Assumptions
 
