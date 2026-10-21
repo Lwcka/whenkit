@@ -28,17 +28,17 @@ body {
   box-sizing: border-box;
 }
 
-/* While the theme changes, the colors cross-fade (the duration is 0 with
-   Animation effects off). */
-[data-theme-changing] *,
-[data-theme-changing] *::before,
-[data-theme-changing] *::after {
-  transition:
-    background-color var(--motion-theme) var(--motion-ease),
-    border-color var(--motion-theme) var(--motion-ease),
-    color var(--motion-theme) var(--motion-ease),
-    box-shadow var(--motion-theme) var(--motion-ease),
-    transform var(--motion-theme) var(--motion-ease) !important;
+/* A theme change is one view transition (theme.ts): the old page cross-fades
+   into the new one. The duration is 0 with Animation effects off. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-theme);
+  animation-timing-function: var(--motion-ease);
+}
+
+/* The window stays clickable during the fade. */
+::view-transition {
+  pointer-events: none;
 }
 
 button {

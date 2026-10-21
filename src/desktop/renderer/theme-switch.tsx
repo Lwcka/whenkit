@@ -2,7 +2,7 @@ import { Moon, Sun } from 'lucide-react';
 import { useSyncExternalStore } from 'react';
 import type { IpcResult, Theme } from '../../shared/ipc';
 import { appStrings } from '../../shared/strings.ro';
-import { applyTheme, getTheme, subscribeTheme } from './theme';
+import { applyTheme, getTargetTheme, getTheme, subscribeTheme } from './theme';
 import './theme-switch.css';
 import { toasts } from './toast-store';
 
@@ -10,18 +10,25 @@ export interface ThemeSwitchProps {
   setTheme: (theme: Theme) => Promise<IpcResult<null>>;
 }
 
+/** The toggle in flight; a toggle that is no longer the latest sends nothing. */
+let latestToggle = 0;
+
 /**
- * A two-place pill (sun, moon) with a sliding knob. A click flips the theme at
- * once and asks main to keep it; if main cannot, the theme goes back and an
+ * A two-place pill (sun, moon) with a sliding knob. A click cross-fades the
+ * theme and, at the midpoint of the fade, asks main to keep it (so the native
+ * caption buttons recolor once); if main cannot, the theme goes back and an
  * error toast says so.
  */
 export function ThemeSwitch({ setTheme }: ThemeSwitchProps) {
   const theme = useSyncExternalStore(subscribeTheme, getTheme);
 
   const toggle = async () => {
-    const previous = getTheme();
+    // The target, not data-theme: a fast second click comes before the flip.
+    const previous = getTargetTheme();
     const next: Theme = previous === 'dark' ? 'light' : 'dark';
-    applyTheme(next, { animate: true });
+    const toggleId = ++latestToggle;
+    await applyTheme(next, { animate: true });
+    if (toggleId !== latestToggle) return;
     let saved = false;
     try {
       saved = (await setTheme(next)).ok;
@@ -29,7 +36,9 @@ export function ThemeSwitch({ setTheme }: ThemeSwitchProps) {
       // The bridge itself failed: same outcome as an error result.
     }
     if (!saved) {
-      if (getTheme() === next) applyTheme(previous, { animate: true });
+      if (toggleId === latestToggle && getTargetTheme() === next) {
+        void applyTheme(previous, { animate: true });
+      }
       toasts.push({ kind: 'error', message: appStrings.themeNotChanged });
     }
   };
