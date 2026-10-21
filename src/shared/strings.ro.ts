@@ -183,6 +183,7 @@ export const rejectionStrings = {
 
 export const entryStrings = {
   emptyCatalog: 'Catalogul e gol.',
+  name: 'Nume',
   listLine: (id: string, kind: string, name: string, categories: string) =>
     `${id}  [${kind}] ${name} — ${categories}`,
   kind: (kind: string, zone: string) => `Fel: ${kind} (${zone})`,
@@ -393,7 +394,15 @@ export const appStrings = {
   /** The action of a single-entry arrival toast. */
   arrivalToastOpen: 'Deschide',
   /** The key hints while a sheet is open (EXPERIENCE, status-bar). */
-  sheetKeyHints: [{ keys: 'Esc', action: 'înapoi' }],
+  sheetKeyHints: [
+    { keys: 'E', action: 'editează' },
+    { keys: 'Esc', action: 'înapoi' },
+  ],
+  /** The key hints while an entry is edited. */
+  editKeyHints: [
+    { keys: 'Ctrl S', action: 'salvează' },
+    { keys: 'Esc', action: 'renunță' },
+  ],
   /** The window title with a sheet open: „remove.bg — WhenKit”. */
   sheetWindowTitle: (name: string): string =>
     `${name} — ${appStrings.productName}`,
@@ -405,6 +414,48 @@ export const appStrings = {
   deleteEntryBody: 'Se șterg și legăturile ei cu alte fișe. Nu se poate anula.',
   /** The default button of a confirmation: the one that does not destroy. */
   cancel: 'Renunță',
+  /** Editing an entry (CAP-10, EXPERIENCE Flow 3): the sheet-bar buttons. */
+  edit: 'Editează',
+  save: 'Salvează',
+  saving: 'Se salvează…',
+  verifyingLink: 'Se verifică linkul…',
+  /** The list editors' add buttons and the row's remove button. */
+  addSituation: 'Adaugă situație',
+  addKeyword: 'Adaugă cuvânt-cheie',
+  addSource: 'Adaugă sursă',
+  removeRow: 'Șterge rândul',
+  /** The accessible names of the rows of a list editor. */
+  situationRow: (number: number): string => `Situația ${number}`,
+  keywordRow: (number: number): string => `Cuvântul-cheie ${number}`,
+  sourceRow: (number: number): string => `Sursa ${number}`,
+  /** The banner when the entry changed in the terminal during the edit. */
+  conflictText:
+    'Fișa a fost modificată din terminal. Salvarea ta va fi refuzată.',
+  reloadEntry: 'Reîncarcă fișa',
+  reloadEntryTitle: 'Reîncarci fișa?',
+  reloadEntryBody: 'Pierzi ce ai schimbat în fișă.',
+  reloadEntryConfirm: 'Reîncarcă',
+  /** Leaving a dirty form. */
+  discardTitle: 'Renunți la modificări?',
+  discardBody: (name: string): string =>
+    `Ce ai schimbat în „${name}” se pierde.`,
+  backToEditing: 'Înapoi la editare',
+  discardChanges: 'Aruncă modificările',
+  /** A save that needs the network and found none. */
+  editOffline:
+    'Nu pot verifica linkul fără internet. Modificarea nu s-a salvat.',
+  /** A field the core refused without a reason of its own (ARGUMENTS_INVALID). */
+  editFieldInvalid: 'Valoarea nu e acceptată.',
+  /** The local validation of the form, under the field. */
+  editErrors: {
+    name: 'Scrie un nume.',
+    categories: 'Alege cel puțin o categorie.',
+    whatItDoes: 'Scrie ce face.',
+    situations: 'Scrie cel puțin o situație.',
+    urlRequired: 'Scrie linkul.',
+    urlScheme: 'Linkul trebuie să înceapă cu http:// sau https://.',
+    content: 'Scrie conținutul.',
+  },
   sheetCrumbsLabel: 'Poziția fișei',
   sheetLabel: (name: string): string => `Fișa ${name}`,
   /** „Când o folosesc · 4”. */

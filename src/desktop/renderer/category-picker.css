@@ -1,0 +1,6 @@
+/* category-picker (DESIGN, category-picker): the chips of category-bar, wrapped. */
+.category-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--spacing-2);
+}

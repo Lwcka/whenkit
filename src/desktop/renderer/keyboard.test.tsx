@@ -224,6 +224,9 @@ describe('zoom', () => {
         back: () => {},
         sheetOpen: () => false,
         requestDelete: () => {},
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
 
@@ -252,6 +255,9 @@ describe('frame bindings', () => {
         back: () => {},
         sheetOpen: () => false,
         requestDelete: () => {},
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -273,6 +279,9 @@ describe('frame bindings', () => {
         back: () => {},
         sheetOpen: () => false,
         requestDelete: () => {},
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -298,6 +307,9 @@ describe('frame bindings', () => {
         back: () => {},
         sheetOpen: () => false,
         requestDelete: () => {},
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -322,6 +334,9 @@ describe('frame bindings', () => {
         back: () => backs++,
         sheetOpen: () => open,
         requestDelete: () => {},
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -351,6 +366,9 @@ describe('frame bindings', () => {
         back: () => {},
         sheetOpen: () => open,
         requestDelete: () => asked++,
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
     const input = document.createElement('input');
@@ -368,6 +386,98 @@ describe('frame bindings', () => {
     expect(event.defaultPrevented).toBe(true);
   });
 
+  it('E starts the edit only on an open sheet, not editing, outside a text field', () => {
+    let open = false;
+    let editing = false;
+    let started = 0;
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => {},
+        zoom: createZoom(() => {}),
+        moveCategory: () => {},
+        focusSearch: () => {},
+        back: () => {},
+        sheetOpen: () => open,
+        requestDelete: () => {},
+        editing: () => editing,
+        startEdit: () => started++,
+        save: () => {},
+      }),
+    );
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    press('KeyE');
+    expect(started).toBe(0);
+
+    open = true;
+    const event = press('KeyE');
+    expect(started).toBe(1);
+    expect(event.defaultPrevented).toBe(true);
+    press('KeyE', {}, input);
+    press('KeyE', { ctrlKey: true });
+    press('KeyE', { shiftKey: true });
+    expect(started).toBe(1);
+
+    editing = true;
+    press('KeyE');
+    expect(started).toBe(1);
+  });
+
+  it('Ctrl+S saves only while editing, also from a text field', () => {
+    let editing = false;
+    let saved = 0;
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => {},
+        zoom: createZoom(() => {}),
+        moveCategory: () => {},
+        focusSearch: () => {},
+        back: () => {},
+        sheetOpen: () => true,
+        requestDelete: () => {},
+        editing: () => editing,
+        startEdit: () => {},
+        save: () => saved++,
+      }),
+    );
+    const input = document.createElement('input');
+    document.body.append(input);
+
+    press('KeyS', { ctrlKey: true });
+    expect(saved).toBe(0);
+
+    editing = true;
+    const event = press('KeyS', { ctrlKey: true }, input);
+    expect(saved).toBe(1);
+    expect(event.defaultPrevented).toBe(true);
+    press('KeyS');
+    expect(saved).toBe(1);
+  });
+
+  it('while editing, the zones, Alt+Left and Delete are inactive', () => {
+    const calls: string[] = [];
+    uninstall = installKeyboard(
+      frameBindings({
+        selectZone: () => calls.push('zone'),
+        zoom: createZoom(() => {}),
+        moveCategory: () => {},
+        focusSearch: () => {},
+        back: () => calls.push('back'),
+        sheetOpen: () => true,
+        requestDelete: () => calls.push('delete'),
+        editing: () => true,
+        startEdit: () => {},
+        save: () => {},
+      }),
+    );
+    press('Digit1', { ctrlKey: true });
+    press('Digit2', { ctrlKey: true });
+    press('ArrowLeft', { altKey: true });
+    press('Delete');
+    expect(calls).toEqual([]);
+  });
+
   it('mutes every binding but the zoom while a dialog is open', () => {
     const calls: string[] = [];
     uninstall = installKeyboard(
@@ -379,6 +489,9 @@ describe('frame bindings', () => {
         back: () => calls.push('back'),
         sheetOpen: () => true,
         requestDelete: () => calls.push('delete'),
+        editing: () => false,
+        startEdit: () => {},
+        save: () => {},
       }),
     );
     const dialog = document.createElement('div');

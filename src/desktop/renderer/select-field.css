@@ -1,0 +1,41 @@
+/* select (DESIGN, select): the native control, restyled, with a chevron. */
+.select {
+  display: block;
+  position: relative;
+}
+
+.select-input {
+  appearance: none;
+  background: var(--select-background);
+  border: 1px solid var(--select-border);
+  border-radius: var(--select-radius);
+  box-sizing: border-box;
+  color: var(--ink);
+  cursor: pointer;
+  font: var(--typography-body);
+  height: var(--select-height);
+  padding: 0 var(--select-chevron-room) 0 var(--spacing-3);
+  width: 100%;
+}
+
+.select-input:focus {
+  border-color: var(--select-border-focus);
+}
+
+.select-input[aria-invalid='true'] {
+  border-color: var(--text-field-border-error);
+}
+
+.select-input:disabled {
+  cursor: default;
+  opacity: var(--disabled-opacity);
+}
+
+.select > .lucide {
+  color: var(--ink-2);
+  pointer-events: none;
+  position: absolute;
+  right: var(--spacing-3);
+  top: 50%;
+  transform: translateY(-50%);
+}

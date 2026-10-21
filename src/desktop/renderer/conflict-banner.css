@@ -1,0 +1,32 @@
+/* conflict-banner (DESIGN, conflict-banner). */
+.conflict-banner {
+  align-items: center;
+  background: var(--conflict-banner-background);
+  border: 1px solid var(--conflict-banner-border);
+  border-left: var(--conflict-banner-stripe) solid var(--signal);
+  border-radius: var(--rounded-lg);
+  color: var(--ink);
+  display: flex;
+  font: var(--typography-body-sm);
+  gap: var(--spacing-3);
+  /* It stays in view while a long form is scrolled. */
+  position: sticky;
+  top: var(--spacing-3);
+  z-index: 2;
+  margin: var(--spacing-6) 0 0;
+  padding: var(--conflict-banner-padding);
+}
+
+.conflict-banner > .lucide {
+  color: var(--signal);
+}
+
+.conflict-banner-text {
+  flex: 1;
+  margin: 0;
+}
+
+/* The sheet below has its own top margin; the banner sits right over it. */
+.conflict-banner + .entry-sheet {
+  margin-top: var(--spacing-4);
+}

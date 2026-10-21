@@ -77,6 +77,7 @@ const api: FrameApi = {
     }),
   setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
+  patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
   setTheme: () => Promise.resolve({ ok: true, data: null }),
   setZoomFactor: () => {},
 };
@@ -167,7 +168,7 @@ describe('App: opening a sheet', () => {
     expect(sheetTitle()).toBe('remove.bg');
     expect(crumbs()).toEqual(['Toolbox', 'Imagini & video', 'remove.bg']);
     expect(document.title).toBe('remove.bg — WhenKit');
-    expect(keyHints()).toEqual(['Esc']);
+    expect(keyHints()).toEqual(['E', 'Esc']);
     expect(listShown()).toBe(false);
     expect(screen.queryByRole('radiogroup')).toBeNull();
     expect(screen.getByRole('searchbox')).toBeTruthy();

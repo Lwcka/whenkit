@@ -31,8 +31,17 @@
   transition: color var(--motion-quick) var(--motion-ease);
 }
 
-.zone-tab:hover {
+.zone-tab:hover:not(:disabled) {
   color: var(--ink-2);
+}
+
+/* Inactive while an entry is edited. */
+.zone-tab:disabled {
+  cursor: default;
+}
+
+.zone-tab:disabled:not([aria-selected='true']) {
+  opacity: var(--disabled-opacity);
 }
 
 .zone-tab[aria-selected='true'] {
@@ -97,6 +106,11 @@
   outline: 0;
   padding: 0;
   text-overflow: ellipsis;
+}
+
+.search-box-input:disabled {
+  cursor: default;
+  opacity: var(--disabled-opacity);
 }
 
 .search-box-input::placeholder {

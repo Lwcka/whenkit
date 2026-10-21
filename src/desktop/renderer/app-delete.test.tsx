@@ -104,6 +104,7 @@ beforeEach(() => {
     searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
     setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
     deleteEntry,
+    patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
     setTheme: () => Promise.resolve({ ok: true, data: null }),
     setZoomFactor: () => {},
   };
@@ -130,7 +131,9 @@ async function open() {
 const card = (name: string) => screen.getByRole('button', { name });
 const dialog = () => screen.queryByRole('dialog');
 const deleteButton = () =>
-  document.querySelector<HTMLElement>('.sheet-bar-actions button');
+  document.querySelector<HTMLElement>(
+    '.sheet-bar-actions button[data-variant="danger"]',
+  );
 const sheetTitle = () =>
   document.querySelector('.entry-sheet .sheet-title')?.textContent ?? null;
 const listShown = () => document.querySelector('.card-grid') !== null;
