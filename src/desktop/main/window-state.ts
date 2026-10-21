@@ -14,10 +14,15 @@ export interface Rectangle {
   height: number;
 }
 
-/** What the file holds, without its version. Both fields are optional. */
+/**
+ * What the file holds, without its version. Every field is optional.
+ * `bounds` is the normal (restored) size; `maximized` is written and read
+ * back only when true (absent means not maximized).
+ */
 export interface WindowState {
   theme?: Theme;
   bounds?: Rectangle;
+  maximized?: boolean;
 }
 
 const boundsSchema = z.object({
@@ -31,6 +36,7 @@ const fileSchema = z.object({
   version: z.literal(WINDOW_STATE_VERSION),
   theme: z.enum(['light', 'dark']).optional(),
   bounds: boundsSchema.optional(),
+  maximized: z.boolean().optional(),
 });
 
 /** The least overlap with a work area for a saved window to count as reachable. */
@@ -54,9 +60,9 @@ export function isVisible(
 }
 
 /**
- * Parses the file's text. Anything wrong with it (bad JSON, version, theme or
- * bounds shape) gives `{}`; bounds that no work area shows are dropped and the
- * theme is kept.
+ * Parses the file's text. Anything wrong with it (bad JSON, version, theme,
+ * bounds or maximized shape) gives `{}`; bounds that no work area shows are
+ * dropped, and the theme and the maximized flag are kept.
  */
 export function parseWindowState(
   text: string,
@@ -72,6 +78,7 @@ export function parseWindowState(
   if (!parsed.success) return {};
   const state: WindowState = {};
   if (parsed.data.theme !== undefined) state.theme = parsed.data.theme;
+  if (parsed.data.maximized === true) state.maximized = true;
   const { bounds } = parsed.data;
   if (bounds !== undefined && isVisible(bounds, workAreas)) {
     state.bounds = bounds;
@@ -101,6 +108,7 @@ export function writeWindowState(path: string, state: WindowState): void {
     version: WINDOW_STATE_VERSION,
     ...(state.theme === undefined ? {} : { theme: state.theme }),
     ...(state.bounds === undefined ? {} : { bounds: state.bounds }),
+    ...(state.maximized === true ? { maximized: true } : {}),
   };
   try {
     writeFileSync(temp, `${JSON.stringify(content, null, 2)}\n`, 'utf8');
