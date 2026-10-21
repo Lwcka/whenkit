@@ -2,38 +2,14 @@
 // Bindings go by the physical key (`event.code`), not the character, so they
 // work on the Romanian keyboard, where `[` and `]` produce „ă” and „î”.
 
-/** The zoom steps of the whole interface (EXPERIENCE: 80–200%). */
-export const ZOOM_STEPS = [0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2] as const;
-const ZOOM_DEFAULT_INDEX = ZOOM_STEPS.indexOf(1);
-
+/**
+ * What the zoom keys call. The renderer only sends the intent; main owns the
+ * factor and its steps (AD-20).
+ */
 export interface Zoom {
   zoomIn(): void;
   zoomOut(): void;
   reset(): void;
-  /** The factor applied now. */
-  factor(): number;
-}
-
-/** Steps through ZOOM_STEPS, clamped at the ends; `apply` sets the factor. */
-export function createZoom(apply: (factor: number) => void): Zoom {
-  let index = ZOOM_DEFAULT_INDEX;
-  const move = (next: number) => {
-    const clamped = Math.min(Math.max(next, 0), ZOOM_STEPS.length - 1);
-    if (clamped === index) return;
-    index = clamped;
-    apply(ZOOM_STEPS[index] ?? 1);
-  };
-  return {
-    zoomIn: () => move(index + 1),
-    zoomOut: () => move(index - 1),
-    // Always applies: after a reload Chromium may still hold the old zoom
-    // while this index is back at 100%.
-    reset: () => {
-      index = ZOOM_DEFAULT_INDEX;
-      apply(1);
-    },
-    factor: () => ZOOM_STEPS[index] ?? 1,
-  };
 }
 
 /** True when Ctrl, Alt, Meta or Shift is held: a plain key press has none. */

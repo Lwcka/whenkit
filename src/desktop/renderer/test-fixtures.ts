@@ -80,7 +80,7 @@ export function fakeFrameApi(overrides: Partial<FrameApi> = {}): FrameApi {
     deleteEntry: okWrite,
     patchEntry: okWrite,
     setTheme: () => Promise.resolve({ ok: true, data: null }),
-    setZoomFactor: () => {},
+    zoom: () => Promise.resolve({ ok: true, data: null }),
     renameCategory: okWrite,
     mergeCategories: okWrite,
     deleteCategory: okWrite,

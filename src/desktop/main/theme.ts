@@ -22,14 +22,22 @@ export interface NativeThemeSettings {
   titleBarOverlay: { color: string; symbolColor: string; height: number };
 }
 
-export function nativeThemeSettings(theme: Theme): NativeThemeSettings {
+/**
+ * The window background and the caption buttons for `theme`. At zoom `z` the
+ * overlay is `40 * z` DIP tall, so `env(titlebar-area-height)` stays 40 CSS px
+ * and the title bar keeps its layout at every zoom (AD-20).
+ */
+export function nativeThemeSettings(
+  theme: Theme,
+  zoom = 1,
+): NativeThemeSettings {
   const { canvas, chrome, ink } = PALETTE[theme];
   return {
     backgroundColor: canvas,
     titleBarOverlay: {
       color: chrome,
       symbolColor: ink,
-      height: TITLE_BAR_HEIGHT,
+      height: Math.round(TITLE_BAR_HEIGHT * zoom),
     },
   };
 }

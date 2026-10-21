@@ -1,10 +1,11 @@
-import { contextBridge, ipcRenderer, webFrame } from 'electron';
+import { contextBridge, ipcRenderer } from 'electron';
 import {
   IPC_CHANNELS,
   workspaceFromArgv,
   type EntryPatchInput,
   type Theme,
   type WhenkitApi,
+  type ZoomIntent,
 } from '../../shared/ipc';
 
 // The only thing the sandboxed renderer can reach (AD-9): `window.whenkit`.
@@ -56,7 +57,8 @@ const api = {
     ipcRenderer.invoke(IPC_CHANNELS.windowSetTheme, theme),
   openExternal: (url: string) =>
     ipcRenderer.invoke(IPC_CHANNELS.shellOpenExternal, url),
-  setZoomFactor: (factor: number) => webFrame.setZoomFactor(factor),
+  zoom: (intent: ZoomIntent) =>
+    ipcRenderer.invoke(IPC_CHANNELS.windowZoom, intent),
 } satisfies WhenkitApi;
 
 contextBridge.exposeInMainWorld('whenkit', api);

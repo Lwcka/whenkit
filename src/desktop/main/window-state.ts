@@ -2,6 +2,7 @@ import { readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { z } from 'zod';
 import { WINDOW_STATE_VERSION } from '../../core/versions';
 import type { Theme } from '../../shared/ipc';
+import { clampZoom } from './zoom';
 
 // The window's preferences (AD-20): `userData/window-state.json`, read by main
 // before the window exists and written only by main. Electron-free so tests
@@ -17,12 +18,15 @@ export interface Rectangle {
 /**
  * What the file holds, without its version. Every field is optional.
  * `bounds` is the normal (restored) size; `maximized` is written and read
- * back only when true (absent means not maximized).
+ * back only when true (absent means not maximized). `zoom` is the interface
+ * zoom factor (AD-20): absent means 100%, and a value read from the file is
+ * clamped to 80-200%.
  */
 export interface WindowState {
   theme?: Theme;
   bounds?: Rectangle;
   maximized?: boolean;
+  zoom?: number;
 }
 
 const boundsSchema = z.object({
@@ -37,6 +41,7 @@ const fileSchema = z.object({
   theme: z.enum(['light', 'dark']).optional(),
   bounds: boundsSchema.optional(),
   maximized: z.boolean().optional(),
+  zoom: z.number().finite().optional(),
 });
 
 /** The least overlap with a work area for a saved window to count as reachable. */
@@ -61,8 +66,8 @@ export function isVisible(
 
 /**
  * Parses the file's text. Anything wrong with it (bad JSON, version, theme,
- * bounds or maximized shape) gives `{}`; bounds that no work area shows are
- * dropped, and the theme and the maximized flag are kept.
+ * bounds, maximized or zoom shape) gives `{}`; bounds that no work area shows
+ * are dropped, and the theme, the maximized flag and the zoom are kept.
  */
 export function parseWindowState(
   text: string,
@@ -79,6 +84,7 @@ export function parseWindowState(
   const state: WindowState = {};
   if (parsed.data.theme !== undefined) state.theme = parsed.data.theme;
   if (parsed.data.maximized === true) state.maximized = true;
+  if (parsed.data.zoom !== undefined) state.zoom = clampZoom(parsed.data.zoom);
   const { bounds } = parsed.data;
   if (bounds !== undefined && isVisible(bounds, workAreas)) {
     state.bounds = bounds;
@@ -109,6 +115,7 @@ export function writeWindowState(path: string, state: WindowState): void {
     ...(state.theme === undefined ? {} : { theme: state.theme }),
     ...(state.bounds === undefined ? {} : { bounds: state.bounds }),
     ...(state.maximized === true ? { maximized: true } : {}),
+    ...(state.zoom === undefined ? {} : { zoom: state.zoom }),
   };
   try {
     writeFileSync(temp, `${JSON.stringify(content, null, 2)}\n`, 'utf8');

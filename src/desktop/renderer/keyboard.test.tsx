@@ -1,11 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ESCAPE_PRIORITY,
-  ZOOM_STEPS,
-  createZoom,
   frameBindings,
   installKeyboard,
   registerEscape,
+  type Zoom,
 } from './keyboard';
 
 // jsdom: the keyboard layer is covered against real DOM events.
@@ -174,51 +173,22 @@ describe('Esc priority', () => {
   });
 });
 
+/** A Zoom that records the intents it receives. */
+function fakeZoom(calls: string[] = []): Zoom {
+  return {
+    zoomIn: () => calls.push('in'),
+    zoomOut: () => calls.push('out'),
+    reset: () => calls.push('reset'),
+  };
+}
+
 describe('zoom', () => {
-  it('has the eight steps of 80-200%', () => {
-    expect([...ZOOM_STEPS]).toEqual([0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2]);
-  });
-
-  it('steps in and out, clamped at the ends', () => {
-    const applied: number[] = [];
-    const zoom = createZoom((factor) => applied.push(factor));
-
-    for (let i = 0; i < 8; i++) zoom.zoomIn();
-    expect(applied).toEqual([1.1, 1.25, 1.5, 1.75, 2]);
-    expect(zoom.factor()).toBe(2);
-
-    applied.length = 0;
-    for (let i = 0; i < 8; i++) zoom.zoomOut();
-    expect(applied).toEqual([1.75, 1.5, 1.25, 1.1, 1, 0.9, 0.8]);
-    expect(zoom.factor()).toBe(0.8);
-  });
-
-  it('resets to 100%', () => {
-    const applied: number[] = [];
-    const zoom = createZoom((factor) => applied.push(factor));
-    zoom.zoomIn();
-    zoom.zoomIn();
-    zoom.reset();
-    expect(applied).toEqual([1.1, 1.25, 1]);
-  });
-
-  it('reset always applies 100%, even when the index is already there', () => {
-    // After a renderer reload Chromium may keep the old zoom while the index
-    // is back at 100%: Ctrl+0 must still set the factor.
-    const applied: number[] = [];
-    const zoom = createZoom((factor) => applied.push(factor));
-    zoom.reset();
-    expect(applied).toEqual([1]);
-    expect(zoom.factor()).toBe(1);
-  });
-
   it('is driven by Ctrl+=, Ctrl+-, Ctrl+0 and the numpad', () => {
-    const applied: number[] = [];
-    const zoom = createZoom((factor) => applied.push(factor));
+    const intents: string[] = [];
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom,
+        zoom: fakeZoom(intents),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => {},
@@ -234,12 +204,10 @@ describe('zoom', () => {
     press('NumpadAdd', { ctrlKey: true });
     press('Minus', { ctrlKey: true });
     press('NumpadSubtract', { ctrlKey: true });
-    press('Equal', { ctrlKey: true });
     press('Digit0', { ctrlKey: true });
-    press('Equal', { ctrlKey: true });
     press('Numpad0', { ctrlKey: true });
     press('Equal'); // without Ctrl: nothing
-    expect(applied).toEqual([1.1, 1.25, 1.1, 1, 1.1, 1, 1.1, 1]);
+    expect(intents).toEqual(['in', 'in', 'out', 'out', 'reset', 'reset']);
   });
 });
 
@@ -249,7 +217,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: (index) => selected.push(index),
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => {},
@@ -273,7 +241,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: (delta) => moves.push(delta),
         focusSearch: () => {},
         back: () => {},
@@ -301,7 +269,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => focused++,
         back: () => {},
@@ -328,7 +296,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => backs++,
@@ -360,7 +328,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => {},
@@ -393,7 +361,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => {},
@@ -430,7 +398,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => {},
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => {},
@@ -460,7 +428,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => calls.push('zone'),
-        zoom: createZoom(() => {}),
+        zoom: fakeZoom(),
         moveCategory: () => {},
         focusSearch: () => {},
         back: () => calls.push('back'),
@@ -483,7 +451,7 @@ describe('frame bindings', () => {
     uninstall = installKeyboard(
       frameBindings({
         selectZone: () => calls.push('zone'),
-        zoom: createZoom(() => calls.push('zoom')),
+        zoom: { ...fakeZoom(), zoomIn: () => calls.push('zoom') },
         moveCategory: () => calls.push('category'),
         focusSearch: () => calls.push('search'),
         back: () => calls.push('back'),
