@@ -6,6 +6,7 @@ covers: [CAP-8, CAP-9, CAP-10, CAP-11, CAP-13]
 after: [epic-catalog-prin-claude]
 assignee: ""
 risk: medium
+status: done
 ---
 
 # Fereastra whenkit
@@ -59,4 +60,5 @@ Driverul desktop (`src/desktop/main`, `preload`, `renderer`), contractul IPC (`s
 - Decision: 20 și povestea `/adauga` din `backlog/` nu depind una de alta; ambele schimbă `strings.ro.ts`, la chei diferite, iar linia de lucru e una singură, deci nu rulează în paralel (2026-10-21).
 - Decision: fără a doua curățenie după 17–20: sunt reparații mici, fiecare cu revizia ei (2026-10-21).
 - Decision: problema amânată cu fonturile Cascadia Mono inline e închisă fără tichet: în build sunt inline doar variantele `woff` de rezervă, aflate după `woff2`, deci nu se cer niciodată (2026-10-21).
+- Decision: epicul e închis pe 2026-10-21, după verificarea de închidere (toate cele 20 de intrări done, Done when 1–6 îndeplinite pe aplicația instalată, 1581 de teste) și confirmarea autorului pentru 2.17–2.20; deferred-work.md gol.
 - Waits on epic-catalog-prin-claude because: citește și scrie prin nucleul și SqliteCatalogStore construite acolo și lucrează pe catalogul real importat.

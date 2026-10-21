@@ -3,7 +3,7 @@ title: 'Restore the maximized window after a restart'
 type: 'bugfix'
 ticket: '18'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '3bd269ed2e16cfab63c60455a80f7456ce94ca88'
 route: 'oneshot'
 route_source: 'auto'

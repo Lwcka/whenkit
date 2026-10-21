@@ -3,7 +3,7 @@ title: 'Main owns the zoom: title bar fits at any zoom, zoom persists'
 type: 'bugfix'
 ticket: '19'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '230fe5c91d71fcd80dbbc5c0a88f433afd627212'
 route: 'full'
 route_source: 'auto'

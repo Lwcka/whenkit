@@ -8,7 +8,7 @@ Acest fișier este pentru **dezvoltarea** aplicației. Claude-ul care *foloseșt
 
 Codul se construiește tichet cu tichet, în ordinea din `_bmad-output/initiative-whenkit-mvp/epic-catalog-prin-claude/tickets.toml`. Ce e gata și ce urmează: `uv run _bmad/method/scripts/tickets.py --project-root . status` (sau `next`); planul fiecărui tichet construit stă lângă `tickets.toml`, ca `story-<titlu>-plan.md`, cu deciziile și triajul reviziei. Lucrurile amânate sunt în `_bmad-output/initiative-whenkit-mvp/deferred-work.md`. Produsul e definit în spec-ul **`_bmad-output/initiative-whenkit-mvp/spec-whenkit/spec-whenkit.md`** și în companionii lui: aceasta e sursa de adevăr. Citește spec-ul înainte de a propune ceva de produs sau de arhitectură. Spec-ul se modifică doar prin skill-ul `bmad-spec` (e derivat din `.memlog.md`), nu de mână.
 
-Arhitectura e decisă în **`_bmad-output/initiative-whenkit-mvp/architecture-whenkit/architecture-whenkit.md`** (regulile AD-1…AD-19): Electron + TypeScript + React (Electron Forge, template Vite), nucleu hexagonal în `src/core`, SQLite prin `node:sqlite`, Zod pentru schema lotului, Vitest pentru teste. Orice cod respectă regulile AD; o abatere se discută și se trece întâi în arhitectură, prin `bmad-architecture`.
+Arhitectura e decisă în **`_bmad-output/initiative-whenkit-mvp/architecture-whenkit/architecture-whenkit.md`** (regulile AD-1…AD-20): Electron + TypeScript + React (Electron Forge, template Vite), nucleu hexagonal în `src/core`, SQLite prin `node:sqlite`, Zod pentru schema lotului, Vitest pentru teste. Orice cod respectă regulile AD; o abatere se discută și se trece întâi în arhitectură, prin `bmad-architecture`.
 
 ## Comenzi
 

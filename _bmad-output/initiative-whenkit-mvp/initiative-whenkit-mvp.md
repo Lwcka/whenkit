@@ -13,7 +13,7 @@ status: in-progress
 
 ## Description
 
-Resursele salvate haotic de Luca (screenshot-uri cu liste, link-uri fără descriere, notițe de concepte) devin un catalog verificat, în română, pe care îl răsfoiește într-o aplicație desktop și îl interoghează prin Claude Code. Spec-ul deține capabilitățile, constrângerile și non-goals; arhitectura deține regulile AD-1…AD-13.
+Resursele salvate haotic de Luca (screenshot-uri cu liste, link-uri fără descriere, notițe de concepte) devin un catalog verificat, în română, pe care îl răsfoiește într-o aplicație desktop și îl interoghează prin Claude Code. Spec-ul deține capabilitățile, constrângerile și non-goals; arhitectura deține regulile AD-1…AD-20.
 
 ## Outcome
 
@@ -21,14 +21,14 @@ Luca găsește resursa potrivită pentru o problemă fără să-și amintească 
 
 ## Done when
 
-1. Materialele de test reale (`50 github repo/`, `20 sites.png`, `inspire.txt`, `API/`), importate cu `/importa` în workspace-ul `C:\Users\Luca\Programe\whenkit\`, dau rezultatele din `test-scenarios.md`, iar `input/` rămâne gol.
+1. Materialele de test reale (`50 github repo/`, `20 sites.png`, `inspire.txt`, `API/`), importate cu `/adauga` (fostul `/importa`) în workspace-ul `C:\Users\Luca\Programe\whenkit\`, dau rezultatele din `test-scenarios.md`, iar `input/` rămâne gol.
 2. remove.bg se găsește prin bara de categorii, prin căutarea „fundal” și prin `/gaseste`.
 3. Toate capabilitățile CAP-1…CAP-13 funcționează în aplicația instalată pe laptop și în CLI-ul `whenkit` disponibil în terminal, nu doar în modul de dezvoltare.
 4. Autorul declară MVP-ul gata.
 
 ## Boundaries
 
-Aplicația desktop whenkit, CLI-ul ei și șablonul workspace-ului (cu skill-urile `/importa` și `/gaseste`), pe laptopul autorului. În afara scopului: tot ce listează spec-ul la Non-goals. Firul de pornire: proiectul Forge pornește, `whenkit init` creează workspace-ul, un lot cu o resursă e importat și apare în `whenkit list --json`.
+Aplicația desktop whenkit, CLI-ul ei și șablonul workspace-ului (cu skill-urile `/adauga` și `/gaseste`), pe laptopul autorului. În afara scopului: tot ce listează spec-ul la Non-goals. Firul de pornire: proiectul Forge pornește, `whenkit init` creează workspace-ul, un lot cu o resursă e importat și apare în `whenkit list --json`.
 
 - Touch point: API-ul public GitHub — doar citit pentru metadatele repo-urilor, fără cheie; owner: epic-catalog-prin-claude
 - Touch point: Claude Code — rulează skill-urile din workspace, nu e modificat; owner: epic-catalog-prin-claude

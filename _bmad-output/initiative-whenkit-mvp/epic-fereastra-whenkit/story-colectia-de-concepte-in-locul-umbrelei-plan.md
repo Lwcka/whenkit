@@ -3,7 +3,7 @@ title: 'The concept collection replaces the umbrella in the window and the expor
 type: 'feature'
 ticket: '20'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: '561d7f692950e17a6ab0f3b33d5ad0992a891011'
 route: 'oneshot'
 route_source: 'auto'

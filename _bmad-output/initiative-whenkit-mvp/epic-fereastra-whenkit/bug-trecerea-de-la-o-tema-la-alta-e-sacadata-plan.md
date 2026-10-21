@@ -3,7 +3,7 @@ title: 'Smooth theme transition'
 type: 'bugfix'
 ticket: '17'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: 'e8fa0a94c740aa7bb00e82f00c126bc2ad09f3bb'
 route: 'full'
 route_source: 'auto'

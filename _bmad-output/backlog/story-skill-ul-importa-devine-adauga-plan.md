@@ -3,7 +3,7 @@ title: 'The /importa skill becomes /adauga'
 type: 'feature'
 ticket: 'story-skill-ul-importa-devine-adauga'
 created: '2026-10-21'
-status: 'built'
+status: done
 baseline_revision: 'dad85d385627df10fab5ac4c90cafbb5f63c4eda'
 route: 'full'
 route_source: 'auto'
