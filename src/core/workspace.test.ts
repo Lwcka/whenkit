@@ -28,6 +28,13 @@ class FakeFileSystem implements FileSystem {
   }
   removeDir(path: string) {
     this.dirs.delete(path);
+    const prefix = `${path}\\`;
+    for (const file of this.files.keys()) {
+      if (file.startsWith(prefix)) this.files.delete(file);
+    }
+  }
+  removeFile(path: string) {
+    this.files.delete(path);
   }
   readText(path: string) {
     const text = this.files.get(path);
@@ -45,7 +52,10 @@ class FakeFileSystem implements FileSystem {
       .filter((path) => path.startsWith(prefix))
       .map((path) => path.slice(prefix.length).replaceAll('\\', '/'))
       .sort();
-    if (found.length === 0) throw new Error(`cannot list ${dir}`);
+    // Like the real file system: an existing empty folder lists nothing.
+    if (found.length === 0 && !this.dirs.has(dir)) {
+      throw new Error(`cannot list ${dir}`);
+    }
     return found;
   }
   joinPath(...parts: string[]) {
@@ -62,7 +72,7 @@ const TEMPLATE_TEXT = '# initial\nlibgen.*\npdfdrive.com\n';
 
 const TEMPLATE_DIR = 'C:\\Proiecte\\whenkit\\workspace-template';
 const TEMPLATE_CLAUDE = `${TEMPLATE_DIR}\\CLAUDE.md`;
-const TEMPLATE_SKILL = `${TEMPLATE_DIR}\\.claude\\skills\\importa\\SKILL.md`;
+const TEMPLATE_SKILL = `${TEMPLATE_DIR}\\.claude\\skills\\adauga\\SKILL.md`;
 const TEMPLATE_KEEP = `${TEMPLATE_DIR}\\input\\.gitkeep`;
 const TEMPLATE_INPUT = `${TEMPLATE_DIR}\\input\\welcome.txt`;
 const TEMPLATE_FILES = [
@@ -306,7 +316,7 @@ describe('initWorkspace', () => {
       [
         ...TEMPLATE_FILES,
         'D:\\dev\\CLAUDE.md',
-        'D:\\dev\\.claude\\skills\\importa\\SKILL.md',
+        'D:\\dev\\.claude\\skills\\adauga\\SKILL.md',
         'D:\\dev\\input\\welcome.txt',
         'D:\\dev\\data\\blocked-domains.txt',
         'D:\\dev\\batch.schema.json',
@@ -440,7 +450,7 @@ describe('initWorkspace template copy', () => {
       { path: 'D:\\ws' },
       { env, fs, openStore: fakeOpener().openStore },
     );
-  const SKILL = 'D:\\ws\\.claude\\skills\\importa\\SKILL.md';
+  const SKILL = 'D:\\ws\\.claude\\skills\\adauga\\SKILL.md';
 
   it('copies every template file, skips .gitkeep and writes schema and marker', () => {
     const fs = withTemplate();
@@ -477,6 +487,47 @@ describe('initWorkspace template copy', () => {
     expect(fs.readText('D:\\ws\\data\\blocked-domains.txt')).toBe('mine');
     expect(fs.readText('D:\\ws\\data\\catalog.sqlite')).toBe('db');
     expect(fs.readText('D:\\ws\\old-skill.md')).toBe('left the template');
+  });
+
+  describe('retired template files', () => {
+    const OLD_DIR = 'D:\\ws\\.claude\\skills\\importa';
+    const oldFiles = [`${OLD_DIR}\\SKILL.md`, `${OLD_DIR}\\exemplu-lot.json`];
+
+    it('deletes the old skill files, even edited, and their folder', () => {
+      const fs = withTemplate();
+      for (const file of oldFiles) fs.writeText(file, 'edited by the user');
+      fs.dirs.add(OLD_DIR);
+      run(fs);
+      expect(oldFiles.some((file) => fs.exists(file))).toBe(false);
+      expect(fs.exists(OLD_DIR)).toBe(false);
+      expect(fs.readText(SKILL)).toBe('skill\n');
+    });
+
+    it('keeps the folder when it holds a file of the user', () => {
+      const fs = withTemplate();
+      for (const file of oldFiles) fs.writeText(file, 'old');
+      fs.writeText(`${OLD_DIR}\\notes.md`, 'mine');
+      fs.dirs.add(OLD_DIR);
+      run(fs);
+      expect(oldFiles.some((file) => fs.exists(file))).toBe(false);
+      expect(fs.readText(`${OLD_DIR}\\notes.md`)).toBe('mine');
+      expect(fs.exists(OLD_DIR)).toBe(true);
+    });
+
+    it('is not an error when nothing is retired, on a first or a second run', () => {
+      const fs = withTemplate();
+      run(fs);
+      expect(() => run(fs)).not.toThrow();
+      expect(fs.exists(OLD_DIR)).toBe(false);
+    });
+
+    it('leaves a broken template with nothing written or deleted', () => {
+      const fs = withTemplate();
+      fs.writeText(oldFiles[0], 'old');
+      fs.unreadable.add(TEMPLATE_CLAUDE);
+      expect(codeOf(() => run(fs))).toBe('INTERNAL');
+      expect(fs.exists(oldFiles[0])).toBe(true);
+    });
   });
 
   it('creates nothing when one template file is unreadable', () => {

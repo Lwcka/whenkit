@@ -3,7 +3,7 @@
 /** Format of %APPDATA%\whenkit\config.json. */
 export const CONFIG_VERSION = 1;
 
-/** Format of the import batch written by /importa (AD-6). */
+/** Format of the import batch written by /adauga (AD-6). */
 export const BATCH_SCHEMA_VERSION = 1;
 
 /** Format of the import report printed by `whenkit import --json` (AD-14). */
@@ -17,7 +17,7 @@ export const CLI_OUTPUT_VERSION = 1;
  * Bump it whenever `workspace-template/` changes; a workspace marked with a
  * lower number is reported as outdated.
  */
-export const TEMPLATE_VERSION = 7;
+export const TEMPLATE_VERSION = 8;
 
 /** Format of `catalog.json` in an export folder (AD-12). */
 export const EXPORT_VERSION = 1;

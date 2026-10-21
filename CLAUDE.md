@@ -52,7 +52,7 @@ Cer Node ≥ 24 (`node:sqlite`, `--env-file-if-exists`). Prima dată: `npm ci`.
 | `src/cli/` | CLI-ul `whenkit`: `main.ts` (alege comanda; testabil), `commands/` (o comandă pe fișier), `render.ts` (ieșirea text), `exit-codes.ts` (singurul tabel `ErrorCode → cod de ieșire`), `bin.ts` (intrarea procesului; singurul loc care leagă adaptoarele reale) | da |
 | `src/desktop/main/`, `preload/`, `renderer/` | procesul main Electron, puntea IPC, interfața React | da |
 | `src/shared/` | `strings.ro.ts` (toate textele românești), mai târziu `ipc.ts` | da |
-| `workspace-template/` | **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/importa` și `/gaseste`, regulile de scriere a fișelor, `data/blocked-domains.txt` inițial), instalat cu `whenkit init`; fișierele utilizatorului (`data/**`) se creează doar dacă lipsesc | da |
+| `workspace-template/` | **șablonul workspace-ului** (CLAUDE.md de runtime, skill-urile `/adauga` și `/gaseste`, regulile de scriere a fișelor, `data/blocked-domains.txt` inițial), instalat cu `whenkit init`; fișierele utilizatorului (`data/**`) se creează doar dacă lipsesc | da |
 | `src/core/verification/` | verificarea deterministă (AD-7): sintaxa URL, tabelul HTTP cu reîncercări, domeniile interzise, sursele conceptelor; motivele sunt coduri (AD-15) | da |
 | `tests/` | fixture-uri sintetice și teste de integrare | da |
 | `dist/cli/`, `.vite/`, `out/` | ieșiri de build (CLI, Forge, installer) | nu |
@@ -73,7 +73,7 @@ Decizii care trebuie respectate de orice arhitectură (detalii în spec, secțiu
 - „Personal-first, multi-user ready”: `owner_id` în model de la început; calea workspace-ului în configurarea utilizatorului (AD-8), nimic hardcodat. **Nu** se construiesc acum: autentificare, conturi, hosting, plăți.
 - **Limba:** codul e integral în engleză (identificatori, comentarii, mesaje de commit). În română sunt interfața, fișele din catalog și documentele citite de autor (README, documentație, artefacte BMad); documentele se traduc în engleză la trecerea open-source. Cod și README scrise ca pentru un proiect public.
 
-Datele de test reale (screenshot-uri și `inspire.txt`) sunt în `C:\Users\Luca\Personal\`, în afara repo-ului. Sunt input pentru `/importa` și nu se transcriu manual. Rezultatele așteptate sunt în companionul `test-scenarios.md` al spec-ului.
+Datele de test reale (screenshot-uri și `inspire.txt`) sunt în `C:\Users\Luca\Personal\`, în afara repo-ului. Sunt input pentru `/adauga` și nu se transcriu manual. Rezultatele așteptate sunt în companionul `test-scenarios.md` al spec-ului.
 
 ## Cum vrea autorul să lucrăm
 

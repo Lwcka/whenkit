@@ -581,6 +581,7 @@ describe('exportCatalogResult', () => {
     exists: () => false,
     mkdir: () => {},
     removeDir: () => {},
+    removeFile: () => {},
     readText: () => '',
     writeText: (path, text) => {
       written[path] = text;

@@ -279,18 +279,95 @@ describe('whenkit init', () => {
     expect(existsSync(s.configFile)).toBe(false);
   });
 
-  it('installs the /importa and /gaseste skills, the example batch and the shared card rules', async () => {
+  it('installs the /adauga and /gaseste skills, the example batch and the shared card rules, and no /importa', async () => {
     const s = setup();
     const workspace = path.join(s.root, 'ws');
     expect((await runCli(s, ['init', workspace])).exitCode).toBe(0);
     for (const file of [
-      ['.claude', 'skills', 'importa', 'SKILL.md'],
-      ['.claude', 'skills', 'importa', 'exemplu-lot.json'],
+      ['.claude', 'skills', 'adauga', 'SKILL.md'],
+      ['.claude', 'skills', 'adauga', 'exemplu-lot.json'],
       ['.claude', 'skills', 'gaseste', 'SKILL.md'],
       ['.claude', 'skills', 'reguli-fise.md'],
     ]) {
       expect(existsSync(path.join(workspace, ...file))).toBe(true);
     }
+    expect(
+      existsSync(path.join(workspace, '.claude', 'skills', 'importa')),
+    ).toBe(false);
+  });
+
+  describe('retires the /importa skill (template version 8)', () => {
+    const OLD_SKILL = ['.claude', 'skills', 'importa'] as const;
+
+    // A workspace as template 7 left it: the old skill, plus user files.
+    async function oldWorkspace() {
+      const s = setup();
+      const workspace = path.join(s.root, 'ws');
+      expect((await runCli(s, ['init', workspace])).exitCode).toBe(0);
+      // Template 7 had no /adauga: drop what the current init installed.
+      rmSync(path.join(workspace, '.claude', 'skills', 'adauga'), {
+        recursive: true,
+      });
+      const importa = path.join(workspace, ...OLD_SKILL);
+      mkdirSync(importa, { recursive: true });
+      writeFileSync(path.join(importa, 'SKILL.md'), 'old skill');
+      writeFileSync(path.join(importa, 'exemplu-lot.json'), '{}');
+      writeFileSync(
+        path.join(workspace, '.whenkit-template.json'),
+        JSON.stringify({ templateVersion: 7, batchSchemaVersion: 1 }),
+      );
+      writeFileSync(path.join(workspace, 'input', 'note.txt'), 'keep me');
+      writeFileSync(path.join(workspace, 'data', 'mine.txt'), 'keep me too');
+      return { s, workspace, importa };
+    }
+
+    it('removes the old skill and its folder, keeps data and input byte-identical', async () => {
+      const { s, workspace, importa } = await oldWorkspace();
+      const dbPath = path.join(workspace, 'data', 'catalog.sqlite');
+      const dbBefore = readFileSync(dbPath);
+
+      expect((await runCli(s, ['init'])).exitCode).toBe(0);
+
+      expect(existsSync(importa)).toBe(false);
+      expect(
+        existsSync(
+          path.join(workspace, '.claude', 'skills', 'adauga', 'SKILL.md'),
+        ),
+      ).toBe(true);
+      expect(
+        readFileSync(path.join(workspace, 'input', 'note.txt'), 'utf8'),
+      ).toBe('keep me');
+      expect(
+        readFileSync(path.join(workspace, 'data', 'mine.txt'), 'utf8'),
+      ).toBe('keep me too');
+      expect(readFileSync(dbPath).equals(dbBefore)).toBe(true);
+    });
+
+    it('removes a retired file the user edited', async () => {
+      const { s, importa } = await oldWorkspace();
+      writeFileSync(path.join(importa, 'SKILL.md'), 'my own edits');
+      expect((await runCli(s, ['init'])).exitCode).toBe(0);
+      expect(existsSync(path.join(importa, 'SKILL.md'))).toBe(false);
+    });
+
+    it('keeps a user file in the old folder, and the folder', async () => {
+      const { s, importa } = await oldWorkspace();
+      writeFileSync(path.join(importa, 'notes.md'), 'mine');
+      expect((await runCli(s, ['init'])).exitCode).toBe(0);
+      expect(readFileSync(path.join(importa, 'notes.md'), 'utf8')).toBe('mine');
+      expect(existsSync(path.join(importa, 'SKILL.md'))).toBe(false);
+      expect(existsSync(path.join(importa, 'exemplu-lot.json'))).toBe(false);
+    });
+
+    it('is a no-op the second time', async () => {
+      const { s, workspace, importa } = await oldWorkspace();
+      expect((await runCli(s, ['init'])).exitCode).toBe(0);
+      const again = await runCli(s, ['init']);
+      expect(again.exitCode).toBe(0);
+      expect(again.stderr).toBe('');
+      expect(existsSync(importa)).toBe(false);
+      expect(existsSync(path.join(workspace, 'input', 'note.txt'))).toBe(true);
+    });
   });
 
   it('the template CLAUDE.md names every CLI command and the contract files', () => {
@@ -302,7 +379,7 @@ describe('whenkit init', () => {
       expect(claude).toContain(`whenkit ${name}`);
     }
     for (const needle of [
-      '.claude/skills/importa/',
+      '.claude/skills/adauga/',
       '.claude/skills/gaseste/',
       '.claude/skills/reguli-fise.md',
       'batch.schema.json',

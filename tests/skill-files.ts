@@ -5,12 +5,12 @@ import path from 'node:path';
 
 export const TEMPLATE = path.join(__dirname, '..', 'workspace-template');
 
-/** The reference batch that ships with the `/importa` skill. */
+/** The reference batch that ships with the `/adauga` skill. */
 export const EXAMPLE = path.join(
   TEMPLATE,
   '.claude',
   'skills',
-  'importa',
+  'adauga',
   'exemplu-lot.json',
 );
 

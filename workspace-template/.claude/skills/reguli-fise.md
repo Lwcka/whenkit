@@ -1,12 +1,12 @@
 # Reguli de scriere a fișelor
 
-Fișierul acesta e gestionat de aplicație (se rescrie la fiecare `whenkit init`); nu îl edita. Îl citesc `/importa` și `/gaseste` înainte să scrie sau să rescrie o fișă. Fiecare regulă de mai jos spune și în ce câmp al lotului ajunge (contractul complet e `batch.schema.json`).
+Fișierul acesta e gestionat de aplicație (se rescrie la fiecare `whenkit init`); nu îl edita. Îl citesc `/adauga` și `/gaseste` înainte să scrie sau să rescrie o fișă. Fiecare regulă de mai jos spune și în ce câmp al lotului ajunge (contractul complet e `batch.schema.json`).
 
 ## Generale
 
 - Totul în **română**, chiar dacă sursa e în engleză. Numele resursei (`name`) rămâne cel original.
 - Vizitezi fiecare link înainte să scrii fișa. Nu documentezi din memorie un site care nu se încarcă.
-- Un site care nu se încarcă intră totuși în lot, ca verificarea să decidă (respins cu motiv în jurnal sau intrat, cu nota ei dacă are una). Primește **fișa minimă**, doar din ce spune inputul (nume, descriere): `whatItDoes` începe exact cu „Nedocumentată: pagina nu s-a încărcat la import.”, urmat de ce reiese din input; o singură situație, cea pe care inputul o susține; o categorie, cea mai apropiată din listă; fără cuvinte-cheie inventate. Regulile de mai jos despre numărul de propoziții, situații și cuvinte-cheie nu se aplică fișei minime. `/importa` o semnalează în raport ca nedocumentată, de rescris ulterior cu un `update`.
+- Un site care nu se încarcă intră totuși în lot, ca verificarea să decidă (respins cu motiv în jurnal sau intrat, cu nota ei dacă are una). Primește **fișa minimă**, doar din ce spune inputul (nume, descriere): `whatItDoes` începe exact cu „Nedocumentată: pagina nu s-a încărcat la import.”, urmat de ce reiese din input; o singură situație, cea pe care inputul o susține; o categorie, cea mai apropiată din listă; fără cuvinte-cheie inventate. Regulile de mai jos despre numărul de propoziții, situații și cuvinte-cheie nu se aplică fișei minime. `/adauga` o semnalează în raport ca nedocumentată, de rescris ulterior cu un `update`.
 - Nu repari tacit un URL greșit. Îl trimiți în `url` exact cum apare (și `httpss://` rămâne `httpss://`); verificarea îl respinge, iar jurnalul îl păstrează pentru reluare.
 
 ## Clasificare

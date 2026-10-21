@@ -62,6 +62,17 @@ describe('the outdated-template warning', () => {
         ),
     ],
     [
+      'with the previous templateVersion (an old workspace)',
+      (workspace: string) =>
+        writeFileSync(
+          marker(workspace),
+          JSON.stringify({
+            templateVersion: TEMPLATE_VERSION - 1,
+            batchSchemaVersion: BATCH_SCHEMA_VERSION,
+          }),
+        ),
+    ],
+    [
       'with another batchSchemaVersion',
       (workspace: string) =>
         writeFileSync(

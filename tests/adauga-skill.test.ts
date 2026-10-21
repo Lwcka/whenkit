@@ -10,12 +10,12 @@ import { runCli, setup } from './cli-harness';
 import { fixedClock } from './helpers';
 import { EXAMPLE, TEMPLATE, frontmatter, read } from './skill-files';
 
-// The files `/importa` ships in workspace-template/ hold to the CLI contract
+// The files `/adauga` ships in workspace-template/ hold to the CLI contract
 // (ticket 11). What Claude does with them is judged live (hitl); here the
 // reference batch is imported for real and SKILL.md is checked for the rules
 // each edge case of the ticket depends on.
 
-const SKILL = path.join(TEMPLATE, '.claude', 'skills', 'importa', 'SKILL.md');
+const SKILL = path.join(TEMPLATE, '.claude', 'skills', 'adauga', 'SKILL.md');
 const RULES = path.join(TEMPLATE, '.claude', 'skills', 'reguli-fise.md');
 
 describe('exemplu-lot.json', () => {
@@ -80,7 +80,7 @@ describe('SKILL.md', () => {
 
   it('has the frontmatter of a skill that may only run whenkit, fetch pages and read files', () => {
     const meta = frontmatter(skill);
-    expect(meta.name).toBe('importa');
+    expect(meta.name).toBe('adauga');
     expect(meta.description).not.toBe('');
     expect(meta['argument-hint']).toContain('respinse');
     expect(meta['allowed-tools']).toBe('Bash(whenkit:*), WebFetch, Read');

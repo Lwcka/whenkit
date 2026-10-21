@@ -29,6 +29,8 @@ export interface FileSystem {
   mkdir(path: string): void;
   /** Removes the directory with everything in it; no-op when it is missing. */
   removeDir(path: string): void;
+  /** Deletes one file; no-op when it is missing. */
+  removeFile(path: string): void;
   readText(path: string): string;
   writeText(path: string, text: string): void;
   /**
