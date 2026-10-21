@@ -221,7 +221,7 @@ export const exportStrings = {
   content: entryStrings.content,
   sources: entryStrings.sources,
   myNotes: entryStrings.myNotes,
-  umbrellas: 'Umbrele',
+  umbrellas: 'Face parte din',
   children: 'Concepte',
   related: 'Resurse înrudite',
 } as const;
@@ -369,9 +369,9 @@ export const appStrings = {
   scrollCategoriesBack: 'Categoriile anterioare',
   scrollCategoriesForward: 'Categoriile următoare',
   cardListLabel: 'Fișe',
-  /** The meta row of a concept that has children. */
-  umbrella: (children: number): string =>
-    `umbrelă · ${plural(children, { one: 'copil', few: 'copii', other: 'de copii' })}`,
+  /** The meta row of a concept that has concepts under it (a collection). */
+  collection: (concepts: number): string =>
+    `colecție · ${plural(concepts, { one: 'concept', few: 'concepte', other: 'de concepte' })}`,
   verificationFlag: 'notă de verificare',
   /** The stars item of a repo card: „137,7k · 15.10.2026”. */
   githubStats: (stars: number, pushedAt: string | null): string =>

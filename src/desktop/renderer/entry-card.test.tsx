@@ -79,7 +79,7 @@ describe('EntryCard in Toolbox', () => {
 });
 
 describe('EntryCard in Learn', () => {
-  it('shows an umbrella with its children, the stamp and one situation without a label', () => {
+  it('shows a collection with its concepts, the stamp and one situation without a label', () => {
     const { container } = render(
       <EntryCard
         entry={makeEntry('Tipuri de API', {
@@ -94,11 +94,31 @@ describe('EntryCard in Learn', () => {
       />,
     );
 
-    expect(screen.getByText('umbrelă · 3 copii')).toBeTruthy();
+    expect(screen.getByText('colecție · 3 concepte')).toBeTruthy();
     expect(container.querySelector('.kind-stamp')?.textContent).toBe('concept');
     expect(container.querySelectorAll('.situation-item')).toHaveLength(1);
     expect(screen.queryByText('Când îl aleg')).toBeNull();
     expect(screen.getByText('+3 situații')).toBeTruthy();
+  });
+
+  it.each([
+    [1, 'colecție · 1 concept'],
+    [2, 'colecție · 2 concepte'],
+    [20, 'colecție · 20 de concepte'],
+  ])('names a collection of %i concepts', (count, label) => {
+    render(
+      <EntryCard
+        entry={makeEntry('Tipuri de API', {
+          zone: 'learn',
+          childIds: Array.from({ length: count }, (_, i) => `c${i}`),
+        })}
+        slot={1}
+        index={0}
+        tabIndex={0}
+      />,
+    );
+
+    expect(screen.getByText(label)).toBeTruthy();
   });
 
   it('keeps an empty meta row for a concept without link or children', () => {

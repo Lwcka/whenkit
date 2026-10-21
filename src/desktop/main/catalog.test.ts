@@ -596,7 +596,7 @@ describe('exportCatalogResult', () => {
       situations: () => 'Situații',
       content: 'Conținut',
       sources: 'Surse',
-      umbrellas: 'Umbrele',
+      umbrellas: 'Face parte din',
       children: 'Concepte',
       related: 'Înrudite',
       myNotes: 'Notițe',
