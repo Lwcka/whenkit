@@ -27,6 +27,8 @@ export interface FileSystem {
   exists(path: string): boolean;
   /** Creates the directory and any missing parents; no-op when it exists. */
   mkdir(path: string): void;
+  /** Removes the directory with everything in it; no-op when it is missing. */
+  removeDir(path: string): void;
   readText(path: string): string;
   writeText(path: string, text: string): void;
   /**

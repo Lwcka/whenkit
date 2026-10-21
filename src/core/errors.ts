@@ -23,6 +23,7 @@ export const ERROR_CODES = [
   'DATABASE_NEEDS_MIGRATION',
   'DATABASE_BUSY',
   'OFFLINE',
+  'EXPORT_WRITE_FAILED',
   'INTERNAL',
 ] as const;
 

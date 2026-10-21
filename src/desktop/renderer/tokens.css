@@ -130,6 +130,9 @@
   --button-padding-x: 14px;
   --button-min-size: 24px;
   --toolbar-button-height: 38px;
+  --toolbar-button-primary-background: var(--surface);
+  --toolbar-button-primary-foreground: var(--ink);
+  --toolbar-button-primary-border: var(--line-strong);
   --app-mark-size: 20px;
   --app-mark-dot-size: 8px;
   --app-mark-dot-border: 2px;

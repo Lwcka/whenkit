@@ -3,6 +3,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import type { DatabaseSync } from 'node:sqlite';
 import { WhenkitError } from '../../core/errors';
+import { fileTimestamp } from '../../core/file-stamp';
 import type { Clock } from '../../core/ports';
 
 // Safe, append-only migrations (AD-4). Files are named NNNN-<name>.sql; the
@@ -105,16 +106,6 @@ function checkApplied(applied: AppliedRow[], known: Migration[]): void {
 
 function currentVersion(applied: AppliedRow[]): number {
   return applied.reduce((max, row) => Math.max(max, row.version), 0);
-}
-
-const pad = (value: number) => String(value).padStart(2, '0');
-
-/** Local date and time as `YYYY-MM-DD_HHmmss`, for file names. */
-export function fileTimestamp(date: Date): string {
-  return (
-    `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` +
-    `_${pad(date.getHours())}${pad(date.getMinutes())}${pad(date.getSeconds())}`
-  );
 }
 
 /** Consistent copy of the database (WAL included) before a migration. */

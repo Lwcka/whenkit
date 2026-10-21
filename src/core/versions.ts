@@ -19,5 +19,8 @@ export const CLI_OUTPUT_VERSION = 1;
  */
 export const TEMPLATE_VERSION = 7;
 
+/** Format of `catalog.json` in an export folder (AD-12). */
+export const EXPORT_VERSION = 1;
+
 /** Format of `window-state.json` in the desktop userData folder (AD-20). */
 export const WINDOW_STATE_VERSION = 1;

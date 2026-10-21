@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { WhenkitError } from '../../core/errors';
 import type {
   CatalogStore,
+  CatalogReader,
   Environment,
   FileSystem,
   StoredEntry,
 } from '../../core/ports';
+import type { ExportDeps } from './catalog';
 import { runWrite } from './catalog-watch';
 import {
   deleteCategoryResult,
@@ -13,7 +15,9 @@ import {
   mergeCategoriesResult,
   renameCategoryResult,
   errorDtoOf,
+  exportCatalogResult,
   openDesktopCatalog,
+  openExportFolderResult,
   searchResult,
   setNotesResult,
   snapshotResult,
@@ -586,5 +590,166 @@ describe('errorDtoOf', () => {
         reasons: [{ code: 'blocked_domain', params: { domain: 'x.dev' } }],
       },
     });
+  });
+});
+
+describe('exportCatalogResult', () => {
+  const written: Record<string, string> = {};
+  const exportFs: FileSystem = {
+    exists: () => false,
+    mkdir: () => {},
+    removeDir: () => {},
+    readText: () => '',
+    writeText: (path, text) => {
+      written[path] = text;
+    },
+    listFiles: () => [],
+    joinPath: (...parts) => parts.join('/'),
+  };
+  const deps: ExportDeps = {
+    fs: exportFs,
+    clock: { now: () => new Date(2026, 9, 16, 14, 30, 2) },
+    labels: {
+      fallbackSlug: 'fisa',
+      situations: () => 'Situații',
+      content: 'Conținut',
+      sources: 'Surse',
+      umbrellas: 'Umbrele',
+      children: 'Concepte',
+      related: 'Înrudite',
+      myNotes: 'Notițe',
+    },
+  };
+  const emptyStore = {
+    readTransaction: <T>(fn: (reader: CatalogReader) => T): T =>
+      fn({
+        allEntries: () => [],
+        allCategories: () => [],
+      } as unknown as CatalogReader),
+  } as unknown as CatalogStore;
+  const open = { ok: true, store: emptyStore, workspace: 'D:/ws' } as const;
+
+  it('answers null for a cancelled dialog and writes nothing', () => {
+    for (const key of Object.keys(written)) delete written[key];
+    expect(exportCatalogResult(open, undefined, deps, vi.fn())).toEqual({
+      ok: true,
+      data: null,
+    });
+    expect(written).toEqual({});
+  });
+
+  it('answers the folder it created', () => {
+    expect(exportCatalogResult(open, 'D:/out', deps, vi.fn())).toEqual({
+      ok: true,
+      data: {
+        folderName: 'whenkit-export-2026-10-16_143002',
+        folderPath: 'D:/out/whenkit-export-2026-10-16_143002',
+      },
+    });
+    expect(Object.keys(written)).toEqual([
+      'D:/out/whenkit-export-2026-10-16_143002/catalog.json',
+    ]);
+  });
+
+  it('keeps the startup code when the catalog is not open', () => {
+    const logged = vi.fn();
+    expect(
+      exportCatalogResult(
+        { ok: false, code: 'DATABASE_NEEDS_MIGRATION' },
+        'D:/out',
+        deps,
+        logged,
+      ),
+    ).toEqual({ ok: false, error: { code: 'DATABASE_NEEDS_MIGRATION' } });
+    expect(
+      exportCatalogResult(
+        { ok: false, code: 'DATABASE_NEEDS_MIGRATION' },
+        undefined,
+        deps,
+        logged,
+      ),
+    ).toEqual({ ok: false, error: { code: 'DATABASE_NEEDS_MIGRATION' } });
+    expect(logged).not.toHaveBeenCalled();
+  });
+
+  it('answers EXPORT_WRITE_FAILED when the disk refuses, and logs the disk error', () => {
+    const logged = vi.fn();
+    const diskError = new Error('read-only');
+    const failing: ExportDeps = {
+      ...deps,
+      fs: {
+        ...exportFs,
+        writeText: () => {
+          throw diskError;
+        },
+      },
+    };
+    expect(exportCatalogResult(open, 'D:/out', failing, logged)).toEqual({
+      ok: false,
+      error: { code: 'EXPORT_WRITE_FAILED' },
+    });
+    expect(logged).toHaveBeenCalledTimes(1);
+    expect(logged).toHaveBeenCalledWith(diskError);
+    // A logger that throws does not turn the answer into a throw.
+    expect(
+      exportCatalogResult(open, 'D:/out', failing, () => {
+        throw new Error('log full');
+      }),
+    ).toEqual({ ok: false, error: { code: 'EXPORT_WRITE_FAILED' } });
+  });
+
+  it('logs an unexpected failure and answers INTERNAL', () => {
+    const logged = vi.fn();
+    const broken = {
+      ok: true,
+      store: {} as CatalogStore,
+      workspace: 'D:/ws',
+    } as const;
+    expect(exportCatalogResult(broken, 'D:/out', deps, logged)).toEqual({
+      ok: false,
+      error: { code: 'INTERNAL' },
+    });
+    expect(logged).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('openExportFolderResult', () => {
+  const exported = new Set(['D:/out/whenkit-export-1']);
+
+  it('opens a folder this session exported', async () => {
+    const opener = vi.fn(() => Promise.resolve(''));
+    expect(
+      await openExportFolderResult(
+        'D:/out/whenkit-export-1',
+        exported,
+        opener,
+        vi.fn(),
+      ),
+    ).toEqual({ ok: true, data: null });
+    expect(opener).toHaveBeenCalledWith('D:/out/whenkit-export-1');
+  });
+
+  it.each(['C:/Windows', 'D:/out', '', 7, null, undefined])(
+    'refuses %j without opening anything',
+    async (path) => {
+      const opener = vi.fn(() => Promise.resolve(''));
+      expect(
+        await openExportFolderResult(path, exported, opener, vi.fn()),
+      ).toEqual({ ok: false, error: { code: 'ARGUMENTS_INVALID' } });
+      expect(opener).not.toHaveBeenCalled();
+    },
+  );
+
+  it('answers INTERNAL and logs when the shell reports an error', async () => {
+    const logged = vi.fn();
+    expect(
+      await openExportFolderResult(
+        'D:/out/whenkit-export-1',
+        exported,
+        () => Promise.resolve('Failed to open path'),
+        logged,
+      ),
+    ).toEqual({ ok: false, error: { code: 'INTERNAL' } });
+    expect(logged).toHaveBeenCalledTimes(1);
   });
 });

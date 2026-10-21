@@ -20,6 +20,7 @@ describe('Toolbar zone tabs', () => {
         counts={{ toolbox: 53, learn: 1234 }}
         onZoneChange={() => {}}
         onOpenCategories={() => {}}
+        onExport={() => {}}
         search={search()}
       />,
     );
@@ -41,6 +42,7 @@ describe('Toolbar zone tabs', () => {
         counts={{ toolbox: 1, learn: 0 }}
         onZoneChange={onZoneChange}
         onOpenCategories={() => {}}
+        onExport={() => {}}
         search={search()}
       />,
     );
@@ -58,6 +60,7 @@ describe('Toolbar search box', () => {
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
         onOpenCategories={() => {}}
+        onExport={() => {}}
         search={search()}
       />,
     );
@@ -76,6 +79,7 @@ describe('Toolbar search box', () => {
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
         onOpenCategories={() => {}}
+        onExport={() => {}}
         search={search()}
       />,
     );
@@ -91,6 +95,7 @@ describe('Toolbar search box', () => {
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
         onOpenCategories={() => {}}
+        onExport={() => {}}
         search={search({ text: 'fundal', onChange, inputRef })}
       />,
     );
@@ -112,6 +117,7 @@ describe('Toolbar „Categorii”', () => {
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
         onOpenCategories={onOpenCategories}
+        onExport={() => {}}
         search={search()}
       />,
     );
@@ -129,6 +135,7 @@ describe('Toolbar „Categorii”', () => {
         counts={{ toolbox: 1, learn: 1 }}
         onZoneChange={() => {}}
         onOpenCategories={() => {}}
+        onExport={() => {}}
         search={search()}
         disabled
       />,
@@ -138,5 +145,45 @@ describe('Toolbar „Categorii”', () => {
         .getByRole('button', { name: 'Categorii' })
         .hasAttribute('disabled'),
     ).toBe(true);
+  });
+});
+
+describe('Toolbar „Exportă catalogul”', () => {
+  const props = {
+    zone: 'toolbox',
+    counts: { toolbox: 1, learn: 1 },
+    onZoneChange: () => {},
+    onOpenCategories: () => {},
+    search: search(),
+  } as const;
+
+  it('asks to export and stays active while the rest of the toolbar is inactive', () => {
+    const onExport = vi.fn();
+    render(<Toolbar {...props} onExport={onExport} disabled />);
+
+    const button = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Exportă catalogul',
+    });
+    expect(button.disabled).toBe(false);
+    expect(button.title).toBe('Exportă catalogul');
+    expect(button.classList.contains('toolbar-button-primary')).toBe(true);
+    fireEvent.click(button);
+    expect(onExport).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByRole<HTMLButtonElement>('button', { name: 'Categorii' })
+        .disabled,
+    ).toBe(true);
+  });
+
+  it('is busy while exporting: disabled, a spinning loader, „Se exportă…”', () => {
+    render(<Toolbar {...props} onExport={() => {}} exporting />);
+
+    const button = screen.getByRole<HTMLButtonElement>('button', {
+      name: 'Se exportă…',
+    });
+    expect(button.disabled).toBe(true);
+    expect(button.getAttribute('aria-busy')).toBe('true');
+    expect(button.textContent).toBe('Se exportă…');
+    expect(button.querySelector('svg.spin')).not.toBeNull();
   });
 });

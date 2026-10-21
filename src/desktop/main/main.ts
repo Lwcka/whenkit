@@ -31,7 +31,11 @@ import {
   type IpcResult,
   type Theme,
 } from '../../shared/ipc';
-import { appStrings, mainStrings } from '../../shared/strings.ro';
+import {
+  appStrings,
+  exportStrings,
+  mainStrings,
+} from '../../shared/strings.ro';
 import {
   openDesktopCatalog,
   patchEntryResult,
@@ -39,6 +43,9 @@ import {
   setNotesResult,
   deleteCategoryResult,
   deleteEntryResult,
+  exportCatalogResult,
+  failure,
+  openExportFolderResult,
   mergeCategoriesResult,
   renameCategoryResult,
   snapshotResult,
@@ -334,6 +341,53 @@ function main(): void {
           notifyCatalogChanged,
           reporter.log,
         ),
+      );
+      // The export (CAP-13, AD-12): one call opens the folder dialog and
+      // writes. Main remembers the folders it made, so "Deschide folderul"
+      // can open those and nothing else (AD-9).
+      const exportDeps = {
+        fs: nodeFileSystem,
+        clock: systemClock,
+        labels: exportStrings,
+      };
+      const exportedFolders = new Set<string>();
+      ipcMain.handle(IPC_CHANNELS.catalogExport, async (event) => {
+        if (!catalog.ok) return failure(catalog.code);
+        try {
+          const options = {
+            title: mainStrings.exportDialogTitle,
+            defaultPath: app.getPath('documents'),
+            properties: ['openDirectory' as const, 'createDirectory' as const],
+          };
+          const window = BrowserWindow.fromWebContents(event.sender);
+          const picked =
+            window === null
+              ? await dialog.showOpenDialog(options)
+              : await dialog.showOpenDialog(window, options);
+          const result = exportCatalogResult(
+            catalog,
+            picked.canceled ? undefined : picked.filePaths[0],
+            exportDeps,
+            reporter.log,
+          );
+          if (result.ok && result.data !== null) {
+            exportedFolders.add(result.data.folderPath);
+          }
+          return result;
+        } catch (error) {
+          reporter.log(error);
+          return failure('INTERNAL');
+        }
+      });
+      ipcMain.handle(
+        IPC_CHANNELS.shellOpenExportFolder,
+        (_event, folderPath: unknown) =>
+          openExportFolderResult(
+            folderPath,
+            exportedFolders,
+            (target) => shell.openPath(target),
+            reporter.log,
+          ),
       );
       ipcMain.handle(IPC_CHANNELS.shellOpenExternal, (_event, url: unknown) =>
         openExternalResult(url, (u) => shell.openExternal(u), reporter.log),

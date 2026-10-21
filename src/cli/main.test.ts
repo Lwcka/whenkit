@@ -11,6 +11,7 @@ const noDeps: CliDeps = {
   fs: {
     exists: untouched,
     mkdir: untouched,
+    removeDir: untouched,
     readText: untouched,
     writeText: untouched,
     listFiles: untouched,

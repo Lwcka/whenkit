@@ -74,8 +74,10 @@ export type FrameApi = Pick<
   WhenkitApi,
   | 'deleteCategory'
   | 'deleteEntry'
+  | 'exportCatalog'
   | 'mergeCategories'
   | 'renameCategory'
+  | 'openExportFolder'
   | 'openExternal'
   | 'patchEntry'
   | 'searchEntries'
@@ -188,6 +190,47 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
   const [leaving, setLeaving] = useState<Leaving | null>(null);
   // The category manager (CAP-11): a dialog over whatever the window shows.
   const [managingCategories, setManagingCategories] = useState(false);
+  // The export (CAP-13, Flow 6): the button is busy from the click until main
+  // answers (the folder dialog included). It reads the stored catalog, so
+  // editing does not disable it.
+  const [exporting, setExporting] = useState(false);
+  const exportingRef = useRef(false);
+  const requestExport = async () => {
+    if (exportingRef.current) return;
+    exportingRef.current = true;
+    setExporting(true);
+    let result: Awaited<ReturnType<FrameApi['exportCatalog']>>;
+    try {
+      result = await api.exportCatalog();
+    } finally {
+      exportingRef.current = false;
+      setExporting(false);
+    }
+    if (!result.ok) {
+      toasts.push({ kind: 'error', message: errorMessages[result.error.code] });
+      return;
+    }
+    // Cancelled in the folder dialog: nothing to say.
+    if (result.data === null) return;
+    const { folderName, folderPath } = result.data;
+    toasts.push({
+      kind: 'info',
+      message: appStrings.exported(folderName),
+      action: {
+        label: appStrings.openFolder,
+        run: () => {
+          void api.openExportFolder(folderPath).then((opened) => {
+            if (!opened.ok) {
+              toasts.push({
+                kind: 'error',
+                message: errorMessages[opened.error.code],
+              });
+            }
+          });
+        },
+      },
+    });
+  };
   const deleteButton = useRef<HTMLButtonElement>(null);
   const cancelButton = useRef<HTMLButtonElement>(null);
   const backToEditingButton = useRef<HTMLButtonElement>(null);
@@ -822,6 +865,8 @@ export function App({ store, api }: { store: CatalogStore; api: FrameApi }) {
         counts={tabCounts}
         onZoneChange={changeZone}
         onOpenCategories={() => setManagingCategories(true)}
+        onExport={() => void requestExport()}
+        exporting={exporting}
         search={{
           text: searchText,
           onChange: changeSearch,
