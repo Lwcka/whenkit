@@ -6,12 +6,20 @@ import {
   screen,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { EntryDto, IpcResult, CatalogSnapshotDto } from '../../shared/ipc';
+import type { CatalogSnapshotDto, IpcResult } from '../../shared/ipc';
 import { errorMessages } from '../../shared/strings.ro';
 import { App, type FrameApi } from './app';
 import { createCatalogStore } from './catalog-store';
 import { applyTheme } from './theme';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  fakeFrameApi,
+  imagini,
+  makeCategory,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+  securitate,
+} from './test-fixtures';
 import { toasts } from './toast-store';
 
 beforeEach(() => {
@@ -21,70 +29,11 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-function fakeApi(overrides: Partial<FrameApi> = {}): FrameApi {
-  return {
-    workspacePath: 'C:\\Users\\Luca\\Programe\\whenkit',
-    searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
-    setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    setTheme: () => Promise.resolve({ ok: true, data: null }),
-    setZoomFactor: () => {},
-    renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    openExternal: () => Promise.resolve({ ok: true, data: null }),
-    exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-    openExportFolder: () => Promise.resolve({ ok: true, data: null }),
-    ...overrides,
-  };
-}
-
-function entry(
-  id: string,
-  name: string,
-  zone: EntryDto['zone'],
-  whatItDoes: string,
-): EntryDto {
-  return {
-    id,
-    ownerId: 'owner',
-    kind: zone === 'toolbox' ? 'tool' : 'concept',
-    zone,
-    name,
-    url: null,
-    resourceType: null,
-    categories: [],
-    relatedIds: [],
-    parentIds: [],
-    childIds: [],
-    whatItDoes,
-    situations: [],
-    keywords: [],
-    sources: [],
-    content: null,
-    myNotes: '',
-    githubStars: null,
-    githubPushedAt: null,
-    githubArchived: null,
-    verificationNotes: [],
-    forced: false,
-    revision: 1,
-    addedAt: '2026-10-13T12:00:00.000Z',
-    verifiedAt: null,
-  };
-}
-
-async function renderWith(
-  result: IpcResult<CatalogSnapshotDto>,
-  api: FrameApi = fakeApi(),
-) {
+function renderWith(result: IpcResult<CatalogSnapshotDto>, api?: FrameApi) {
   const store = createCatalogStore({
     catalogSnapshot: () => Promise.resolve(result),
   });
-  const view = render(<App store={store} api={api} />);
-  await act(() => store.load());
-  return view;
+  return renderApp(store, api);
 }
 
 describe('App', () => {
@@ -92,25 +41,40 @@ describe('App', () => {
     const store = createCatalogStore({
       catalogSnapshot: () => new Promise(() => {}),
     });
-    render(<App store={store} api={fakeApi()} />);
+    render(<App store={store} api={fakeFrameApi()} />);
     expect(screen.getByText('WhenKit')).toBeTruthy();
     expect(screen.queryByRole('tablist')).toBeNull();
     expect(screen.queryByRole('status')).toBeNull();
   });
 
   it('shows Toolbox first and switches zones, keeping the snapshot order', async () => {
-    await renderWith({
-      ok: true,
-      data: {
-        categories: [],
-        entries: [
-          entry('1', 'Zeta tool', 'toolbox', 'Prima.'),
-          entry('2', 'Un concept', 'learn', 'Învățare.'),
-          entry('3', 'Alfa tool', 'toolbox', 'A doua.'),
-          entry('4', 'Alt concept', 'learn', 'Încă una.'),
+    await renderWith(
+      okSnapshot(
+        [
+          makeEntry('1', {
+            name: 'Zeta tool',
+            zone: 'toolbox',
+            whatItDoes: 'Prima.',
+          }),
+          makeEntry('2', {
+            name: 'Un concept',
+            zone: 'learn',
+            whatItDoes: 'Învățare.',
+          }),
+          makeEntry('3', {
+            name: 'Alfa tool',
+            zone: 'toolbox',
+            whatItDoes: 'A doua.',
+          }),
+          makeEntry('4', {
+            name: 'Alt concept',
+            zone: 'learn',
+            whatItDoes: 'Încă una.',
+          }),
         ],
-      },
-    });
+        [],
+      ),
+    );
 
     const tabs = screen.getAllByRole('tab');
     // Each tab carries its zone's live counter.
@@ -166,23 +130,27 @@ describe('App', () => {
     const store = createCatalogStore({
       catalogSnapshot: () => Promise.reject(new Error('ipc down')),
     });
-    render(<App store={store} api={fakeApi()} />);
-    await act(() => store.load());
+    await renderApp(store);
     expect(screen.getByText('INTERNAL')).toBeTruthy();
   });
 });
 
 describe('App frame', () => {
-  const snapshot: IpcResult<CatalogSnapshotDto> = {
-    ok: true,
-    data: {
-      categories: [],
-      entries: [
-        entry('1', 'Zeta tool', 'toolbox', 'Prima.'),
-        entry('2', 'Un concept', 'learn', 'Învățare.'),
-      ],
-    },
-  };
+  const snapshot = okSnapshot(
+    [
+      makeEntry('1', {
+        name: 'Zeta tool',
+        zone: 'toolbox',
+        whatItDoes: 'Prima.',
+      }),
+      makeEntry('2', {
+        name: 'Un concept',
+        zone: 'learn',
+        whatItDoes: 'Învățare.',
+      }),
+    ],
+    [],
+  );
 
   it('switches zones with Ctrl+1 and Ctrl+2', async () => {
     await renderWith(snapshot);
@@ -202,7 +170,7 @@ describe('App frame', () => {
 
   it('zooms through the bridge on Ctrl+=', async () => {
     const setZoomFactor = vi.fn();
-    await renderWith(snapshot, fakeApi({ setZoomFactor }));
+    await renderWith(snapshot, fakeFrameApi({ setZoomFactor }));
 
     fireEvent.keyDown(document, { code: 'Equal', ctrlKey: true });
     fireEvent.keyDown(document, { code: 'Digit0', ctrlKey: true });
@@ -227,8 +195,6 @@ describe('App frame', () => {
 
 describe('Browsing by category', () => {
   const ai = makeCategory('c-ai', 'AI & LLM');
-  const imagini = makeCategory('c-img', 'Imagini & video');
-  const securitate = makeCategory('c-sec', 'Securitate');
   const backend = makeCategory('c-api', 'Backend & API-uri', 'learn');
   const algoritmi = makeCategory('c-alg', 'Algoritmi', 'learn');
 
@@ -239,10 +205,7 @@ describe('Browsing by category', () => {
     makeEntry('Photopea', { categories: [ai] }),
     makeEntry('Webhook', { zone: 'learn', categories: [backend] }),
   ];
-  const snapshot: IpcResult<CatalogSnapshotDto> = {
-    ok: true,
-    data: { categories, entries },
-  };
+  const snapshot = okSnapshot(entries, categories);
 
   const chip = (name: RegExp) => screen.getByRole('radio', { name });
   const chipTexts = () =>
@@ -354,15 +317,11 @@ describe('Browsing by category', () => {
     const store = createCatalogStore({
       catalogSnapshot: () => Promise.resolve(result),
     });
-    render(<App store={store} api={fakeApi()} />);
-    await act(() => store.load());
+    await renderApp(store);
     fireEvent.click(chip(/^Securitate/));
     expect(selectedChip()?.textContent).toMatch(/^Securitate/);
 
-    result = {
-      ok: true,
-      data: { categories: [ai, imagini, backend, algoritmi], entries },
-    };
+    result = okSnapshot(entries, [ai, imagini, backend, algoritmi]);
     await act(() => store.load());
 
     expect(selectedChip()?.textContent).toMatch(/^Toate/);
@@ -430,13 +389,9 @@ describe('Browsing by category', () => {
   });
 
   it('names the zone in the small empty-state under Toate', async () => {
-    await renderWith({
-      ok: true,
-      data: {
-        categories,
-        entries: [makeEntry('Unealta', { categories: [ai] })],
-      },
-    });
+    await renderWith(
+      okSnapshot([makeEntry('Unealta', { categories: [ai] })], categories),
+    );
 
     fireEvent.click(screen.getByRole('tab', { name: /^Learn/ }));
 
@@ -444,7 +399,7 @@ describe('Browsing by category', () => {
   });
 
   it('shows the big empty-state for an empty catalog, with the categories at 0', async () => {
-    await renderWith({ ok: true, data: { categories, entries: [] } });
+    await renderWith(okSnapshot([], categories));
 
     expect(screen.getByText('Catalogul e gol.')).toBeTruthy();
     expect(screen.getByText('Spune-i lui Claude ce ai găsit:')).toBeTruthy();
@@ -470,7 +425,7 @@ describe('Startup skeleton', () => {
     const store = createCatalogStore({
       catalogSnapshot: () => new Promise(() => {}),
     });
-    const { container } = render(<App store={store} api={fakeApi()} />);
+    const { container } = render(<App store={store} api={fakeFrameApi()} />);
 
     act(() => vi.advanceTimersByTime(199));
     expect(skeleton()).toBeNull();
@@ -491,11 +446,11 @@ describe('Startup skeleton', () => {
           resolve = done;
         }),
     });
-    render(<App store={store} api={fakeApi()} />);
+    render(<App store={store} api={fakeFrameApi()} />);
 
     act(() => vi.advanceTimersByTime(100));
     const loading = store.load();
-    resolve({ ok: true, data: { categories: [], entries: [] } });
+    resolve(okSnapshot([], []));
     await act(() => loading);
     act(() => vi.advanceTimersByTime(500));
 

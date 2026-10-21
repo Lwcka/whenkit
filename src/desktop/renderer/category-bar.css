@@ -112,7 +112,9 @@
   border-color: var(--line);
 }
 
-.category-chip-dot {
+/* The dot is also the category manager's (category-manager-dot). */
+.category-chip-dot,
+.category-manager-dot {
   background: var(--category);
   border-radius: 50%;
   flex: none;

@@ -1,4 +1,5 @@
 import { isExternalUrl, type IpcResult } from '../../shared/ipc';
+import { failure, logQuietly } from './catalog';
 
 /**
  * The `shell:openExternal` answer (AD-9, AD-18). The renderer is not trusted:
@@ -12,17 +13,13 @@ export async function openExternalResult(
   logError: (error: unknown) => void = console.error,
 ): Promise<IpcResult<null>> {
   if (!isExternalUrl(url)) {
-    return { ok: false, error: { code: 'ARGUMENTS_INVALID' } };
+    return failure('ARGUMENTS_INVALID');
   }
   try {
     await open(url);
     return { ok: true, data: null };
   } catch (error) {
-    try {
-      logError(error);
-    } catch {
-      // Logging must not turn an answer into a throw (AD-18).
-    }
-    return { ok: false, error: { code: 'INTERNAL' } };
+    logQuietly(logError, error);
+    return failure('INTERNAL');
   }
 }

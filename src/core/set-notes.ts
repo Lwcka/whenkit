@@ -1,5 +1,5 @@
 import { toEntryDto, type EntryDto } from './dto';
-import { WhenkitError } from './errors';
+import { vanishedError, WhenkitError } from './errors';
 import type { CatalogStore } from './ports';
 
 /**
@@ -19,7 +19,7 @@ export function setNotes(
     }
     const entry = writer.entryById(id);
     if (entry === undefined) {
-      throw new WhenkitError('INTERNAL', { detail: `entry ${id} vanished` });
+      throw vanishedError('entry', id);
     }
     return toEntryDto(entry);
   });

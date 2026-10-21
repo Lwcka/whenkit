@@ -1,14 +1,10 @@
 import { Layers, LoaderCircle, Search, Upload } from 'lucide-react';
 import type { RefObject } from 'react';
-import type { EntryDto } from '../../shared/ipc';
+import type { Zone } from '../../shared/ipc';
 import { appStrings, formatCompact, zoneLabels } from '../../shared/strings.ro';
-import './button.css';
+import { ZONE_ORDER } from './catalog-view';
 import './kbd.css';
 import './toolbar.css';
-
-type Zone = EntryDto['zone'];
-
-export const ZONE_ORDER: readonly Zone[] = ['toolbox', 'learn'];
 
 export interface ToolbarProps {
   zone: Zone;

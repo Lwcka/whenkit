@@ -4,6 +4,7 @@ import type {
   EntryDto,
   EntryPatchInput,
   ErrorDto,
+  ExportResult,
   SearchResultDto,
 } from '../core/dto';
 
@@ -97,11 +98,11 @@ export interface WriteResult {
   categories?: readonly CategoryDto[];
 }
 
+/** The zone of an entry: Toolbox or Learn. */
+export type Zone = EntryDto['zone'];
+
 /** What an export answers with: the folder it created, inside the one the user picked. */
-export interface ExportResultDto {
-  folderName: string;
-  folderPath: string;
-}
+export type ExportResultDto = ExportResult;
 
 /** The bridge preload exposes as `window.whenkit`. */
 export interface WhenkitApi {

@@ -8,28 +8,19 @@ import { searchEntries } from '../src/core/search-entries';
 import {
   batch,
   count,
+  idsByRef,
   importReport,
   initialized,
+  onStore,
   show,
   tool,
   type CliSetup,
 } from './cli-harness';
-import { errorCodeOf, testStoreOpener } from './helpers';
+import { errorCodeOf } from './helpers';
 
 // Category management (AD-3, AD-5) on the real store, in a temp development
 // workspace: rename, merge and delete, with the revision rules and the rows
 // of `entry_categories` checked after each.
-
-type Store = ReturnType<ReturnType<typeof testStoreOpener>>;
-
-function onStore<T>(s: CliSetup, fn: (store: Store) => T): T {
-  const store = testStoreOpener()(s.dbPath, {});
-  try {
-    return fn(store);
-  } finally {
-    store.close();
-  }
-}
 
 /**
  * Four tools and a concept. `a` has only Imagini & video, `b` has Imagini &
@@ -57,10 +48,7 @@ async function withCatalog() {
       },
     ]),
   );
-  const ids = Object.fromEntries(
-    report.items.map((item) => [item.ref, String(item.id)]),
-  );
-  return { s, ids };
+  return { s, ids: idsByRef(report) };
 }
 
 /** The id of the category with this name in the zone. */

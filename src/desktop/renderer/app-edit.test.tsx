@@ -2,13 +2,11 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type {
-  CatalogSnapshotDto,
   EntryDto,
   EntryPatch,
   EntryPatchInput,
@@ -16,19 +14,25 @@ import type {
   WriteResult,
 } from '../../shared/ipc';
 import { errorMessages } from '../../shared/strings.ro';
-import { App, type FrameApi } from './app';
+import type { FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  backend,
+  fakeFrameApi,
+  imagini,
+  makeCategory,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+  securitate,
+} from './test-fixtures';
 import { applyTheme } from './theme';
 import { toasts } from './toast-store';
 
 // The edit mode of the sheet (CAP-10, Flow 3): the real store and the real
 // App, with a fake `patchEntry` that answers like main's `entries:patch`.
 
-const imagini = makeCategory('c-img', 'Imagini & video');
-const securitate = makeCategory('c-sec', 'Securitate');
 const design = makeCategory('c-des', 'Design & UI');
-const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
 const categories = [imagini, securitate, design, backend];
 
 const removeBg = makeEntry('removebg', {
@@ -106,27 +110,9 @@ beforeEach(() => {
   setNotes = vi.fn(() =>
     Promise.resolve({ ok: true, data: { changed: [] } } as const),
   );
-  api = {
-    workspacePath: 'C:\\ws',
-    openExternal: () => Promise.resolve({ ok: true, data: null }),
-    exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-    openExportFolder: () => Promise.resolve({ ok: true, data: null }),
-    searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
-    setNotes,
-    deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    patchEntry,
-    setTheme: () => Promise.resolve({ ok: true, data: null }),
-    setZoomFactor: () => {},
-    renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  };
+  api = fakeFrameApi({ setNotes, patchEntry });
   store = createCatalogStore({
-    catalogSnapshot: () =>
-      Promise.resolve({
-        ok: true,
-        data: { entries: current, categories },
-      } satisfies IpcResult<CatalogSnapshotDto>),
+    catalogSnapshot: () => Promise.resolve(okSnapshot(current, categories)),
   });
 });
 
@@ -137,8 +123,7 @@ afterEach(() => {
 });
 
 async function open() {
-  render(<App store={store} api={api} />);
-  await act(() => store.load());
+  await renderApp(store, api);
 }
 
 /** The terminal changed the catalog: the store reloads and classifies it. */

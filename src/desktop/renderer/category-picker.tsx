@@ -5,7 +5,7 @@ import './category-picker.css';
 import './text-field.css';
 
 /** How many categories an entry may have (AD-5). */
-export const MAX_CATEGORIES = 2;
+const MAX_CATEGORIES = 2;
 
 export interface CategoryPickerProps {
   /** The categories of the entry's zone. */

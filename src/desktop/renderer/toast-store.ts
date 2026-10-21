@@ -72,3 +72,8 @@ export function createToastStore(): ToastStore {
 
 /** The window's one toast queue. */
 export const toasts: ToastStore = createToastStore();
+
+/** Shows an error toast on the window's queue. */
+export function toastError(message: ToastMessage): number {
+  return toasts.push({ kind: 'error', message });
+}

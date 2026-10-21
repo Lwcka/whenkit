@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { EntryDto, WhenkitApi } from '../../shared/ipc';
 import { appStrings } from '../../shared/strings.ro';
-import { toasts } from './toast-store';
+import { toastError } from './toast-store';
 
 /** DESIGN motion.search-debounce (150 ms), mirrored from tokens.css for the timer. */
 export const SEARCH_DEBOUNCE_MS = 150;
@@ -49,12 +49,12 @@ export function useSearch(
           if (result.ok) {
             setFound({ query, ids: result.data.ids });
           } else {
-            toasts.push({ kind: 'error', message: appStrings.searchFailed });
+            toastError(appStrings.searchFailed);
           }
         },
         () => {
           if (question !== latest.current) return;
-          toasts.push({ kind: 'error', message: appStrings.searchFailed });
+          toastError(appStrings.searchFailed);
         },
       );
     };

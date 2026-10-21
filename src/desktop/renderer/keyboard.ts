@@ -36,6 +36,16 @@ export function createZoom(apply: (factor: number) => void): Zoom {
   };
 }
 
+/** True when Ctrl, Alt, Meta or Shift is held: a plain key press has none. */
+export function hasModifier(event: {
+  ctrlKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
+  shiftKey: boolean;
+}): boolean {
+  return event.ctrlKey || event.altKey || event.metaKey || event.shiftKey;
+}
+
 export interface Binding {
   /** `event.code` value(s), e.g. `Digit1` or `['Equal', 'NumpadAdd']`. */
   code: string | readonly string[];

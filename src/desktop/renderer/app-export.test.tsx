@@ -2,27 +2,27 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   within,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type {
-  CatalogSnapshotDto,
-  ExportResultDto,
-  IpcResult,
-} from '../../shared/ipc';
+import type { ExportResultDto, IpcResult } from '../../shared/ipc';
 import { errorMessages } from '../../shared/strings.ro';
-import { App, type FrameApi } from './app';
+import type { FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  fakeFrameApi,
+  imagini,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+} from './test-fixtures';
 import { applyTheme } from './theme';
 import { toasts } from './toast-store';
 
 // The export (CAP-13, Flow 6) through the real App and the real store, with a
 // fake bridge that answers like main's `catalog:export` channel.
 
-const imagini = makeCategory('c-img', 'Imagini & video');
 const removeBg = makeEntry('removebg', {
   name: 'remove.bg',
   url: 'https://remove.bg',
@@ -50,27 +50,9 @@ beforeEach(() => {
   toasts.clear();
   exportCatalog = vi.fn(() => Promise.resolve({ ok: true, data: FOLDER }));
   openExportFolder = vi.fn(() => Promise.resolve({ ok: true, data: null }));
-  api = {
-    workspacePath: 'C:\\ws',
-    openExternal: () => Promise.resolve({ ok: true, data: null }),
-    exportCatalog,
-    openExportFolder,
-    searchEntries: () => Promise.resolve({ ok: true, data: { ids: [] } }),
-    setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    setTheme: () => Promise.resolve({ ok: true, data: null }),
-    setZoomFactor: () => {},
-    renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-    deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  };
+  api = fakeFrameApi({ exportCatalog, openExportFolder });
   store = createCatalogStore({
-    catalogSnapshot: () =>
-      Promise.resolve({
-        ok: true,
-        data: { entries: [removeBg], categories: [imagini] },
-      } satisfies IpcResult<CatalogSnapshotDto>),
+    catalogSnapshot: () => Promise.resolve(okSnapshot([removeBg], [imagini])),
   });
 });
 
@@ -81,8 +63,7 @@ afterEach(() => {
 });
 
 async function open() {
-  render(<App store={store} api={api} />);
-  await act(() => store.load());
+  await renderApp(store, api);
 }
 
 const exportButton = () =>

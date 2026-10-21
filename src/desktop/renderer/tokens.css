@@ -408,3 +408,20 @@
 [data-slot='9'] {
   --category: var(--category-9);
 }
+
+/* The spinning loader icon of a busy button (Button, Toolbar). */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spin {
+  animation: spin var(--motion-spin) linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}

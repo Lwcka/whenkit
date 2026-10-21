@@ -1,5 +1,6 @@
-/* Base styles of the window: the page layout and the pieces that have no
-   component of their own yet. Every value comes from tokens.css. */
+/* Base styles of the window: the page layout, the list and sheet shell, and
+   the startup error screen (.app-error*), which have no stylesheet of their
+   own. Every value comes from tokens.css. */
 
 html,
 body,

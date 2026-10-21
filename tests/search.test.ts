@@ -1,19 +1,18 @@
 import { DatabaseSync } from 'node:sqlite';
 import { describe, expect, it } from 'vitest';
-import {
-  ftsQuery,
-  openCatalogStore,
-} from '../src/adapters/sqlite/sqlite-catalog-store';
+import { ftsQuery } from '../src/adapters/sqlite/sqlite-catalog-store';
 import { searchResultDtoSchema } from '../src/core/dto';
 import { searchEntries } from '../src/core/search-entries';
 import {
   batch,
+  concept,
   importReport,
   initialized,
+  material,
   tool,
   type CliSetup,
 } from './cli-harness';
-import { fixedClock, sequentialIds } from './helpers';
+import { fixedClock, testStoreOpener } from './helpers';
 
 // Full-text search (CAP-9, AD-5): the query builder on its own, and the
 // adapter against a real catalog filled through the CLI import.
@@ -43,35 +42,6 @@ describe('ftsQuery', () => {
     expect(ftsQuery(text)).toBe(expected);
   });
 });
-
-function material(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'material',
-    name: `Material ${ref}`,
-    url: `https://${ref}.dev`,
-    resourceType: 'site',
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Învață ceva.',
-    situations: ['Când studiez'],
-    ...overrides,
-  };
-}
-
-function concept(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'concept',
-    name: `Concept ${ref}`,
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Explică o idee.',
-    situations: ['Când aleg o arhitectură'],
-    content: `# ${ref}\n\nText lung.`,
-    ...overrides,
-  };
-}
 
 /** Toolbox entries in the first batch; a concept, a material and a tool in the second. */
 async function searchableCatalog(): Promise<CliSetup> {
@@ -105,6 +75,8 @@ async function searchableCatalog(): Promise<CliSetup> {
       concept('k1', {
         name: 'Webhook',
         whatItDoes: 'Un apel HTTP pornit de server.',
+        situations: ['Când aleg o arhitectură'],
+        content: '# k1\n\nText lung.',
         keywords: ['fundal'],
       }),
       material('m1', { keywords: ['video', 'fundal'] }),
@@ -119,12 +91,7 @@ async function searchableCatalog(): Promise<CliSetup> {
 }
 
 function openStore(s: CliSetup) {
-  return openCatalogStore(s.dbPath, {
-    migrate: false,
-    clock: fixedClock(),
-    ids: sequentialIds('9000'),
-    busyTimeoutMs: 100,
-  });
+  return testStoreOpener()(s.dbPath, { migrate: false });
 }
 
 /** The names of the matching entries, in the order the search returned them. */

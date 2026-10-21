@@ -6,7 +6,7 @@ export interface ErrorReporterPorts {
   /** The log file, or undefined when the workspace (or its data/) is unknown. */
   logPath?: string;
   append: (path: string, text: string) => void;
-  showDialog: (logPath: string | undefined, error: unknown) => void;
+  showDialog: (logPath: string | undefined) => void;
   now: () => Date;
 }
 
@@ -53,7 +53,7 @@ export function createErrorReporter({
     report(error) {
       log(error);
       try {
-        showDialog(logPath, error);
+        showDialog(logPath);
       } catch {
         // Reporting must never throw.
       }

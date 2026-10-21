@@ -1,8 +1,14 @@
 import type { BatchItem } from './batch-schema';
 import { toEntryDto, type EntryDto } from './dto';
-import { zoneOf, type ResourceType } from './entry';
+import { zoneOf, type ResourceType, type Zone } from './entry';
 import { entryPatchSchema, type EntryPatchInput } from './entry-patch';
-import { WhenkitError, type ErrorIssue } from './errors';
+import {
+  issuesError,
+  toErrorIssues,
+  vanishedError,
+  WhenkitError,
+  type ErrorIssue,
+} from './errors';
 import type { CatalogStore, Clock, StoredEntry } from './ports';
 import { dedupKey } from './url';
 import type { VerdictReason } from './verification/reason-codes';
@@ -38,10 +44,25 @@ interface Fields {
 }
 
 function invalid(issues: ErrorIssue[]): WhenkitError {
-  return new WhenkitError('ARGUMENTS_INVALID', {
-    issues,
-    detail: issues.map((issue) => issue.message).join('; '),
-  });
+  return issuesError('ARGUMENTS_INVALID', issues);
+}
+
+/** One issue for each chosen category id that is not a category of `zone`. */
+function unknownCategoryIssues(
+  categoryIds: readonly string[],
+  known: { has(id: string): boolean },
+  zone: Zone,
+): ErrorIssue[] {
+  return categoryIds.flatMap((id, index) =>
+    known.has(id)
+      ? []
+      : [
+          {
+            path: ['categoryIds', index],
+            message: `"${id}" is not a category of the ${zone} zone`,
+          },
+        ],
+  );
 }
 
 function sameList(a: readonly string[], b: readonly string[]): boolean {
@@ -128,14 +149,7 @@ export async function patchEntry(
 ): Promise<EntryDto> {
   const parsed = entryPatchSchema.safeParse(input.changes);
   if (!parsed.success) {
-    throw invalid(
-      parsed.error.issues.map((issue) => ({
-        path: issue.path.map((key) =>
-          typeof key === 'number' ? key : String(key),
-        ),
-        message: issue.message,
-      })),
-    );
+    throw invalid(toErrorIssues(parsed.error.issues));
   }
   const changes = parsed.data;
 
@@ -183,14 +197,13 @@ export async function patchEntry(
     }
   }
   const knownCategories = new Map(zoneCategories.map((c) => [c.id, c.name]));
-  changes.categoryIds?.forEach((id, index) => {
-    if (!knownCategories.has(id)) {
-      issues.push({
-        path: ['categoryIds', index],
-        message: `"${id}" is not a category of the ${zoneOf(stored.kind)} zone`,
-      });
-    }
-  });
+  issues.push(
+    ...unknownCategoryIssues(
+      changes.categoryIds ?? [],
+      knownCategories,
+      zoneOf(stored.kind),
+    ),
+  );
   if (issues.length > 0) throw invalid(issues);
 
   const before = fieldsOf(stored);
@@ -278,15 +291,10 @@ export async function patchEntry(
       const known = new Set(
         writer.categoriesInZone(zoneOf(current.kind)).map((c) => c.id),
       );
-      const gone = next.categoryIds.flatMap((id, index) =>
-        known.has(id)
-          ? []
-          : [
-              {
-                path: ['categoryIds', index],
-                message: `"${id}" is not a category of the ${zoneOf(current.kind)} zone`,
-              },
-            ],
+      const gone = unknownCategoryIssues(
+        next.categoryIds,
+        known,
+        zoneOf(current.kind),
       );
       if (gone.length > 0) throw invalid(gone);
     }
@@ -333,9 +341,7 @@ export async function patchEntry(
 
     const saved = writer.entryById(input.id);
     if (saved === undefined) {
-      throw new WhenkitError('INTERNAL', {
-        detail: `entry ${input.id} vanished`,
-      });
+      throw vanishedError('entry', input.id);
     }
     return toEntryDto(saved);
   });

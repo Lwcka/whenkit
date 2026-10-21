@@ -5,6 +5,9 @@ import { Button } from './button';
 import './kbd.css';
 import './sheet-bar.css';
 
+/** A save in progress: `links` when core verifies the links first (a slow save). */
+export type SavingPhase = 'text' | 'links';
+
 /** The sheet-bar while the entry is edited. */
 export interface SheetBarEditing {
   /** „Renunță”: leaves the edit (asks first when the form has changes). */
@@ -14,7 +17,7 @@ export interface SheetBarEditing {
   /** The form is invalid: „Salvează” is inactive. */
   saveDisabled: boolean;
   /** A save is running; `links` when core verifies the links first (a slow save). */
-  saving: 'text' | 'links' | null;
+  saving: SavingPhase | null;
 }
 
 export interface SheetBarProps {

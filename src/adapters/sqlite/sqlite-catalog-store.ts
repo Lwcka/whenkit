@@ -1,5 +1,9 @@
 import { existsSync } from 'node:fs';
-import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
+import {
+  DatabaseSync,
+  type SQLInputValue,
+  type StatementResultingChanges,
+} from 'node:sqlite';
 import { CATEGORY_SEED } from '../../core/category-seed';
 import type { EntryKind, ResourceType, Zone } from '../../core/entry';
 import { WhenkitError, isWhenkitError } from '../../core/errors';
@@ -141,6 +145,13 @@ const SUMMARY_COLUMNS = `id, owner_id, kind, name, url, resource_type,
   github_pushed_at, github_archived, verification_notes, forced, dedup_key,
   revision, added_at, verified_at`;
 
+const CATEGORY_COLUMNS = 'id, zone, name, name_key';
+
+/** True when a statement touched at least one row. */
+function touchedRows(result: StatementResultingChanges): boolean {
+  return Number(result.changes) > 0;
+}
+
 const NO_LINKS = (): LinkIds => ({
   relatedIds: [],
   parentIds: [],
@@ -199,6 +210,18 @@ function toSummary(
   };
 }
 
+/** A full entry: the summary plus the content, which summaries leave out. */
+function toEntry(
+  row: EntryRow,
+  categories: StoredCategory[],
+  links: LinkIds,
+): StoredEntry {
+  return {
+    ...toSummary(row, categories, links),
+    content: row.content ?? null,
+  };
+}
+
 class SqliteCatalogStore implements CatalogStore, CatalogWriter {
   constructor(
     private readonly db: DatabaseSync,
@@ -225,7 +248,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
 
   categoriesInZone(zone: Zone): StoredCategory[] {
     return this.all<CategoryRow>(
-      `SELECT id, zone, name, name_key FROM categories
+      `SELECT ${CATEGORY_COLUMNS} FROM categories
        WHERE owner_id = ? AND zone = ? ORDER BY name_key`,
       this.owner,
       zone,
@@ -298,10 +321,19 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     if (row === undefined) return undefined;
     const categories = this.categoriesByEntry(id).get(id) ?? [];
     const links = this.linksByEntry(id).get(id) ?? NO_LINKS();
-    return {
-      ...toSummary(row, categories, links),
-      content: row.content ?? null,
-    };
+    return toEntry(row, categories, links);
+  }
+
+  /** Builds one value per row, with the categories and links of all the owner's entries. */
+  private withRelations<T>(
+    rows: EntryRow[],
+    build: (row: EntryRow, categories: StoredCategory[], links: LinkIds) => T,
+  ): T[] {
+    const categories = this.categoriesByEntry();
+    const links = this.linksByEntry();
+    return rows.map((row) =>
+      build(row, categories.get(row.id) ?? [], links.get(row.id) ?? NO_LINKS()),
+    );
   }
 
   entrySummaries(): StoredEntrySummary[] {
@@ -310,15 +342,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
        WHERE owner_id = ? ORDER BY added_at, seq`,
       this.owner,
     );
-    const categories = this.categoriesByEntry();
-    const links = this.linksByEntry();
-    return rows.map((row) =>
-      toSummary(
-        row,
-        categories.get(row.id) ?? [],
-        links.get(row.id) ?? NO_LINKS(),
-      ),
-    );
+    return this.withRelations(rows, toSummary);
   }
 
   allEntries(): StoredEntry[] {
@@ -327,16 +351,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
        WHERE owner_id = ? ORDER BY added_at DESC, seq ASC`,
       this.owner,
     );
-    const categories = this.categoriesByEntry();
-    const links = this.linksByEntry();
-    return rows.map((row) => ({
-      ...toSummary(
-        row,
-        categories.get(row.id) ?? [],
-        links.get(row.id) ?? NO_LINKS(),
-      ),
-      content: row.content ?? null,
-    }));
+    return this.withRelations(rows, toEntry);
   }
 
   searchEntryIds(text: string): string[] {
@@ -358,7 +373,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
 
   allCategories(): StoredCategory[] {
     return this.all<CategoryRow>(
-      `SELECT id, zone, name, name_key FROM categories
+      `SELECT ${CATEGORY_COLUMNS} FROM categories
        WHERE owner_id = ? ORDER BY zone, name_key`,
       this.owner,
     ).map(toCategory);
@@ -366,7 +381,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
 
   categoryById(id: string): StoredCategory | undefined {
     const row = this.get<CategoryRow>(
-      'SELECT id, zone, name, name_key FROM categories WHERE owner_id = ? AND id = ?',
+      `SELECT ${CATEGORY_COLUMNS} FROM categories WHERE owner_id = ? AND id = ?`,
       this.owner,
       id,
     );
@@ -520,7 +535,7 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     const result = this.db
       .prepare('UPDATE entries SET my_notes = ? WHERE owner_id = ? AND id = ?')
       .run(notes, this.owner, id);
-    return Number(result.changes) > 0;
+    return touchedRows(result);
   }
 
   replaceEntryCategories(
@@ -541,14 +556,14 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         'UPDATE categories SET name = ?, name_key = ? WHERE owner_id = ? AND id = ?',
       )
       .run(name, nameKey, this.owner, id);
-    return Number(result.changes) > 0;
+    return touchedRows(result);
   }
 
   deleteCategory(id: string): boolean {
     const result = this.db
       .prepare('DELETE FROM categories WHERE owner_id = ? AND id = ?')
       .run(this.owner, id);
-    return Number(result.changes) > 0;
+    return touchedRows(result);
   }
 
   bumpRevisions(entryIds: readonly string[]): void {
@@ -627,14 +642,14 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
     const result = this.db
       .prepare('DELETE FROM rejections WHERE owner_id = ? AND id = ?')
       .run(this.owner, id);
-    return Number(result.changes) > 0;
+    return touchedRows(result);
   }
 
   deleteEntry(id: string): boolean {
     const result = this.db
       .prepare('DELETE FROM entries WHERE owner_id = ? AND id = ?')
       .run(this.owner, id);
-    return Number(result.changes) > 0;
+    return touchedRows(result);
   }
 
   deleteUpdateRejections(entryId: string): void {
@@ -653,26 +668,23 @@ class SqliteCatalogStore implements CatalogStore, CatalogWriter {
         detail: 'write on a read-only catalog',
       });
     }
-    if (this.db.isTransaction) {
-      throw new WhenkitError('INTERNAL', { detail: 'nested transaction' });
-    }
-    try {
-      this.db.exec('BEGIN IMMEDIATE');
-      const result = fn(this);
-      this.db.exec('COMMIT');
-      return result;
-    } catch (error) {
-      if (this.db.isTransaction) this.db.exec('ROLLBACK');
-      throw toWhenkitError(error);
-    }
+    return this.transaction('BEGIN IMMEDIATE', fn);
   }
 
   readTransaction<T>(fn: (reader: CatalogReader) => T): T {
+    return this.transaction('BEGIN', fn);
+  }
+
+  /** Runs `fn` between `begin` and COMMIT, rolling back on any throw. */
+  private transaction<T>(
+    begin: 'BEGIN' | 'BEGIN IMMEDIATE',
+    fn: (store: this) => T,
+  ): T {
     if (this.db.isTransaction) {
       throw new WhenkitError('INTERNAL', { detail: 'nested transaction' });
     }
     try {
-      this.db.exec('BEGIN');
+      this.db.exec(begin);
       const result = fn(this);
       this.db.exec('COMMIT');
       return result;

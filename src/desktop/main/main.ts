@@ -120,11 +120,17 @@ function main(): void {
     return;
   }
   let mainWindow: BrowserWindow | undefined;
+  /** The window, unless it is not created yet or already destroyed. */
+  const liveWindow = (): BrowserWindow | undefined =>
+    mainWindow !== undefined && !mainWindow.isDestroyed()
+      ? mainWindow
+      : undefined;
   app.on('second-instance', () => {
-    if (mainWindow === undefined || mainWindow.isDestroyed()) return;
-    if (mainWindow.isMinimized()) mainWindow.restore();
-    mainWindow.show();
-    mainWindow.focus();
+    const window = liveWindow();
+    if (window === undefined) return;
+    if (window.isMinimized()) window.restore();
+    window.show();
+    window.focus();
   });
 
   // 4. Unexpected errors: a dialog and the workspace log (AD-19).
@@ -240,6 +246,13 @@ function main(): void {
   const currentTheme = (): Theme =>
     nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
 
+  /** The native half of a theme: the window background and the caption buttons. */
+  const applyNativeTheme = (window: BrowserWindow, theme: Theme) => {
+    const { backgroundColor, titleBarOverlay } = nativeThemeSettings(theme);
+    window.setBackgroundColor(backgroundColor);
+    window.setTitleBarOverlay(titleBarOverlay);
+  };
+
   void app
     .whenReady()
     .then(() => {
@@ -266,11 +279,18 @@ function main(): void {
       // Tells the window the catalog changed (AD-10): from the poll below and
       // from the handlers that write.
       const notifyCatalogChanged = () => {
-        if (mainWindow === undefined || mainWindow.isDestroyed()) return;
-        const { webContents } = mainWindow;
+        const window = liveWindow();
+        if (window === undefined) return;
+        const { webContents } = window;
         if (!webContents.isDestroyed()) {
           webContents.send(IPC_CHANNELS.catalogChanged);
         }
+      };
+      // What the six write handlers share (AD-10, AD-18).
+      const writeContext = {
+        opened: catalog,
+        emit: notifyCatalogChanged,
+        logError: reporter.log,
       };
       ipcMain.handle(IPC_CHANNELS.catalogSnapshot, () =>
         snapshotResult(catalog, reporter.log),
@@ -281,49 +301,25 @@ function main(): void {
       ipcMain.handle(
         IPC_CHANNELS.entriesSetNotes,
         (_event, id: unknown, notes: unknown) =>
-          setNotesResult(
-            catalog,
-            id,
-            notes,
-            notifyCatalogChanged,
-            reporter.log,
-          ),
+          setNotesResult(writeContext, id, notes),
       );
       ipcMain.handle(IPC_CHANNELS.entriesDelete, (_event, id: unknown) =>
-        deleteEntryResult(catalog, id, notifyCatalogChanged, reporter.log),
+        deleteEntryResult(writeContext, id),
       );
       ipcMain.handle(
         IPC_CHANNELS.categoriesRename,
         (_event, id: unknown, name: unknown) =>
-          renameCategoryResult(
-            catalog,
-            id,
-            name,
-            notifyCatalogChanged,
-            reporter.log,
-          ),
+          renameCategoryResult(writeContext, id, name),
       );
       ipcMain.handle(
         IPC_CHANNELS.categoriesMerge,
         (_event, sourceId: unknown, targetId: unknown) =>
-          mergeCategoriesResult(
-            catalog,
-            sourceId,
-            targetId,
-            notifyCatalogChanged,
-            reporter.log,
-          ),
+          mergeCategoriesResult(writeContext, sourceId, targetId),
       );
       ipcMain.handle(
         IPC_CHANNELS.categoriesDelete,
         (_event, id: unknown, targetId: unknown) =>
-          deleteCategoryResult(
-            catalog,
-            id,
-            targetId,
-            notifyCatalogChanged,
-            reporter.log,
-          ),
+          deleteCategoryResult(writeContext, id, targetId),
       );
       // The same link checks as the CLI's import (AD-3), created once.
       const patchDeps = {
@@ -334,13 +330,7 @@ function main(): void {
           readBlockedDomains(workspace, { env, fs: nodeFileSystem }),
       };
       ipcMain.handle(IPC_CHANNELS.entriesPatch, (_event, input: unknown) =>
-        patchEntryResult(
-          catalog,
-          input,
-          patchDeps,
-          notifyCatalogChanged,
-          reporter.log,
-        ),
+        patchEntryResult(writeContext, input, patchDeps),
       );
       // The export (CAP-13, AD-12): one call opens the folder dialog and
       // writes. Main remembers the folders it made, so "Deschide folderul"
@@ -396,12 +386,10 @@ function main(): void {
         IPC_CHANNELS.windowSetTheme,
         (event, theme: unknown): IpcResult<null> => {
           if (!isTheme(theme)) {
-            return { ok: false, error: { code: 'ARGUMENTS_INVALID' } };
+            return failure('ARGUMENTS_INVALID');
           }
           try {
             nativeTheme.themeSource = theme;
-            const { backgroundColor, titleBarOverlay } =
-              nativeThemeSettings(theme);
             const window = BrowserWindow.fromWebContents(event.sender);
             saved.theme = theme;
             if (window === null) {
@@ -411,15 +399,14 @@ function main(): void {
                 reporter.log(error);
               }
             } else {
-              window.setBackgroundColor(backgroundColor);
-              window.setTitleBarOverlay(titleBarOverlay);
+              applyNativeTheme(window, theme);
               // The theme is applied; a failed save is already logged.
               saveState(window);
             }
             return { ok: true, data: null };
           } catch (error) {
             reporter.log(error);
-            return { ok: false, error: { code: 'INTERNAL' } };
+            return failure('INTERNAL');
           }
         },
       );
@@ -437,11 +424,8 @@ function main(): void {
       // With no saved theme the renderer follows Windows live; the native
       // half (background, caption buttons) must follow it too.
       nativeTheme.on('updated', () => {
-        if (mainWindow === undefined || mainWindow.isDestroyed()) return;
-        const { backgroundColor, titleBarOverlay } =
-          nativeThemeSettings(currentTheme());
-        mainWindow.setBackgroundColor(backgroundColor);
-        mainWindow.setTitleBarOverlay(titleBarOverlay);
+        const window = liveWindow();
+        if (window !== undefined) applyNativeTheme(window, currentTheme());
       });
 
       const workspace = catalog.ok ? catalog.workspace : null;

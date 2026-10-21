@@ -16,6 +16,7 @@ import { patchEntryResult } from '../src/desktop/main/catalog';
 import { errorMessages } from '../src/shared/strings.ro';
 import {
   batch,
+  concept as baseConcept,
   initialized,
   importReport,
   tool,
@@ -79,19 +80,12 @@ function context(
   };
 }
 
+/** A concept with one good source, so a patch has a link to verify. */
 function concept(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'concept',
-    name: `Concept ${ref}`,
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Explică ceva.',
-    situations: ['Când aleg'],
-    content: `# ${ref}`,
+  return baseConcept(ref, {
     sources: ['https://sursa-buna.dev/a'],
     ...overrides,
-  };
+  });
 }
 
 interface Fixture {
@@ -688,22 +682,27 @@ describe('patchEntryResult (the entries:patch handler)', () => {
       retryDelayMs: 0,
     };
   }
-  const openedFor = (f: Fixture) =>
-    ({ ok: true, store: f.store, workspace: f.s.workspace }) as const;
+  const contextFor = (f: Fixture, emit: () => void = vi.fn()) => ({
+    opened: {
+      ok: true,
+      store: f.store,
+      workspace: f.s.workspace,
+    } as const,
+    emit,
+  });
 
   it('answers the changed entry and emits', async () => {
     const f = await fixture();
     const emit = vi.fn();
     const d = deps(f);
     const result = await patchEntryResult(
-      openedFor(f),
+      contextFor(f, emit),
       {
         id: f.a,
         expectedRevision: 1,
         changes: { whatItDoes: 'Altceva.' },
       },
       d,
-      emit,
     );
     expect(result).toEqual({
       ok: true,
@@ -727,14 +726,13 @@ describe('patchEntryResult (the entries:patch handler)', () => {
     const emit = vi.fn();
     const d = deps(f, fakeHttp);
     const result = await patchEntryResult(
-      openedFor(f),
+      contextFor(f, emit),
       {
         id: f.a,
         expectedRevision: 1,
         changes: { url: 'https://evil.dev' },
       },
       d,
-      emit,
     );
     expect(result).toEqual({
       ok: false,
@@ -750,10 +748,9 @@ describe('patchEntryResult (the entries:patch handler)', () => {
   it('carries the field issues of invalid changes', async () => {
     const f = await fixture();
     const result = await patchEntryResult(
-      openedFor(f),
+      contextFor(f),
       { id: f.a, expectedRevision: 1, changes: { situations: [] } },
       deps(f),
-      vi.fn(),
     );
     expect(result).toEqual({
       ok: false,
@@ -767,10 +764,9 @@ describe('patchEntryResult (the entries:patch handler)', () => {
   it('answers CONFLICT for a stale revision', async () => {
     const f = await fixture();
     const result = await patchEntryResult(
-      openedFor(f),
+      contextFor(f),
       { id: f.a, expectedRevision: 7, changes: { name: 'Altfel' } },
       deps(f),
-      vi.fn(),
     );
     expect(result).toEqual({ ok: false, error: { code: 'CONFLICT' } });
   });
@@ -790,7 +786,7 @@ describe('patchEntryResult (the entries:patch handler)', () => {
     const emit = vi.fn();
     const d = deps(f);
     await expect(
-      patchEntryResult(openedFor(f), payload, d, emit),
+      patchEntryResult(contextFor(f, emit), payload, d),
     ).resolves.toEqual({ ok: false, error: { code: 'ARGUMENTS_INVALID' } });
     expect(d.readBlockedDomains).not.toHaveBeenCalled();
     expect(emit).not.toHaveBeenCalled();
@@ -800,10 +796,9 @@ describe('patchEntryResult (the entries:patch handler)', () => {
     const f = await fixture();
     await expect(
       patchEntryResult(
-        { ok: false, code: 'DATABASE_TOO_NEW' },
+        { opened: { ok: false, code: 'DATABASE_TOO_NEW' }, emit: vi.fn() },
         { id: f.a, expectedRevision: 1, changes: {} },
         deps(f),
-        vi.fn(),
       ),
     ).resolves.toEqual({ ok: false, error: { code: 'DATABASE_TOO_NEW' } });
   });

@@ -14,6 +14,8 @@ import type {
 import { exportStrings } from '../src/shared/strings.ro';
 import {
   batch,
+  concept as baseConcept,
+  idsByRef,
   importReport,
   initialized,
   tool,
@@ -35,18 +37,12 @@ const github: GitHubClient = {
 
 const EXPORT_CLOCK: Clock = fixedClock(new Date(2026, 9, 16, 14, 30, 2));
 
+/** The shared concept, with this file's content. */
 function concept(ref: string, overrides: Record<string, unknown> = {}) {
-  return {
-    ref,
-    op: 'add',
-    kind: 'concept',
-    name: `Concept ${ref}`,
-    categories: ['Backend & API-uri'],
-    whatItDoes: 'Explică ceva.',
-    situations: ['Când aleg'],
+  return baseConcept(ref, {
     content: `# ${ref}\n\nText.`,
     ...overrides,
-  };
+  });
 }
 
 function openStore(s: CliSetup): CatalogStore {
@@ -106,9 +102,7 @@ async function fullCatalog() {
       concept('graphql', { name: 'GraphQL' }),
     ]),
   );
-  const ids = Object.fromEntries(
-    report.items.map((item) => [item.ref, String(item.id)]),
-  );
+  const ids = idsByRef(report);
   const store = openStore(s);
   store.writeTransaction((writer) => {
     writer.setEntryNotes(ids.a, 'Gratuit doar la rezoluție mică.');

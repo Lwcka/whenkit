@@ -3,6 +3,7 @@ import { ERROR_CODES } from './errors';
 import { ENTRY_KINDS, RESOURCE_TYPES, ZONES, zoneOf } from './entry';
 import { EXPORT_VERSION } from './versions';
 import type {
+  CatalogReader,
   StoredCategory,
   StoredEntry,
   StoredEntrySummary,
@@ -114,6 +115,12 @@ export const catalogExportSchema = z.strictObject({
 
 export type CatalogExport = z.infer<typeof catalogExportSchema>;
 
+/** What an export answers with: the folder it created, inside the one the user picked. */
+export interface ExportResult {
+  folderName: string;
+  folderPath: string;
+}
+
 /** What a search answers with (AD-10): the ids only, in display order, both zones. */
 export const searchResultDtoSchema = z.strictObject({
   ids: z.array(z.string()),
@@ -176,6 +183,17 @@ export function toEntrySummaryDto(entry: StoredEntrySummary): EntrySummaryDto {
 
 export function toEntryDto(entry: StoredEntry): EntryDto {
   return { ...toEntrySummaryDto(entry), content: entry.content };
+}
+
+/** The entries with these ids as stored now, in the order given; a missing id is skipped. */
+export function toEntryDtos(
+  reader: Pick<CatalogReader, 'entryById'>,
+  ids: readonly string[],
+): EntryDto[] {
+  return ids.flatMap((id) => {
+    const entry = reader.entryById(id);
+    return entry === undefined ? [] : [toEntryDto(entry)];
+  });
 }
 
 export function toRejectionDto(rejection: StoredRejection): RejectionDto {

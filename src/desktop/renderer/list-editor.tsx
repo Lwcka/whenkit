@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react';
 import { useId, useLayoutEffect, useRef } from 'react';
-import { appStrings } from '../../shared/strings.ro';
+import { appStrings, rowNumber } from '../../shared/strings.ro';
 import { Button } from './button';
 import { TextField } from './text-field';
 import './list-editor.css';
@@ -77,7 +77,7 @@ export function ListEditor({
           <li key={index} className="list-editor-row">
             {numbered && (
               <span className="list-editor-number" aria-hidden="true">
-                {String(index + 1).padStart(2, '0')}
+                {rowNumber(index)}
               </span>
             )}
             <TextField

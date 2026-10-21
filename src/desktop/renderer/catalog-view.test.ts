@@ -18,73 +18,41 @@ import {
   shortId,
   viewCategoryId,
 } from './catalog-view';
+import { makeCategory, makeEntry } from './test-fixtures';
 
-function category(
-  id: string,
-  name: string,
-  zone: CategoryDto['zone'] = 'toolbox',
-): CategoryDto {
-  return { id, zone, name };
-}
-
+/** An entry of the given zone with these categories and no description. */
 function entry(
   id: string,
   zone: EntryDto['zone'],
   categories: readonly CategoryDto[],
 ): EntryDto {
-  return {
-    id,
-    ownerId: 'owner',
-    kind: zone === 'toolbox' ? 'tool' : 'concept',
-    zone,
-    name: id,
-    url: null,
-    resourceType: null,
-    categories: categories.map(({ id: categoryId, name }) => ({
-      id: categoryId,
-      name,
-    })),
-    relatedIds: [],
-    parentIds: [],
-    childIds: [],
-    whatItDoes: '',
-    situations: [],
-    keywords: [],
-    sources: [],
-    content: null,
-    myNotes: '',
-    githubStars: null,
-    githubPushedAt: null,
-    githubArchived: null,
-    verificationNotes: [],
-    forced: false,
-    revision: 1,
-    addedAt: '2026-10-13T12:00:00.000Z',
-    verifiedAt: null,
-  };
+  return makeEntry(id, { zone, categories, whatItDoes: '' });
 }
 
 describe('categorySlots', () => {
   it('gives slots 1…9 in the order of the ids, as plain text', () => {
     // 'b' sorts before 'c' whatever the order of arrival.
     const slots = categorySlots([
-      category('c', 'C'),
-      category('a', 'A'),
-      category('b', 'B'),
+      makeCategory('c', 'C'),
+      makeCategory('a', 'A'),
+      makeCategory('b', 'B'),
     ]);
     expect([slots.get('a'), slots.get('b'), slots.get('c')]).toEqual([1, 2, 3]);
   });
 
   it('sorts ids as text, not as locale-aware strings', () => {
     // Plain code-unit order puts uppercase before lowercase.
-    const slots = categorySlots([category('a', 'A'), category('B', 'B')]);
+    const slots = categorySlots([
+      makeCategory('a', 'A'),
+      makeCategory('B', 'B'),
+    ]);
     expect(slots.get('B')).toBe(1);
     expect(slots.get('a')).toBe(2);
   });
 
   it('starts over after nine: the tenth gets slot 1', () => {
     const categories = Array.from({ length: 10 }, (_, index) =>
-      category(`id-${index}`, `Categoria ${index}`),
+      makeCategory(`id-${index}`, `Categoria ${index}`),
     );
     const slots = categorySlots(categories);
     expect(categories.map((c) => slots.get(c.id))).toEqual([
@@ -94,9 +62,9 @@ describe('categorySlots', () => {
 
   it('counts the zones separately', () => {
     const slots = categorySlots([
-      category('b', 'B', 'toolbox'),
-      category('a', 'A', 'learn'),
-      category('c', 'C', 'learn'),
+      makeCategory('b', 'B', 'toolbox'),
+      makeCategory('a', 'A', 'learn'),
+      makeCategory('c', 'C', 'learn'),
     ]);
     expect(slots.get('b')).toBe(1);
     expect(slots.get('a')).toBe(1);
@@ -108,13 +76,13 @@ describe('barCategories', () => {
   it('lists the zone in Romanian alphabetical order, diacritics included', () => {
     const bar = barCategories(
       [
-        category('1', 'Țări'),
-        category('2', 'Tabele'),
-        category('3', 'Zero'),
-        category('4', 'Ana'),
-        category('5', 'Învățare'),
-        category('6', 'Iepuri'),
-        category('7', 'Altă zonă', 'learn'),
+        makeCategory('1', 'Țări'),
+        makeCategory('2', 'Tabele'),
+        makeCategory('3', 'Zero'),
+        makeCategory('4', 'Ana'),
+        makeCategory('5', 'Învățare'),
+        makeCategory('6', 'Iepuri'),
+        makeCategory('7', 'Altă zonă', 'learn'),
       ],
       'toolbox',
     );
@@ -131,9 +99,9 @@ describe('barCategories', () => {
 });
 
 describe('categoryCounts and entriesInView', () => {
-  const a = category('a', 'A');
-  const b = category('b', 'B');
-  const learn = category('l', 'L', 'learn');
+  const a = makeCategory('a', 'A');
+  const b = makeCategory('b', 'B');
+  const learn = makeCategory('l', 'L', 'learn');
   const entries = [
     entry('1', 'toolbox', [a]),
     entry('2', 'toolbox', [a, b]),
@@ -173,7 +141,11 @@ describe('categoryCounts and entriesInView', () => {
 });
 
 describe('viewCategoryId and neighborCategoryId', () => {
-  const bar = [category('a', 'A'), category('b', 'B'), category('c', 'C')];
+  const bar = [
+    makeCategory('a', 'A'),
+    makeCategory('b', 'B'),
+    makeCategory('c', 'C'),
+  ];
 
   it('keeps the remembered category while it is in the snapshot of the zone', () => {
     expect(viewCategoryId(bar, 'toolbox', 'b')).toBe('b');
@@ -250,8 +222,8 @@ describe('isNew', () => {
 });
 
 describe('arrivalToasts', () => {
-  const backend = category('c-be', 'Backend & API-uri', 'learn');
-  const imagini = category('c-img', 'Imagini & video');
+  const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
+  const imagini = makeCategory('c-img', 'Imagini & video');
   const named = (id: string, zone: EntryDto['zone'], cat?: CategoryDto) => ({
     ...entry(id, zone, cat === undefined ? [] : [cat]),
     name: id,
@@ -347,8 +319,8 @@ describe('searchHits', () => {
 
 describe('sheetCrumbs', () => {
   it('names the zone, the first category and the entry', () => {
-    const imagini = category('c-img', 'Imagini & video');
-    const other = category('c-z', 'Zebre');
+    const imagini = makeCategory('c-img', 'Imagini & video');
+    const other = makeCategory('c-z', 'Zebre');
     expect(
       sheetCrumbs({
         ...entry('r', 'toolbox', [imagini, other]),

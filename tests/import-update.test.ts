@@ -17,6 +17,7 @@ import {
   count,
   importJson,
   importReport,
+  onStore,
   runCli,
   setup as baseSetup,
   show,
@@ -69,12 +70,7 @@ async function catalogWithTwoTools() {
   const [a, b] = added.items.map((item) => String(item.id));
   // The notes go through the use case the window uses (entries:setNotes);
   // `forced` is also set by `import --force`.
-  const store = testStoreOpener()(s.dbPath, {});
-  try {
-    setNotes(store, String(a), 'Merge și pe PNG mari.');
-  } finally {
-    store.close();
-  }
+  onStore(s, (store) => setNotes(store, String(a), 'Merge și pe PNG mari.'));
   const db = new DatabaseSync(s.dbPath);
   try {
     db.prepare('UPDATE entries SET forced = 1 WHERE id = ?').run(a);

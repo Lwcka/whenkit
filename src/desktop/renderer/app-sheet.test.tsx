@@ -2,24 +2,28 @@ import {
   act,
   cleanup,
   fireEvent,
-  render,
   screen,
   waitFor,
 } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { CatalogSnapshotDto, EntryDto, IpcResult } from '../../shared/ipc';
-import { App, type FrameApi } from './app';
+import type { FrameApi } from './app';
 import { createCatalogStore, type CatalogStore } from './catalog-store';
-import { makeCategory, makeEntry } from './test-fixtures';
+import {
+  backend,
+  fakeFrameApi,
+  imagini,
+  makeEntry,
+  okSnapshot,
+  renderApp,
+  securitate,
+} from './test-fixtures';
 import { applyTheme } from './theme';
 import { toasts } from './toast-store';
 
 // The sheet of an entry and the way between sheets (CAP-10, Flow 7): the real
 // store and the real App.
 
-const imagini = makeCategory('c-img', 'Imagini & video');
-const securitate = makeCategory('c-sec', 'Securitate');
-const backend = makeCategory('c-be', 'Backend & API-uri', 'learn');
 const categories = [imagini, securitate, backend];
 
 const removeBg = makeEntry('removebg', {
@@ -59,11 +63,7 @@ const graphql = makeEntry('graphql', {
 });
 const catalog = [removeBg, photopea, nmap, umbrella, rest, graphql];
 
-const api: FrameApi = {
-  workspacePath: 'C:\\ws',
-  openExternal: () => Promise.resolve({ ok: true, data: null }),
-  exportCatalog: () => Promise.resolve({ ok: true, data: null }),
-  openExportFolder: () => Promise.resolve({ ok: true, data: null }),
+const api: FrameApi = fakeFrameApi({
   searchEntries: (text) =>
     Promise.resolve({
       ok: true,
@@ -77,21 +77,13 @@ const api: FrameApi = {
           .map((entry) => entry.id),
       },
     }),
-  setNotes: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  deleteEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  patchEntry: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  setTheme: () => Promise.resolve({ ok: true, data: null }),
-  setZoomFactor: () => {},
-  renameCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  mergeCategories: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-  deleteCategory: () => Promise.resolve({ ok: true, data: { changed: [] } }),
-};
+});
 
 let answers: IpcResult<CatalogSnapshotDto>[];
 let store: CatalogStore;
 
 function snapshot(...entries: EntryDto[]): IpcResult<CatalogSnapshotDto> {
-  return { ok: true, data: { entries, categories } };
+  return okSnapshot(entries, categories);
 }
 
 // jsdom does no layout, so its scrollTop never keeps what is set.
@@ -133,8 +125,7 @@ afterEach(() => {
 
 async function open(...entries: EntryDto[]) {
   answers.push(snapshot(...(entries.length > 0 ? entries : catalog)));
-  render(<App store={store} api={api} />);
-  await act(() => store.load());
+  await renderApp(store, api);
 }
 
 async function reloadWith(...entries: EntryDto[]) {
