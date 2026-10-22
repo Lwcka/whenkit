@@ -117,11 +117,20 @@ whenkit --help
 
 ### 3. Creează workspace-ul
 
-Alege un folder **în afara repo-ului clonat** (aplicația refuză altfel) și rulează:
+**Workspace-ul** e folderul tău de lucru: în el stă catalogul, acolo pui materialele de adăugat și acolo deschizi Claude Code. Îl alegi tu, o singură dată. Poate fi orice folder **în afara repo-ului clonat** (aplicația refuză altfel), de exemplu `C:\Users\<tu>\whenkit`. Rulează:
 
 ```powershell
 whenkit init C:\Users\<tu>\whenkit
 ```
+
+Sau, dacă ești deja în folderul ales, `.` înseamnă „folderul curent”:
+
+```powershell
+cd C:\Users\<tu>\whenkit
+whenkit init .
+```
+
+> `whenkit init` fără cale nu creează nimic la prima instalare: răspunde că workspace-ul nu e configurat. Fără cale, comanda doar actualizează un workspace care există deja.
 
 Asta:
 
@@ -378,7 +387,7 @@ Dacă vreo comandă `whenkit` avertizează că fișierele workspace-ului sunt ma
 | Simptom | Cauza și ce faci |
 |---|---|
 | SmartScreen: „Windows a protejat computerul” | installer-ul nu e semnat. „Mai multe informații” → „Rulează oricum”. |
-| Fereastra spune „Nu găsesc workspace-ul.” | n-ai rulat încă `whenkit init <cale>`; rulează-l, apoi repornește aplicația. |
+| Fereastra spune „Nu găsesc workspace-ul.” sau `whenkit` spune „Workspace-ul … nu e configurat încă” | n-ai rulat încă `whenkit init <cale>` (sau `whenkit init .` din folderul ales); rulează-l, apoi repornește aplicația. |
 | `whenkit` nu e recunoscut | deschide un terminal **nou** după `npm link`; verifică `node --version` (≥ 24). |
 | Eroare despre `node:sqlite` | Node e mai vechi de 24; actualizează-l. |
 | `/adauga` nu apare în Claude Code | Claude Code trebuie deschis **în folderul workspace-ului**, nu în repo. Într-o sesiune deja deschisă înainte de `whenkit init`, pornește una nouă. |

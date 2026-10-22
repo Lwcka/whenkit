@@ -13,6 +13,7 @@ export const cliStrings = {
     'Comenzi:',
     '  init [cale]                     creează workspace-ul (sau îl verifică, dacă există) și',
     '                                  salvează calea; fără cale, folosește workspace-ul configurat',
+    '                                  („whenkit init .” îl creează în folderul curent)',
     '  import <lot> [--json]           importă în catalog fișele dintr-un lot JSON;',
     '         [--force <ref>]…         --force <ref> (repetabil) scrie totuși elementul respins doar',
     '                                  de verificare și îl marchează „forțat”',
@@ -49,7 +50,7 @@ export const cliStrings = {
 
 export const errorMessages: Record<ErrorCode, string> = {
   WORKSPACE_NOT_CONFIGURED:
-    'Workspace-ul nu e configurat. Rulează „whenkit init <cale>” sau setează variabila WHENKIT_WORKSPACE.',
+    'Workspace-ul (folderul în care stă catalogul tău) nu e configurat încă. Alege un folder și rulează în terminal „whenkit init C:\\cale\\spre\\folder”, sau „whenkit init .” din folderul ales.',
   WORKSPACE_INSIDE_REPO:
     'Workspace-ul nu poate fi folderul aplicației și nici în interiorul lui. Alege o cale în afara repo-ului.',
   CONFIG_INVALID:
