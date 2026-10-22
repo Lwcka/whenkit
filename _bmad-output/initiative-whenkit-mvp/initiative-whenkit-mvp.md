@@ -6,7 +6,7 @@ covers: [CAP-1, CAP-2, CAP-3, CAP-4, CAP-5, CAP-6, CAP-7, CAP-8, CAP-9, CAP-10, 
 after: []
 assignee: ""
 risk: medium
-status: in-progress
+status: done
 ---
 
 # whenkit MVP: un catalog personal verificat, în care cauți după problemă
@@ -46,4 +46,5 @@ Aplicația desktop whenkit, CLI-ul ei și șablonul workspace-ului (cu skill-uri
 - Decision: fără epic separat pentru platformă; scheletul (Forge, structura de foldere, teste) e primul tichet al primului epic, pentru că un singur autor și un singur repo nu justifică un epic doar de setup (2026-10-13).
 - Decision: fără epic separat pentru Learn; conceptele trec prin același import și același ecran (2026-10-13).
 - Decision: „producție” înseamnă aici aplicația instalată pe laptopul autorului și CLI-ul `whenkit` disponibil în terminal; fără server, fără CI (arhitectura, Deferred).
+- Decision: inițiativa e închisă pe 2026-10-22: ambele epicuri done (38 de intrări), plus povestea `/adauga` din backlog; verificarea de închidere a găsit Done when 1–3 îndeplinite, iar autorul a declarat MVP-ul gata (Done when 4).
 - Waits on epic-catalog-prin-claude because: fereastra citește și scrie prin nucleul și baza de date construite în primul epic.
