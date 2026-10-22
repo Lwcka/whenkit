@@ -87,7 +87,7 @@ Sunt patru pași: aplicația, CLI-ul, workspace-ul, apoi o verificare. Comenzile
 
 **Varianta rapidă (recomandată): din Release.**
 
-1. Deschide pagina [Releases](../../releases) a repo-ului și descarcă `WhenKit-0.1.0 Setup.exe` din ultima versiune.
+1. Deschide pagina [Releases](../../releases) a repo-ului și descarcă `WhenKit-0.1.0.Setup.exe` din ultima versiune.
 2. Rulează-l. Nu are asistent de instalare: se instalează singur în `%LOCALAPPDATA%\WhenKit` și pornește aplicația. De acum o găsești în meniul Start, ca **WhenKit**.
 3. **Windows SmartScreen** va spune probabil „Windows a protejat computerul”, pentru că installer-ul nu e semnat digital (un certificat costă bani, iar acesta e un proiect personal). Apasă **„Mai multe informații” → „Rulează oricum”**.
 
