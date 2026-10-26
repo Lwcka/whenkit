@@ -71,7 +71,7 @@ Decizii care trebuie respectate de orice arhitectură (detalii în spec, secțiu
 - **Verificarea** e un modul separat, determinist și testabil (URL, link care răspunde, domenii interzise, duplicate), completat de judecata lui Claude pentru conținut dubios. În caz de dubiu, resursa se respinge cu motiv.
 - Datele sunt separate de cod, în workspace, într-un format portabil.
 - „Personal-first, multi-user ready”: `owner_id` în model de la început; calea workspace-ului în configurarea utilizatorului (AD-8), nimic hardcodat. **Nu** se construiesc acum: autentificare, conturi, hosting, plăți.
-- **Limba:** codul e integral în engleză (identificatori, comentarii, mesaje de commit). În română sunt interfața, fișele din catalog și documentele citite de autor (README, documentație, artefacte BMad); documentele se traduc în engleză la trecerea open-source. Cod și README scrise ca pentru un proiect public.
+- **Limba:** codul e integral în engleză (identificatori, comentarii, mesaje de commit). În română sunt interfața, fișele din catalog și documentele citite de autor (README, documentație, artefacte BMad); repo-ul e public pe GitHub din 2026-10-26, iar traducerea documentelor în engleză rămâne pe roadmap. Cod și README scrise pentru un proiect public.
 
 Datele de test reale (screenshot-uri și `inspire.txt`) sunt în `C:\Users\Luca\Personal\`, în afara repo-ului. Sunt input pentru `/adauga` și nu se transcriu manual. Rezultatele așteptate sunt în companionul `test-scenarios.md` al spec-ului.
 
@@ -89,7 +89,7 @@ Cum rulăm `bmad-build` (decis de autor, 2026-10-14; scopul e să nu consumăm l
 
 - **Documente de planificare** (spec, arhitectură, CLAUDE.md): commit direct pe `main`.
 - **Cod**: o ramură per tichet (`feat/<nume-scurt>`, `fix/<nume-scurt>`), revizie cu `bmad-code-review` pe ramură, apoi merge în `main` și ștergerea ramurii.
-- **Fără `push`** pe GitHub (`origin` = `Lwcka/whenkit`) până nu cere autorul explicit; deocamdată totul rămâne local.
+- **Fără `push`** pe GitHub (`origin` = `Lwcka/whenkit`, repo **public**) până nu cere autorul explicit: tot ce ajunge pe GitHub e vizibil oricui.
 - Autorul învață acest flux: explică pe scurt fiecare pas de git (ce face și de ce) când îl execuți.
 
 ## BMad Method

@@ -8,7 +8,9 @@ Salvezi zeci de linkuri, screenshot-uri cu liste de unelte și notițe despre co
 - **Claude Code e „creierul”**: el citește ce îi dai (un link, un text, un screenshot), documentează resursa și scrie fișa. Aplicația nu conține AI și nu folosește chei API.
 - **Aplicația e catalogul**: verifică fiecare resursă (linkul merge? domeniu interzis? duplicat?), o salvează și ți-o arată.
 
-> **Stadiu:** MVP (v0.1.0), terminat pe 2026-10-22. E un proiect personal, testat pe un singur laptop. Merge, dar încă nu e șlefuit pentru oricine; feedback-ul e binevenit.
+> **Stadiu:** MVP (v0.1.0), terminat pe 2026-10-22. E un proiect personal, open-source, testat pe un singur laptop. Merge, dar încă nu e șlefuit pentru oricine. Bug-urile și ideile sunt binevenite în [Issues](../../issues).
+
+*English: WhenKit is a Windows desktop catalog of developer resources that you search by problem ("when do I use it?"), filled and searched through Claude Code. The app and docs are in Romanian for now; an English version is on the [roadmap](_bmad-output/initiative-whenkit-mvp/spec-whenkit/post-v1-roadmap.md).*
 
 ---
 
@@ -68,7 +70,6 @@ Claude **nu scrie niciodată direct** în baza de date: scrie un lot JSON, iar `
 | **Git** | ca să clonezi repo-ul (pentru CLI) | [git-scm.com](https://git-scm.com/) |
 | **Node.js 24 sau mai nou** | CLI-ul folosește `node:sqlite`, care există doar de la Node 24 | [nodejs.org](https://nodejs.org/) |
 | **Claude Code**, cu cont | rulează skill-urile `/adauga` și `/gaseste` | [claude.com/claude-code](https://claude.com/claude-code) |
-| **Acces la acest repo** | repo-ul e privat: cere-i lui Luca să te adauge ca colaborator | — |
 | **Internet** | la import, linkurile se verifică live | — |
 
 Verifică versiunea de Node într-un terminal nou:
@@ -470,7 +471,11 @@ Proiectul a fost planificat și construit cu [BMad Method](https://github.com/bm
 | [`architecture-whenkit.md`](_bmad-output/initiative-whenkit-mvp/architecture-whenkit/architecture-whenkit.md) | regulile de arhitectură AD-1…AD-20 |
 | `epic-*/tickets.toml` și `*-plan.md` | tichetele, în ordinea construirii, cu planul și triajul reviziei fiecăruia |
 
-Documentele sunt în română; vor fi traduse în engleză dacă proiectul devine open-source public.
+Documentele sunt în română; traducerea lor în engleză e pe [roadmap](_bmad-output/initiative-whenkit-mvp/spec-whenkit/post-v1-roadmap.md).
+
+### Contribuții
+
+Proiectul e deschis: poți raporta un bug sau propune o idee în [Issues](../../issues), iar un pull request e binevenit. Înainte de cod, citește [`CLAUDE.md`](CLAUDE.md) (comenzile, structura, regulile de lucru) și regulile de arhitectură; `npm test`, `npm run lint` și `npm run typecheck` trebuie să treacă.
 
 ---
 
