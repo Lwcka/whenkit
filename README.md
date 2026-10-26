@@ -10,7 +10,9 @@ Salvezi zeci de linkuri, screenshot-uri cu liste de unelte și notițe despre co
 
 > **Stadiu:** MVP (v0.1.0), terminat pe 2026-10-22. E un proiect personal, open-source, testat pe un singur laptop. Merge, dar încă nu e șlefuit pentru oricine. Bug-urile și ideile sunt binevenite în [Issues](../../issues).
 
-*English: WhenKit is a Windows desktop catalog of developer resources that you search by problem ("when do I use it?"), filled and searched through Claude Code. The app and docs are in Romanian for now; an English version is on the [roadmap](_bmad-output/initiative-whenkit-mvp/spec-whenkit/post-v1-roadmap.md).*
+> **Despre limbă:** deocamdată totul e în română: interfața, fișele, README-ul și documentația. E o alegere temporară, ca MVP-ul să se dezvolte mai ușor. Codul e deja integral în engleză, iar la lansarea open-source oficială aplicația și documentația vor fi disponibile și în engleză ([roadmap](_bmad-output/initiative-whenkit-mvp/spec-whenkit/post-v1-roadmap.md)).
+>
+> *English: WhenKit is a Windows desktop catalog of developer resources that you search by problem ("when do I use it?"), filled and searched through Claude Code. For now the app and docs are in Romanian only; English versions will come with the official open-source release.*
 
 ---
 
